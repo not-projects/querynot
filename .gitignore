@@ -1,0 +1,64 @@
+# Node / frontend
+node_modules/
+.npm/
+.pnpm-store/
+.svelte-kit/
+.vite/
+
+# Build, test, and coverage output
+build/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Rust / Tauri
+target/
+src-tauri/target/
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+.pgpass
+.my.cnf
+tnsnames.ora
+
+# Local databases, dumps, and development data
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+*.sqlite-shm
+*.sqlite-wal
+*.duckdb
+*.duckdb.wal
+*.dump
+*.backup
+.querynot/
+local-data/
+dev-data/
+
+# Logs and temporary files
+*.log
+.tmp/
+tmp/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# Codex local state
+.codex/

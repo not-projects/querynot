@@ -1,0 +1,60 @@
+name: Agent task
+description: Define a bounded implementation or investigation task for an AI coding agent.
+title: "[Agent Task]: "
+labels:
+  - agent-task
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State one concrete outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Link relevant issues, files, designs, or prior decisions. Do not paste secrets or private data.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions that must be true when the task is complete.
+      placeholder: |
+        - [ ] First condition
+        - [ ] Second condition
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and safety boundaries
+      description: Include architecture, compatibility, security, data, or dependency restrictions.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Required validation
+      description: Name exact tests, checks, or manual evidence when already known.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: State adjacent work the agent must not include.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: This task is narrow enough for one reviewable change.
+          required: true
+        - label: The task contains no credentials, production data, or private infrastructure details.
+          required: true

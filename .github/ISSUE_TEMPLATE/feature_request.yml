@@ -1,0 +1,48 @@
+name: Feature request
+description: Propose a focused improvement to a QueryNot database workflow.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What database workflow is difficult today, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the user-visible result rather than prescribing implementation details.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds or other approaches have you considered?
+  - type: textarea
+    id: scope
+    attributes:
+      label: Suggested scope
+      description: What belongs in the first useful version, and what should remain out of scope?
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Local-first and security impact
+      description: Note any effect on credentials, SQL execution, stored data, files, telemetry, networking, or cloud services.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing issues for this request.
+          required: true
+        - label: I have not included credentials, production data, or other sensitive information.
+          required: true
