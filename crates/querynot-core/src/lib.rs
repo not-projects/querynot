@@ -3,12 +3,16 @@
 pub mod adapter;
 pub mod diagnostics;
 pub mod error;
+pub mod export;
 pub mod fixture;
 pub mod generated;
 pub mod ids;
 pub mod ownership;
 pub mod profile;
+pub mod result;
 pub mod settings;
+pub mod sql;
+pub mod sqlite;
 pub mod state;
 pub mod store;
 pub mod value;

@@ -15,9 +15,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
+base64.workspace = true
 querynot-core = { path = "../crates/querynot-core", version = "0.0.0" }
 secrecy.workspace = true
 serde.workspace = true
+sqlformat.workspace = true
 tauri = { version = "2.11.5", features = [] }
 tauri-plugin-dialog = "2.7.2"
 tokio.workspace = true

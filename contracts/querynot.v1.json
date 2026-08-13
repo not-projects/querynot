@@ -61,6 +61,82 @@
       "request": null,
       "response": "FilePickerResponse"
     },
+    "pick_new_sqlite_file": {
+      "request": null,
+      "response": "FilePickerResponse"
+    },
+    "test_profile_connection": {
+      "request": "ProfileIdRequest",
+      "response": "ConnectionInfoView"
+    },
+    "connect_profile": {
+      "request": "ProfileIdRequest",
+      "response": "ConnectionInfoView"
+    },
+    "disconnect_profile": {
+      "request": "ProfileIdRequest",
+      "response": "FileActionResponse"
+    },
+    "open_tab_session": {
+      "request": "ProfileTabRequest",
+      "response": "SessionView"
+    },
+    "close_tab_session": {
+      "request": "SessionRequest",
+      "response": "FileActionResponse"
+    },
+    "load_schema_namespaces": {
+      "request": "ProfileIdRequest",
+      "response": "SchemaNamespacesResponse"
+    },
+    "load_schema_objects": {
+      "request": "SchemaNamespaceRequest",
+      "response": "SchemaObjectsResponse"
+    },
+    "load_schema_object_detail": {
+      "request": "SchemaObjectRequest",
+      "response": "SchemaObjectDetailView"
+    },
+    "format_sql": {
+      "request": "FormatSqlRequest",
+      "response": "FormatSqlResponse"
+    },
+    "start_execution": {
+      "request": "StartExecutionRequest",
+      "response": "ExecutionStartResponse"
+    },
+    "ack_result_batch": {
+      "request": "ResultBatchControlRequest",
+      "response": "FileActionResponse"
+    },
+    "load_more_results": {
+      "request": "ResultControlRequest",
+      "response": "FileActionResponse"
+    },
+    "discard_result": {
+      "request": "ResultControlRequest",
+      "response": "FileActionResponse"
+    },
+    "cancel_execution": {
+      "request": "ExecutionIdRequest",
+      "response": "FileActionResponse"
+    },
+    "set_transaction_mode": {
+      "request": "TransactionModeRequest",
+      "response": "TransactionStateView"
+    },
+    "commit_transaction": {
+      "request": "SessionRequest",
+      "response": "TransactionStateView"
+    },
+    "rollback_transaction": {
+      "request": "SessionRequest",
+      "response": "TransactionStateView"
+    },
+    "export_result": {
+      "request": "ExportResultRequest",
+      "response": "ExportResultResponse"
+    },
     "diagnostics_preview": {
       "request": null,
       "response": "DiagnosticsPreviewView"
@@ -74,7 +150,9 @@
       "response": "FileActionResponse"
     }
   },
-  "events": {},
+  "events": {
+    "query_execution": "ExecutionEventView"
+  },
   "types": {
     "ApplicationStatusResponse": {
       "contract_version": "u16",
@@ -219,6 +297,214 @@
     },
     "ConfirmedActionRequest": {
       "confirmed": "bool"
+    },
+    "AdapterCapabilitiesView": {
+      "metadata": "bool",
+      "streaming": "bool",
+      "cancellation": "bool",
+      "transactions": "bool",
+      "multiple_results": "bool",
+      "safe_table_mutations": "bool"
+    },
+    "ConnectionInfoView": {
+      "profile_id": "string",
+      "profile_name": "string",
+      "engine": "string",
+      "exact_version": "string",
+      "dialect": "string",
+      "context": "string",
+      "read_only": "bool",
+      "capabilities": "AdapterCapabilitiesView"
+    },
+    "ProfileTabRequest": {
+      "profile_id": "string",
+      "tab_id": "string"
+    },
+    "SessionRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string"
+    },
+    "SessionView": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "state": "string",
+      "transaction": "TransactionStateView"
+    },
+    "TransactionStateView": {
+      "automatic": "bool",
+      "certainty": "string"
+    },
+    "SchemaNamespaceView": {
+      "name": "string",
+      "state": "string"
+    },
+    "SchemaNamespacesResponse": {
+      "profile_id": "string",
+      "namespaces": "SchemaNamespaceView[]",
+      "stale": "bool"
+    },
+    "SchemaObjectView": {
+      "namespace": "string",
+      "name": "string",
+      "kind": "string"
+    },
+    "SchemaNamespaceRequest": {
+      "profile_id": "string",
+      "namespace": "string"
+    },
+    "SchemaObjectsResponse": {
+      "profile_id": "string",
+      "namespace": "string",
+      "objects": "SchemaObjectView[]",
+      "stale": "bool"
+    },
+    "SchemaObjectRequest": {
+      "profile_id": "string",
+      "namespace": "string",
+      "object_name": "string"
+    },
+    "SchemaColumnView": {
+      "name": "string",
+      "declared_type": "string",
+      "nullable": "bool",
+      "primary_key_position": "u32",
+      "default_expression": "string?"
+    },
+    "SchemaForeignKeyView": {
+      "id": "i64",
+      "sequence": "i64",
+      "referenced_table": "string",
+      "from_column": "string",
+      "to_column": "string?",
+      "on_update": "string",
+      "on_delete": "string"
+    },
+    "SchemaIndexView": {
+      "name": "string",
+      "unique": "bool",
+      "origin": "string",
+      "columns": "string[]"
+    },
+    "SchemaObjectDetailView": {
+      "object": "SchemaObjectView",
+      "columns": "SchemaColumnView[]",
+      "foreign_keys": "SchemaForeignKeyView[]",
+      "indexes": "SchemaIndexView[]",
+      "definition": "string?",
+      "routines_supported": "bool",
+      "stale": "bool"
+    },
+    "FormatSqlRequest": {
+      "sql": "string",
+      "selection_start": "u32?",
+      "selection_end": "u32?"
+    },
+    "FormatSqlResponse": {
+      "sql": "string",
+      "selection_start": "u32?",
+      "selection_end": "u32?"
+    },
+    "StartExecutionRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "sql": "string",
+      "selection_start": "u32?",
+      "selection_end": "u32?",
+      "cursor": "u32",
+      "run_all": "bool",
+      "approval_fingerprint": "string?"
+    },
+    "SafetyFlagView": {
+      "statement_index": "u32",
+      "start": "u32",
+      "end": "u32",
+      "statement_type": "string",
+      "object_name": "string?",
+      "reason": "string"
+    },
+    "ExecutionStartResponse": {
+      "status": "string",
+      "execution_id": "string?",
+      "fingerprint": "string?",
+      "safety_flags": "SafetyFlagView[]",
+      "message": "string"
+    },
+    "ResultBatchControlRequest": {
+      "execution_id": "string",
+      "result_set_id": "string",
+      "sequence": "u64"
+    },
+    "ResultControlRequest": {
+      "execution_id": "string",
+      "result_set_id": "string"
+    },
+    "ExecutionIdRequest": {
+      "execution_id": "string"
+    },
+    "TransactionModeRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "automatic": "bool"
+    },
+    "ResultColumnView": {
+      "name": "string",
+      "declared_type": "string",
+      "nullable": "bool?"
+    },
+    "TaggedValueView": {
+      "value_type": "string",
+      "text": "string?",
+      "boolean": "bool?",
+      "bytes_base64": "string?",
+      "timezone_or_offset": "string?"
+    },
+    "ResultRowView": {
+      "values": "TaggedValueView[]"
+    },
+    "ExecutionEventView": {
+      "event_type": "string",
+      "execution_id": "string",
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "result_set_id": "string?",
+      "sequence": "u64?",
+      "statement_index": "u32?",
+      "statement_start": "u32?",
+      "statement_end": "u32?",
+      "statement_count": "u32?",
+      "statements_completed": "u32?",
+      "columns": "ResultColumnView[]",
+      "rows": "ResultRowView[]",
+      "received_rows": "u32",
+      "retained_bytes": "u64",
+      "rows_affected": "u64?",
+      "duration_ms": "u64?",
+      "terminal_state": "string?",
+      "capped": "bool",
+      "transaction": "TransactionStateView?",
+      "error": "string?",
+      "error_category": "string?",
+      "retryable": "bool?",
+      "cancel_confirmed": "bool?"
+    },
+    "ExportResultRequest": {
+      "execution_id": "string",
+      "result_set_id": "string",
+      "format": "string",
+      "row_indexes": "u32[]",
+      "null_token": "string",
+      "view_label": "string"
+    },
+    "ExportResultResponse": {
+      "completed": "bool",
+      "cancelled": "bool",
+      "rows_written": "u32",
+      "message": "string"
     }
   }
 }

@@ -98,6 +98,301 @@
       "automated_test_ids": ["P1-AUTO-FIRST-RUN-A11Y", "P1-AUTO-NO-TELEMETRY"],
       "manual_procedure_ids": ["PENDING-P5-EMPTY-STATE-MATRIX"]
     },
+    "CON-2": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-SQLITE-METADATA"],
+      "manual_procedure_ids": ["PENDING-P5-SQLITE-FILE-DIALOG-MATRIX"]
+    },
+    "CON-13": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
+      "manual_procedure_ids": ["PENDING-P3-COMPATIBILITY-MATRIX"]
+    },
+    "WKS-7": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-CANCELLATION"],
+      "manual_procedure_ids": ["PENDING-P3-CONCURRENT-ADAPTER-JOURNEY"]
+    },
+    "WKS-8": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
+      "manual_procedure_ids": ["PENDING-P3-CONTEXT-CHANGE-MATRIX"]
+    },
+    "WKS-12": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P3-METADATA-SESSION-MATRIX"]
+    },
+    "SCH-1": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
+      "manual_procedure_ids": ["PENDING-P3-SCHEMA-OBJECT-MATRIX"]
+    },
+    "SCH-2": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-EDITOR"],
+      "manual_procedure_ids": ["PENDING-P5-SCHEMA-STATE-ACCESSIBILITY"]
+    },
+    "SCH-3": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
+      "manual_procedure_ids": ["PENDING-P3-SCHEMA-REFRESH-MATRIX"]
+    },
+    "SCH-4": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-EDITOR"],
+      "manual_procedure_ids": ["PENDING-P5-SCHEMA-KEYBOARD-REVIEW"]
+    },
+    "SCH-5": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
+      "manual_procedure_ids": ["PENDING-P3-SCHEMA-CAPABILITY-MATRIX"]
+    },
+    "SCH-6": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
+      "manual_procedure_ids": ["PENDING-P4-SCHEMA-ENTRY-ACTIONS"]
+    },
+    "SCH-7": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SCHEMA-CACHE"],
+      "manual_procedure_ids": ["PENDING-P3-SCHEMA-CACHE-MATRIX"]
+    },
+    "SCH-8": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-METADATA-BOUNDARY", "P2-AUTO-VIRTUAL-GRID"],
+      "manual_procedure_ids": ["PENDING-P5-HOSTILE-METADATA-REVIEW"]
+    },
+    "EDT-1": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION"],
+      "manual_procedure_ids": ["PENDING-P3-DIALECT-MATRIX"]
+    },
+    "EDT-2": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-EDITOR"],
+      "manual_procedure_ids": ["PENDING-P5-EDITOR-INTERACTION-REVIEW"]
+    },
+    "EDT-3": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-EDITOR"],
+      "manual_procedure_ids": ["PENDING-P4-FORMATTER-FIDELITY"]
+    },
+    "EDT-4": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-EDITOR"],
+      "manual_procedure_ids": ["PENDING-P4-COMPLETION-FIDELITY"]
+    },
+    "EDT-5": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION"],
+      "manual_procedure_ids": ["PENDING-P4-DIAGNOSTICS-FIDELITY"]
+    },
+    "EDT-6": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SELECTION"],
+      "manual_procedure_ids": ["PENDING-P3-SELECTION-DIALECT-MATRIX"]
+    },
+    "EDT-7": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-SQLITE-JOURNEY"],
+      "manual_procedure_ids": ["PENDING-P3-MULTI-STATEMENT-MATRIX"]
+    },
+    "EDT-8": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-EDITOR"],
+      "manual_procedure_ids": ["PENDING-P4-SHORTCUT-DOCUMENTATION", "PENDING-P5-SHORTCUT-MATRIX"]
+    },
+    "EDT-9": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-DESTRUCTIVE-SAFETY"],
+      "manual_procedure_ids": ["PENDING-P3-PARSER-DIALECT-MATRIX"]
+    },
+    "EDT-10": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SQLITE-JOURNEY"],
+      "manual_procedure_ids": ["PENDING-P4-NO-IMPLICIT-EXECUTION-JOURNEY"]
+    },
+    "EXE-1": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P5-NATIVE-BOUNDARY-REVIEW"]
+    },
+    "EXE-2": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-CANCELLATION"],
+      "manual_procedure_ids": ["PENDING-P5-EXECUTION-LIFECYCLE-REVIEW"]
+    },
+    "EXE-3": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-CANCELLATION", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P3-CANCELLATION-MATRIX"]
+    },
+    "EXE-4": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
+      "manual_procedure_ids": ["PENDING-P3-TRANSACTION-MATRIX"]
+    },
+    "EXE-5": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-DESTRUCTIVE-SAFETY", "P2-AUTO-SELECTION"],
+      "manual_procedure_ids": ["PENDING-P3-DESTRUCTIVE-DIALECT-MATRIX"]
+    },
+    "EXE-6": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-APPROVAL-SINGLE-USE"],
+      "manual_procedure_ids": ["PENDING-P5-DESTRUCTIVE-DIALOG-REVIEW"]
+    },
+    "EXE-7": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-CANCELLATION"],
+      "manual_procedure_ids": ["PENDING-P3-ERROR-MATRIX"]
+    },
+    "EXE-8": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P5-CONCURRENT-TAB-REVIEW"]
+    },
+    "EXE-9": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
+      "manual_procedure_ids": ["PENDING-P3-SESSION-CONTINUITY-MATRIX"]
+    },
+    "EXE-10": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
+      "manual_procedure_ids": ["PENDING-P3-TRANSACTION-RECONCILIATION-MATRIX"]
+    },
+    "EXE-11": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-RELOAD-CLEANUP", "P2-AUTO-EVENT-INTEGRITY"],
+      "manual_procedure_ids": ["PENDING-P3-CONNECTION-LOSS-MATRIX"]
+    },
+    "EXE-12": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-CANCELLATION"],
+      "manual_procedure_ids": ["PENDING-P3-PROTOCOL-TIMEOUT-REVIEW"]
+    },
+    "EXE-13": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-DESTRUCTIVE-SAFETY", "P2-AUTO-APPROVAL-SINGLE-USE"],
+      "manual_procedure_ids": ["PENDING-P3-CONFIRMATION-DIALECT-MATRIX"]
+    },
+    "EXE-14": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
+      "manual_procedure_ids": ["PENDING-P3-MANUAL-TRANSACTION-MATRIX"]
+    },
+    "RES-1": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-EVENT-INTEGRITY"],
+      "manual_procedure_ids": ["PENDING-P3-STREAMING-MATRIX"]
+    },
+    "RES-2": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID", "P2-PERF-FIRST-BATCH"],
+      "manual_procedure_ids": ["PENDING-P5-WEBVIEW-FPS-MATRIX"]
+    },
+    "RES-3": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EVENT-INTEGRITY"],
+      "manual_procedure_ids": ["PENDING-P3-MULTIPLE-RESULT-MATRIX"]
+    },
+    "RES-4": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EXPORT-JSON"],
+      "manual_procedure_ids": ["PENDING-P3-TYPE-FIDELITY-MATRIX"]
+    },
+    "RES-5": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID"],
+      "manual_procedure_ids": ["PENDING-P5-GRID-INTERACTION-REVIEW"]
+    },
+    "RES-6": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID"],
+      "manual_procedure_ids": ["PENDING-P5-LARGE-VALUE-REVIEW"]
+    },
+    "RES-7": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EXPORT-INTERRUPTION"],
+      "manual_procedure_ids": ["PENDING-P5-EXPORT-DIALOG-MATRIX"]
+    },
+    "RES-8": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-CANCELLATION", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P5-RESOURCE-MEMORY-MATRIX"]
+    },
+    "RES-9": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-CURSOR-EXPIRY", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P5-CURSOR-LIFETIME-REVIEW"]
+    },
+    "RES-10": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-EVENT-INTEGRITY", "P2-AUTO-STREAM-BACKPRESSURE"],
+      "manual_procedure_ids": ["PENDING-P3-EVENT-INTEGRITY-MATRIX"]
+    },
+    "RES-11": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-EXPORT-CSV"],
+      "manual_procedure_ids": ["PENDING-P5-CSV-DIALOG-REVIEW"]
+    },
+    "RES-12": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-EXPORT-JSON"],
+      "manual_procedure_ids": ["PENDING-P5-JSON-EXPORT-REVIEW"]
+    },
+    "RES-13": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID", "P2-AUTO-EXPORT-CSV", "P2-AUTO-EXPORT-JSON"],
+      "manual_procedure_ids": ["PENDING-P5-HOSTILE-VALUE-REVIEW"]
+    },
+    "RES-14": {
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID"],
+      "manual_procedure_ids": ["PENDING-P5-CLIPBOARD-MATRIX"]
+    },
+    "AC-05": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION"],
+      "manual_procedure_ids": ["PENDING-P4-EDITOR-ACCEPTANCE"]
+    },
+    "AC-06": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-VIRTUAL-GRID"],
+      "manual_procedure_ids": ["PENDING-P3-P4-RESULT-ACCEPTANCE"]
+    },
+    "AC-07": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID", "P2-PERF-FIRST-BATCH", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P5-NATIVE-PERFORMANCE-MATRIX"]
+    },
+    "AC-08": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-SCHEMA-CACHE"],
+      "manual_procedure_ids": ["PENDING-P3-SCHEMA-ACCEPTANCE"]
+    },
+    "AC-10": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-DESTRUCTIVE-SAFETY", "P2-AUTO-APPROVAL-SINGLE-USE"],
+      "manual_procedure_ids": ["PENDING-P3-DESTRUCTIVE-ACCEPTANCE"]
+    },
+    "AC-16": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-CANCELLATION", "P2-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P3-CONNECTION-LOSS-ACCEPTANCE"]
+    },
+    "AC-17": {
+      "status": "in_progress",
+      "automated_test_ids": ["P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-CURSOR-EXPIRY", "P2-AUTO-EVENT-INTEGRITY", "P2-AUTO-EXPORT-INTERRUPTION"],
+      "manual_procedure_ids": ["PENDING-P3-RESULT-CONTRACT-MATRIX"]
+    },
+    "AC-19": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-MIGRATION-ROLLBACK", "P1-AUTO-VAULT-REFUSAL", "P2-AUTO-RELOAD-CLEANUP", "P2-AUTO-EXPORT-INTERRUPTION"],
+      "manual_procedure_ids": ["PENDING-P5-DISK-FULL-AND-RELOAD-MATRIX"]
+    },
     "SET-1": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],

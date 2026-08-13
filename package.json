@@ -20,6 +20,8 @@
     "fixtures:fetch:native": "node scripts/fetch-native-feasibility.mjs",
     "verify:phase0": "node scripts/verify-phase0.mjs",
     "verify:phase1": "node scripts/verify-phase1.mjs",
+    "benchmark:phase2": "node scripts/benchmark-phase2.mjs",
+    "verify:phase2": "node scripts/verify-phase2.mjs",
     "format": "prettier --write \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "format:check": "prettier --check \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "tauri": "tauri"
@@ -27,7 +29,9 @@
   "dependencies": {
     "@codemirror/autocomplete": "6.20.3",
     "@codemirror/commands": "6.10.4",
+    "@codemirror/language": "6.12.4",
     "@codemirror/lang-sql": "6.10.0",
+    "@codemirror/lint": "6.9.7",
     "@codemirror/search": "6.7.1",
     "@codemirror/state": "6.7.1",
     "@codemirror/view": "6.43.8",

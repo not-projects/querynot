@@ -167,6 +167,245 @@ export interface ConfirmedActionRequest {
   confirmed: boolean;
 }
 
+export interface AdapterCapabilitiesView {
+  metadata: boolean;
+  streaming: boolean;
+  cancellation: boolean;
+  transactions: boolean;
+  multiple_results: boolean;
+  safe_table_mutations: boolean;
+}
+
+export interface ConnectionInfoView {
+  profile_id: string;
+  profile_name: string;
+  engine: string;
+  exact_version: string;
+  dialect: string;
+  context: string;
+  read_only: boolean;
+  capabilities: AdapterCapabilitiesView;
+}
+
+export interface ProfileTabRequest {
+  profile_id: string;
+  tab_id: string;
+}
+
+export interface SessionRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+}
+
+export interface SessionView {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  state: string;
+  transaction: TransactionStateView;
+}
+
+export interface TransactionStateView {
+  automatic: boolean;
+  certainty: string;
+}
+
+export interface SchemaNamespaceView {
+  name: string;
+  state: string;
+}
+
+export interface SchemaNamespacesResponse {
+  profile_id: string;
+  namespaces: SchemaNamespaceView[];
+  stale: boolean;
+}
+
+export interface SchemaObjectView {
+  namespace: string;
+  name: string;
+  kind: string;
+}
+
+export interface SchemaNamespaceRequest {
+  profile_id: string;
+  namespace: string;
+}
+
+export interface SchemaObjectsResponse {
+  profile_id: string;
+  namespace: string;
+  objects: SchemaObjectView[];
+  stale: boolean;
+}
+
+export interface SchemaObjectRequest {
+  profile_id: string;
+  namespace: string;
+  object_name: string;
+}
+
+export interface SchemaColumnView {
+  name: string;
+  declared_type: string;
+  nullable: boolean;
+  primary_key_position: number;
+  default_expression: string | null;
+}
+
+export interface SchemaForeignKeyView {
+  id: number;
+  sequence: number;
+  referenced_table: string;
+  from_column: string;
+  to_column: string | null;
+  on_update: string;
+  on_delete: string;
+}
+
+export interface SchemaIndexView {
+  name: string;
+  unique: boolean;
+  origin: string;
+  columns: string[];
+}
+
+export interface SchemaObjectDetailView {
+  object: SchemaObjectView;
+  columns: SchemaColumnView[];
+  foreign_keys: SchemaForeignKeyView[];
+  indexes: SchemaIndexView[];
+  definition: string | null;
+  routines_supported: boolean;
+  stale: boolean;
+}
+
+export interface FormatSqlRequest {
+  sql: string;
+  selection_start: number | null;
+  selection_end: number | null;
+}
+
+export interface FormatSqlResponse {
+  sql: string;
+  selection_start: number | null;
+  selection_end: number | null;
+}
+
+export interface StartExecutionRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  sql: string;
+  selection_start: number | null;
+  selection_end: number | null;
+  cursor: number;
+  run_all: boolean;
+  approval_fingerprint: string | null;
+}
+
+export interface SafetyFlagView {
+  statement_index: number;
+  start: number;
+  end: number;
+  statement_type: string;
+  object_name: string | null;
+  reason: string;
+}
+
+export interface ExecutionStartResponse {
+  status: string;
+  execution_id: string | null;
+  fingerprint: string | null;
+  safety_flags: SafetyFlagView[];
+  message: string;
+}
+
+export interface ResultBatchControlRequest {
+  execution_id: string;
+  result_set_id: string;
+  sequence: number;
+}
+
+export interface ResultControlRequest {
+  execution_id: string;
+  result_set_id: string;
+}
+
+export interface ExecutionIdRequest {
+  execution_id: string;
+}
+
+export interface TransactionModeRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  automatic: boolean;
+}
+
+export interface ResultColumnView {
+  name: string;
+  declared_type: string;
+  nullable: boolean | null;
+}
+
+export interface TaggedValueView {
+  value_type: string;
+  text: string | null;
+  boolean: boolean | null;
+  bytes_base64: string | null;
+  timezone_or_offset: string | null;
+}
+
+export interface ResultRowView {
+  values: TaggedValueView[];
+}
+
+export interface ExecutionEventView {
+  event_type: string;
+  execution_id: string;
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  result_set_id: string | null;
+  sequence: number | null;
+  statement_index: number | null;
+  statement_start: number | null;
+  statement_end: number | null;
+  statement_count: number | null;
+  statements_completed: number | null;
+  columns: ResultColumnView[];
+  rows: ResultRowView[];
+  received_rows: number;
+  retained_bytes: number;
+  rows_affected: number | null;
+  duration_ms: number | null;
+  terminal_state: string | null;
+  capped: boolean;
+  transaction: TransactionStateView | null;
+  error: string | null;
+  error_category: string | null;
+  retryable: boolean | null;
+  cancel_confirmed: boolean | null;
+}
+
+export interface ExportResultRequest {
+  execution_id: string;
+  result_set_id: string;
+  format: string;
+  row_indexes: number[];
+  null_token: string;
+  view_label: string;
+}
+
+export interface ExportResultResponse {
+  completed: boolean;
+  cancelled: boolean;
+  rows_written: number;
+  message: string;
+}
+
 export interface QueryNotCommands {
   application_status: { request: null; response: ApplicationStatusResponse };
   bootstrap_workspace: { request: null; response: BootstrapWorkspaceResponse };
@@ -195,6 +434,67 @@ export interface QueryNotCommands {
   close_offline_tab: { request: TabIdRequest; response: WorkspaceSaveResponse };
   pick_sql_file: { request: null; response: FilePickerResponse };
   pick_sqlite_file: { request: null; response: FilePickerResponse };
+  pick_new_sqlite_file: { request: null; response: FilePickerResponse };
+  test_profile_connection: {
+    request: ProfileIdRequest;
+    response: ConnectionInfoView;
+  };
+  connect_profile: { request: ProfileIdRequest; response: ConnectionInfoView };
+  disconnect_profile: {
+    request: ProfileIdRequest;
+    response: FileActionResponse;
+  };
+  open_tab_session: { request: ProfileTabRequest; response: SessionView };
+  close_tab_session: { request: SessionRequest; response: FileActionResponse };
+  load_schema_namespaces: {
+    request: ProfileIdRequest;
+    response: SchemaNamespacesResponse;
+  };
+  load_schema_objects: {
+    request: SchemaNamespaceRequest;
+    response: SchemaObjectsResponse;
+  };
+  load_schema_object_detail: {
+    request: SchemaObjectRequest;
+    response: SchemaObjectDetailView;
+  };
+  format_sql: { request: FormatSqlRequest; response: FormatSqlResponse };
+  start_execution: {
+    request: StartExecutionRequest;
+    response: ExecutionStartResponse;
+  };
+  ack_result_batch: {
+    request: ResultBatchControlRequest;
+    response: FileActionResponse;
+  };
+  load_more_results: {
+    request: ResultControlRequest;
+    response: FileActionResponse;
+  };
+  discard_result: {
+    request: ResultControlRequest;
+    response: FileActionResponse;
+  };
+  cancel_execution: {
+    request: ExecutionIdRequest;
+    response: FileActionResponse;
+  };
+  set_transaction_mode: {
+    request: TransactionModeRequest;
+    response: TransactionStateView;
+  };
+  commit_transaction: {
+    request: SessionRequest;
+    response: TransactionStateView;
+  };
+  rollback_transaction: {
+    request: SessionRequest;
+    response: TransactionStateView;
+  };
+  export_result: {
+    request: ExportResultRequest;
+    response: ExportResultResponse;
+  };
   diagnostics_preview: { request: null; response: DiagnosticsPreviewView };
   export_diagnostics: {
     request: DiagnosticsPreviewView;
@@ -204,4 +504,8 @@ export interface QueryNotCommands {
     request: ConfirmedActionRequest;
     response: FileActionResponse;
   };
+}
+
+export interface QueryNotEvents {
+  query_execution: ExecutionEventView;
 }

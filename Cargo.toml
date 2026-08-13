@@ -11,6 +11,7 @@ rust-version = "1.94"
 
 [workspace.dependencies]
 async-trait = "0.1.89"
+base64 = "0.22.1"
 futures-util = "0.3.31"
 keyring = "4.1.6"
 secrecy = { version = "0.10.3", features = ["serde"] }

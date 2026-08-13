@@ -8,7 +8,7 @@ QueryNot is a pre-alpha, local-first desktop SQL client from Not Projects.
 
 > Query your data, not your patience.
 
-The planned stack is Rust, Tauri 2, Svelte, and TypeScript. Treat those choices as approved direction, but do not claim components, commands, database drivers, or supported engines exist until they are checked into this repository.
+The implemented stack is Rust, Tauri 2, Svelte, and TypeScript. Continue to verify checked-in commands, adapters, and evidence before describing any behavior or support claim.
 
 ## Canonical Working Directory
 
@@ -34,7 +34,7 @@ Then inspect the actual repository state and current branch before proposing cha
 
 ## Current State
 
-The repository contains the Phase 0 scaffold and a Phase 1 secure local foundation: generated native contracts, non-secret profiles, keyring/session-secret abstractions, an application-owned SQLite store, settings, redacted diagnostics/logging, native file grants, eight explicit state machines, ownership checks, and an offline draft-restoring Svelte workbench. It intentionally has no database connect or SQL-execution command yet. Cross-platform Phase 1 vault/accessibility evidence and every later release phase remain incomplete; no compatibility row is a release support claim.
+The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, and Phase 2 SQLite vertical slice. The implemented native surface includes explicit SQLite file profiles, isolated metadata and tab sessions, progressive schema metadata/cache, statement planning and destructive approval, transactions, cancellation, bounded acknowledged result streaming, cursor expiry, typed values, and atomic received-row export. The Svelte workbench uses CodeMirror and a virtualized result grid. Cross-platform Phase 1/2 evidence, MySQL-family parity, Phase 4 productivity/editing, Phase 5 release validation, and Phase 6 follow-up remain incomplete; no compatibility row is a release support claim.
 
 ## Verified Commands
 
@@ -51,6 +51,8 @@ The repository contains the Phase 0 scaffold and a Phase 1 secure local foundati
 - `cargo deny check advisories licenses bans sources` — Rust advisory, license, wildcard, and source policy using `cargo-deny 0.20.2`.
 - `npm run tauri -- build` — production desktop binary build; Phase 0 has bundling disabled.
 - `npm run verify:phase1` — clean-tree, commit-addressed Phase 1 local validation and evidence generation; real OS-vault and manual target-platform procedures remain separate gates.
+- `npm run benchmark:phase2` — 30-sample release-build SQLite ordinary-result first-batch benchmark after one discarded setup run.
+- `npm run verify:phase2` — clean-tree, commit-addressed Phase 2 local validation, benchmark, desktop build, and evidence generation; native target-platform performance and manual review remain separate gates.
 - `npm run test:feasibility` — exact disposable network-database feasibility run; requires Docker and retains a redacted report.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — checksum-pinned Linux fallback that installs nothing, uses random loopback ports and verified TLS, and retains the same redacted report.
 

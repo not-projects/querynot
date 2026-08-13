@@ -216,6 +216,43 @@ impl OwnershipRegistry {
         Ok(())
     }
 
+    pub fn authorize_session(
+        &self,
+        window_id: WindowId,
+        profile_id: ProfileId,
+        tab_id: TabId,
+        session_id: NativeSessionId,
+    ) -> Result<(), OwnershipError> {
+        let expected = SessionOwner {
+            window_id,
+            profile_id,
+            tab_id,
+        };
+        (self.sessions.get(&session_id) == Some(&expected))
+            .then_some(())
+            .ok_or(OwnershipError::NotOwned)
+    }
+
+    pub fn unregister_session(
+        &mut self,
+        window_id: WindowId,
+        profile_id: ProfileId,
+        tab_id: TabId,
+        session_id: NativeSessionId,
+    ) -> Result<(), OwnershipError> {
+        self.authorize_session(window_id, profile_id, tab_id, session_id)?;
+        if self.executions.values().any(|owner| {
+            owner.window_id == window_id
+                && owner.profile_id == profile_id
+                && owner.tab_id == tab_id
+                && owner.session_id == session_id
+        }) {
+            return Err(OwnershipError::NotOwned);
+        }
+        self.sessions.remove(&session_id);
+        Ok(())
+    }
+
     pub fn authorize_execution(
         &self,
         window_id: WindowId,

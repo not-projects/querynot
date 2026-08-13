@@ -40,7 +40,7 @@ describe('Phase 1 native boundaries', () => {
     }
   });
 
-  it('has no query-execution command and no frontend filesystem or network capability', () => {
+  it('keeps query execution behind explicit native commands and grants no frontend filesystem or network capability', () => {
     const contract = JSON.parse(read('contracts/querynot.v1.json')) as {
       commands: Record<string, unknown>;
     };
@@ -49,7 +49,8 @@ describe('Phase 1 native boundaries', () => {
     };
 
     expect(Object.keys(contract.commands)).not.toContain('execute_sql');
-    expect(Object.keys(contract.commands)).not.toContain('connect_profile');
+    expect(Object.keys(contract.commands)).toContain('start_execution');
+    expect(Object.keys(contract.commands)).toContain('connect_profile');
     expect(
       capability.permissions.some((permission) =>
         /shell|process|http|env|fs:allow/.test(permission)

@@ -302,6 +302,52 @@ impl LocalStore {
         }
     }
 
+    pub async fn save_schema_cache<T: serde::Serialize>(
+        &self,
+        profile_id: ProfileId,
+        cache_key: &str,
+        metadata: &T,
+    ) -> Result<(), StoreError> {
+        if cache_key.is_empty() || cache_key.len() > 1_024 {
+            return Err(StoreError::InvalidData);
+        }
+        let serialized = serde_json::to_string(metadata).map_err(|_| StoreError::InvalidData)?;
+        if serialized.len() > 16 * 1024 * 1024 {
+            return Err(StoreError::InvalidData);
+        }
+        sqlx::query(
+            "INSERT INTO schema_cache (profile_id, cache_key, metadata_json) VALUES (?, ?, ?) ON CONFLICT(profile_id, cache_key) DO UPDATE SET metadata_json = excluded.metadata_json",
+        )
+        .bind(profile_id.to_string())
+        .bind(cache_key)
+        .bind(serialized)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| StoreError::Unavailable)?;
+        Ok(())
+    }
+
+    pub async fn load_schema_cache<T: serde::de::DeserializeOwned>(
+        &self,
+        profile_id: ProfileId,
+        cache_key: &str,
+    ) -> Result<Option<T>, StoreError> {
+        if cache_key.is_empty() || cache_key.len() > 1_024 {
+            return Err(StoreError::InvalidData);
+        }
+        let serialized: Option<String> = sqlx::query_scalar(
+            "SELECT metadata_json FROM schema_cache WHERE profile_id = ? AND cache_key = ?",
+        )
+        .bind(profile_id.to_string())
+        .bind(cache_key)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| StoreError::Unavailable)?;
+        serialized
+            .map(|metadata| serde_json::from_str(&metadata).map_err(|_| StoreError::InvalidData))
+            .transpose()
+    }
+
     pub async fn begin_profile_deletion(
         &self,
         profile_id: ProfileId,
@@ -721,6 +767,50 @@ mod tests {
         assert_eq!(store.load_settings().await.unwrap(), reset);
         assert_eq!(store.profile(profile.id).await.unwrap(), profile);
         assert_eq!(store.load_workspace().await.unwrap(), workspace);
+    }
+
+    #[tokio::test]
+    async fn schema_cache_is_typed_bounded_and_removed_with_its_profile() {
+        let directory = tempfile::tempdir().unwrap();
+        let store = LocalStore::bootstrap(directory.path().join("querynot.sqlite3"))
+            .await
+            .store
+            .unwrap();
+        let profile = profile(100);
+        store.save_profile(&profile).await.unwrap();
+        let cache_key = "sqlite:3.50.4:main:objects";
+        let cached = vec!["table_one".to_owned(), "view_two".to_owned()];
+
+        store
+            .save_schema_cache(profile.id, cache_key, &cached)
+            .await
+            .unwrap();
+        assert_eq!(
+            store
+                .load_schema_cache::<Vec<String>>(profile.id, cache_key)
+                .await
+                .unwrap(),
+            Some(cached)
+        );
+        assert_eq!(
+            store
+                .save_schema_cache(profile.id, "", &Vec::<String>::new())
+                .await,
+            Err(StoreError::InvalidData)
+        );
+
+        let vault = DeletionVault::default();
+        assert_eq!(
+            delete_profile_two_step(&store, &vault, profile.id, false, false, 101).await,
+            ProfileDeletionOutcome::Deleted
+        );
+        assert_eq!(
+            store
+                .load_schema_cache::<Vec<String>>(profile.id, cache_key)
+                .await
+                .unwrap(),
+            None
+        );
     }
 
     #[tokio::test]

@@ -5,6 +5,7 @@ use querynot_core::generated::contracts::*;
 use querynot_core::ownership::OwnershipRegistry;
 use querynot_core::profile::{ConnectionProfile, ConnectionTarget, TlsMode};
 use querynot_core::settings::{AppSettings, ThemePreference};
+use querynot_core::sqlite::create_sqlite_file as create_sqlite_database_file;
 use querynot_core::state::LocalStoreState;
 use querynot_core::store::{
     LocalStore, ProfileDeletionOutcome, delete_profile_two_step, unix_time_ms,
@@ -16,7 +17,7 @@ use secrecy::SecretString;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
@@ -35,17 +36,18 @@ struct GrantedFile {
 }
 
 pub(crate) struct AppRuntimeState {
-    store: Option<LocalStore>,
+    pub(crate) store: Option<LocalStore>,
     store_state: LocalStoreState,
     store_message: Option<String>,
-    settings: Mutex<AppSettings>,
+    pub(crate) settings: Mutex<AppSettings>,
     vault: KeyringVault,
     session_secrets: Mutex<SessionSecretStore>,
     file_grants: Mutex<HashMap<FileGrantId, GrantedFile>>,
-    ownership: Mutex<OwnershipRegistry>,
+    pub(crate) ownership: Arc<Mutex<OwnershipRegistry>>,
+    pub(crate) phase2: crate::phase2::Phase2Runtime,
     operational_log: Mutex<LocalOperationalLog>,
     data_dir: PathBuf,
-    window_id: WindowId,
+    pub(crate) window_id: WindowId,
 }
 
 impl AppRuntimeState {
@@ -89,7 +91,8 @@ impl AppRuntimeState {
             vault: KeyringVault,
             session_secrets: Mutex::new(SessionSecretStore::default()),
             file_grants: Mutex::new(HashMap::new()),
-            ownership: Mutex::new(ownership),
+            ownership: Arc::new(Mutex::new(ownership)),
+            phase2: crate::phase2::Phase2Runtime::default(),
             operational_log: Mutex::new(operational_log),
             data_dir,
             window_id,
@@ -97,6 +100,7 @@ impl AppRuntimeState {
     }
 
     pub(crate) fn cleanup_window(&self) {
+        self.phase2.cleanup();
         if let Ok(mut ownership) = self.ownership.lock() {
             let _ = ownership.cleanup_window(self.window_id);
         }
@@ -113,6 +117,9 @@ impl AppRuntimeState {
 pub(crate) async fn bootstrap_workspace(
     state: State<'_, AppRuntimeState>,
 ) -> Result<BootstrapWorkspaceResponse, QueryNotError> {
+    // Bootstrap is also the frontend-reload boundary. Invalidate native jobs,
+    // cursors, sessions, and metadata resources before rebuilding ownership.
+    state.phase2.cleanup();
     let (profiles, workspace) = match &state.store {
         Some(store) => (store.list_profiles().await?, store.load_workspace().await?),
         None => (Vec::new(), WorkspaceSnapshot::default()),
@@ -167,6 +174,13 @@ pub(crate) async fn update_profile(
 ) -> Result<ProfileView, QueryNotError> {
     let store = available_store(&state)?;
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    if state.phase2.profile_is_connected(profile_id)
+        || lock(&state.ownership)?.has_active_profile_resources(profile_id)
+    {
+        return Err(QueryNotError::authorization(
+            "Disconnect this profile's metadata and tab sessions before editing it.",
+        ));
+    }
     let existing = store.profile(profile_id).await?;
     let profile = profile_from_input(&state, request.profile, Some(&existing), unix_time_ms())?;
     store.save_profile(&profile).await?;
@@ -210,7 +224,9 @@ pub(crate) async fn delete_profile(
         ));
     }
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
-    if lock(&state.ownership)?.has_active_profile_resources(profile_id) {
+    if state.phase2.profile_is_connected(profile_id)
+        || lock(&state.ownership)?.has_active_profile_resources(profile_id)
+    {
         return Err(QueryNotError::authorization(
             "Disconnect this profile and resolve active jobs, transactions, and staged edits before deletion.",
         ));
@@ -544,6 +560,41 @@ pub(crate) async fn pick_sqlite_file(
         ));
     }
     let grant_id = grant_file(&state, path.clone(), FilePurpose::SqliteDatabase)?;
+    Ok(FilePickerResponse {
+        cancelled: false,
+        file_grant_id: Some(grant_id.to_string()),
+        tab_id: None,
+        display_name: Some(display_name(&path)),
+        content: None,
+    })
+}
+
+#[tauri::command]
+pub(crate) async fn pick_new_sqlite_file(
+    app: AppHandle,
+    state: State<'_, AppRuntimeState>,
+) -> Result<FilePickerResponse, QueryNotError> {
+    let selected = app
+        .dialog()
+        .file()
+        .add_filter("SQLite databases", &["sqlite3", "sqlite", "db"])
+        .set_file_name("database.sqlite3")
+        .set_title("Create SQLite database")
+        .blocking_save_file();
+    let Some(selected) = selected else {
+        return Ok(cancelled_file_picker());
+    };
+    let path = selected.into_path().map_err(|_| {
+        QueryNotError::authorization("Only local filesystem SQLite files are supported.")
+    })?;
+    create_sqlite_database_file(&path).await?;
+    let grant_id = grant_file(&state, path.clone(), FilePurpose::SqliteDatabase)?;
+    log_event(
+        &state,
+        DiagnosticArea::Workspace,
+        "sqlite_file_created",
+        None,
+    );
     Ok(FilePickerResponse {
         cancelled: false,
         file_grant_id: Some(grant_id.to_string()),
@@ -965,7 +1016,7 @@ fn resolve_grant(
     Ok(granted.path.clone())
 }
 
-fn available_store(state: &AppRuntimeState) -> Result<&LocalStore, QueryNotError> {
+pub(crate) fn available_store(state: &AppRuntimeState) -> Result<&LocalStore, QueryNotError> {
     state.store.as_ref().ok_or_else(|| {
         QueryNotError::local_storage(
             state.store_message.clone().unwrap_or_else(|| {
@@ -976,13 +1027,13 @@ fn available_store(state: &AppRuntimeState) -> Result<&LocalStore, QueryNotError
     })
 }
 
-fn lock<T>(mutex: &Mutex<T>) -> Result<MutexGuard<'_, T>, QueryNotError> {
+pub(crate) fn lock<T>(mutex: &Mutex<T>) -> Result<MutexGuard<'_, T>, QueryNotError> {
     mutex
         .lock()
         .map_err(|_| QueryNotError::internal("Native state lock is unavailable."))
 }
 
-fn parse_id<T>(value: &str) -> Result<T, QueryNotError>
+pub(crate) fn parse_id<T>(value: &str) -> Result<T, QueryNotError>
 where
     T: FromStr,
 {

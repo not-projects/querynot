@@ -3101,10 +3101,12 @@ dependencies = [
 name = "querynot"
 version = "0.0.0"
 dependencies = [
+ "base64 0.22.1",
  "querynot-core",
  "secrecy",
  "serde",
  "serde_json",
+ "sqlformat",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -3116,6 +3118,7 @@ name = "querynot-core"
 version = "0.0.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "futures-util",
  "keyring",
  "proptest",

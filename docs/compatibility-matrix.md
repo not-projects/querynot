@@ -1,6 +1,6 @@
 # Compatibility and conformance matrix
 
-Status: Phase 0 candidate matrix; not a support claim
+Status: Phase 2 development matrix; not a support claim
 Selection date: 2026-08-13
 
 No row becomes supported until Phase 5 retains native packaging, installation, end-to-end, accessibility, and applicable adapter conformance evidence for the exact patch/runtime combination.
@@ -20,9 +20,9 @@ No row becomes supported until Phase 5 retains native packaging, installation, e
 
 ## Database fixtures
 
-| Matrix ID | Exact selected patch | Authentication | TLS | Lifecycle | Phase 0 evidence |
+| Matrix ID | Exact selected patch | Authentication | TLS | Lifecycle | Current evidence |
 | --- | --- | --- | --- | --- | --- |
-| `sqlite-bundled` | SQLx/libsqlite3-sys bundled SQLite selected by `Cargo.lock` | File permissions | Not applicable | Current bundled library | In-memory feasibility; release file-format/read-only conformance pending |
+| `sqlite-bundled` | 3.51.3 through SQLx/libsqlite3-sys in the Phase 2 local build | File permissions | Not applicable | Current bundled library | Phase 2 real-file metadata, read-only execution, transactions, cancellation, streaming, fidelity, and export journey pass locally; target-platform release conformance pending |
 | `mysql-5.7.44` | 5.7.44 | `mysql_native_password` | Verified TLS 1.2 required for protected connections | Legacy/EOL; persistent warning required | Disposable feasibility target |
 | `mysql-8.0.46` | 8.0.46 | `caching_sha2_password` over protected transport | System trust/custom CA/client certificate matrix pending | Legacy line at selection date | Phase 3 conformance pending |
 | `mysql-8.4.10` | 8.4.10 LTS | `caching_sha2_password` over protected transport | Phase 0 generated-CA identity verification at TLS 1.2 passes; system trust/custom CA/client certificate matrix pending | Maintained LTS | Disposable feasibility target passes |

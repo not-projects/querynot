@@ -74,4 +74,20 @@ impl QueryNotError {
             context: None,
         }
     }
+
+    #[must_use]
+    pub fn database(category: ErrorCategory, message: impl Into<String>, retryable: bool) -> Self {
+        Self {
+            category,
+            safe_message: message.into(),
+            retryable,
+            safe_detail: None,
+            context: None,
+        }
+    }
+
+    #[must_use]
+    pub fn cancelled(message: impl Into<String>) -> Self {
+        Self::database(ErrorCategory::Cancelled, message, false)
+    }
 }

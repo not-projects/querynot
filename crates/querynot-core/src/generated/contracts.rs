@@ -190,3 +190,273 @@ pub struct FileActionResponse {
 pub struct ConfirmedActionRequest {
     pub confirmed: bool,
 }
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct AdapterCapabilitiesView {
+    pub metadata: bool,
+    pub streaming: bool,
+    pub cancellation: bool,
+    pub transactions: bool,
+    pub multiple_results: bool,
+    pub safe_table_mutations: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ConnectionInfoView {
+    pub profile_id: String,
+    pub profile_name: String,
+    pub engine: String,
+    pub exact_version: String,
+    pub dialect: String,
+    pub context: String,
+    pub read_only: bool,
+    pub capabilities: AdapterCapabilitiesView,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProfileTabRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SessionRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SessionView {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub state: String,
+    pub transaction: TransactionStateView,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TransactionStateView {
+    pub automatic: bool,
+    pub certainty: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaNamespaceView {
+    pub name: String,
+    pub state: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaNamespacesResponse {
+    pub profile_id: String,
+    pub namespaces: Vec<SchemaNamespaceView>,
+    pub stale: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaObjectView {
+    pub namespace: String,
+    pub name: String,
+    pub kind: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaNamespaceRequest {
+    pub profile_id: String,
+    pub namespace: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaObjectsResponse {
+    pub profile_id: String,
+    pub namespace: String,
+    pub objects: Vec<SchemaObjectView>,
+    pub stale: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaObjectRequest {
+    pub profile_id: String,
+    pub namespace: String,
+    pub object_name: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaColumnView {
+    pub name: String,
+    pub declared_type: String,
+    pub nullable: bool,
+    pub primary_key_position: u32,
+    pub default_expression: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaForeignKeyView {
+    pub id: i64,
+    pub sequence: i64,
+    pub referenced_table: String,
+    pub from_column: String,
+    pub to_column: Option<String>,
+    pub on_update: String,
+    pub on_delete: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaIndexView {
+    pub name: String,
+    pub unique: bool,
+    pub origin: String,
+    pub columns: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaObjectDetailView {
+    pub object: SchemaObjectView,
+    pub columns: Vec<SchemaColumnView>,
+    pub foreign_keys: Vec<SchemaForeignKeyView>,
+    pub indexes: Vec<SchemaIndexView>,
+    pub definition: Option<String>,
+    pub routines_supported: bool,
+    pub stale: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct FormatSqlRequest {
+    pub sql: String,
+    pub selection_start: Option<u32>,
+    pub selection_end: Option<u32>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct FormatSqlResponse {
+    pub sql: String,
+    pub selection_start: Option<u32>,
+    pub selection_end: Option<u32>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct StartExecutionRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub sql: String,
+    pub selection_start: Option<u32>,
+    pub selection_end: Option<u32>,
+    pub cursor: u32,
+    pub run_all: bool,
+    pub approval_fingerprint: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SafetyFlagView {
+    pub statement_index: u32,
+    pub start: u32,
+    pub end: u32,
+    pub statement_type: String,
+    pub object_name: Option<String>,
+    pub reason: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExecutionStartResponse {
+    pub status: String,
+    pub execution_id: Option<String>,
+    pub fingerprint: Option<String>,
+    pub safety_flags: Vec<SafetyFlagView>,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ResultBatchControlRequest {
+    pub execution_id: String,
+    pub result_set_id: String,
+    pub sequence: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ResultControlRequest {
+    pub execution_id: String,
+    pub result_set_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExecutionIdRequest {
+    pub execution_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TransactionModeRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub automatic: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ResultColumnView {
+    pub name: String,
+    pub declared_type: String,
+    pub nullable: Option<bool>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TaggedValueView {
+    pub value_type: String,
+    pub text: Option<String>,
+    pub boolean: Option<bool>,
+    pub bytes_base64: Option<String>,
+    pub timezone_or_offset: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ResultRowView {
+    pub values: Vec<TaggedValueView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExecutionEventView {
+    pub event_type: String,
+    pub execution_id: String,
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub result_set_id: Option<String>,
+    pub sequence: Option<u64>,
+    pub statement_index: Option<u32>,
+    pub statement_start: Option<u32>,
+    pub statement_end: Option<u32>,
+    pub statement_count: Option<u32>,
+    pub statements_completed: Option<u32>,
+    pub columns: Vec<ResultColumnView>,
+    pub rows: Vec<ResultRowView>,
+    pub received_rows: u32,
+    pub retained_bytes: u64,
+    pub rows_affected: Option<u64>,
+    pub duration_ms: Option<u64>,
+    pub terminal_state: Option<String>,
+    pub capped: bool,
+    pub transaction: Option<TransactionStateView>,
+    pub error: Option<String>,
+    pub error_category: Option<String>,
+    pub retryable: Option<bool>,
+    pub cancel_confirmed: Option<bool>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExportResultRequest {
+    pub execution_id: String,
+    pub result_set_id: String,
+    pub format: String,
+    pub row_indexes: Vec<u32>,
+    pub null_token: String,
+    pub view_label: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExportResultResponse {
+    pub completed: bool,
+    pub cancelled: bool,
+    pub rows_written: u32,
+    pub message: String,
+}

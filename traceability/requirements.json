@@ -55,10 +55,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-2"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-SQLITE-METADATA"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-2"
+        "PENDING-P5-SQLITE-FILE-DIALOG-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -68,7 +69,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -362,10 +363,10 @@
         "PHASE-3"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-13"
+        "P2-AUTO-SQLITE-METADATA"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-13"
+        "PENDING-P3-COMPATIBILITY-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -375,7 +376,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -624,10 +625,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-7"
+        "P2-AUTO-SESSION-ISOLATION",
+        "P2-AUTO-CANCELLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-7"
+        "PENDING-P3-CONCURRENT-ADAPTER-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -635,7 +637,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -648,10 +650,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-8"
+        "P2-AUTO-SESSION-ISOLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-8"
+        "PENDING-P3-CONTEXT-CHANGE-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -659,7 +661,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -751,10 +753,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-12"
+        "P2-AUTO-SQLITE-METADATA",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-12"
+        "PENDING-P3-METADATA-SESSION-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -762,7 +765,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -802,10 +805,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-1"
+        "P2-AUTO-SQLITE-METADATA"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-1"
+        "PENDING-P3-SCHEMA-OBJECT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -815,7 +818,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -828,10 +831,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-2"
+        "P2-AUTO-SQLITE-METADATA",
+        "P2-AUTO-EDITOR"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-2"
+        "PENDING-P5-SCHEMA-STATE-ACCESSIBILITY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -841,7 +845,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -854,10 +858,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-3"
+        "P2-AUTO-SQLITE-METADATA"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-3"
+        "PENDING-P3-SCHEMA-REFRESH-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -867,7 +871,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -880,10 +884,10 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-4"
+        "P2-AUTO-EDITOR"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-4"
+        "PENDING-P5-SCHEMA-KEYBOARD-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -893,7 +897,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -906,10 +910,10 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-5"
+        "P2-AUTO-SQLITE-METADATA"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-5"
+        "PENDING-P3-SCHEMA-CAPABILITY-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -919,7 +923,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -932,10 +936,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-6"
+        "P2-AUTO-SQLITE-METADATA"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-6"
+        "PENDING-P4-SCHEMA-ENTRY-ACTIONS"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -945,7 +949,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -958,10 +962,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-7"
+        "P2-AUTO-SCHEMA-CACHE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-7"
+        "PENDING-P3-SCHEMA-CACHE-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -971,7 +975,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -984,10 +988,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SCH-8"
+        "P2-AUTO-METADATA-BOUNDARY",
+        "P2-AUTO-VIRTUAL-GRID"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SCH-8"
+        "PENDING-P5-HOSTILE-METADATA-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -997,7 +1002,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1010,10 +1015,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-1"
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SELECTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-1"
+        "PENDING-P3-DIALECT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1023,7 +1029,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1036,10 +1042,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-2"
+        "P2-AUTO-EDITOR"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-2"
+        "PENDING-P5-EDITOR-INTERACTION-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1049,7 +1055,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1062,10 +1068,10 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-3"
+        "P2-AUTO-EDITOR"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-3"
+        "PENDING-P4-FORMATTER-FIDELITY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1075,7 +1081,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1088,10 +1094,10 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-4"
+        "P2-AUTO-EDITOR"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-4"
+        "PENDING-P4-COMPLETION-FIDELITY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1101,7 +1107,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1114,10 +1120,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-5"
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SELECTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-5"
+        "PENDING-P4-DIAGNOSTICS-FIDELITY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1127,7 +1134,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1140,10 +1147,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-6"
+        "P2-AUTO-SELECTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-6"
+        "PENDING-P3-SELECTION-DIALECT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1153,7 +1160,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1166,10 +1173,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-7"
+        "P2-AUTO-SELECTION",
+        "P2-AUTO-SQLITE-JOURNEY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-7"
+        "PENDING-P3-MULTI-STATEMENT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1179,7 +1187,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1192,10 +1200,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-8"
+        "P2-AUTO-EDITOR"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-8"
+        "PENDING-P4-SHORTCUT-DOCUMENTATION",
+        "PENDING-P5-SHORTCUT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1205,7 +1214,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1218,10 +1227,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-9"
+        "P2-AUTO-SELECTION",
+        "P2-AUTO-DESTRUCTIVE-SAFETY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-9"
+        "PENDING-P3-PARSER-DIALECT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1231,7 +1241,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1244,10 +1254,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EDT-10"
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SQLITE-JOURNEY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EDT-10"
+        "PENDING-P4-NO-IMPLICIT-EXECUTION-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1257,7 +1268,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1270,10 +1281,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-1"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-1"
+        "PENDING-P5-NATIVE-BOUNDARY-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1283,7 +1295,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1296,10 +1308,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-2"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-CANCELLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-2"
+        "PENDING-P5-EXECUTION-LIFECYCLE-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1309,7 +1322,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1322,10 +1335,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-3"
+        "P2-AUTO-CANCELLATION",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-3"
+        "PENDING-P3-CANCELLATION-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1335,7 +1349,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1348,10 +1362,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-4"
+        "P2-AUTO-SESSION-ISOLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-4"
+        "PENDING-P3-TRANSACTION-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1361,7 +1375,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1374,10 +1388,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-5"
+        "P2-AUTO-DESTRUCTIVE-SAFETY",
+        "P2-AUTO-SELECTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-5"
+        "PENDING-P3-DESTRUCTIVE-DIALECT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1387,7 +1402,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1400,10 +1415,10 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-6"
+        "P2-AUTO-APPROVAL-SINGLE-USE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-6"
+        "PENDING-P5-DESTRUCTIVE-DIALOG-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1413,7 +1428,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1426,10 +1441,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-7"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-CANCELLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-7"
+        "PENDING-P3-ERROR-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1439,7 +1455,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1452,10 +1468,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-8"
+        "P2-AUTO-SESSION-ISOLATION",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-8"
+        "PENDING-P5-CONCURRENT-TAB-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1465,7 +1482,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1478,10 +1495,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-9"
+        "P2-AUTO-SESSION-ISOLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-9"
+        "PENDING-P3-SESSION-CONTINUITY-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1491,7 +1508,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1504,10 +1521,10 @@
         "PHASE-3"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-10"
+        "P2-AUTO-SESSION-ISOLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-10"
+        "PENDING-P3-TRANSACTION-RECONCILIATION-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1517,7 +1534,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1530,10 +1547,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-11"
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P2-AUTO-EVENT-INTEGRITY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-11"
+        "PENDING-P3-CONNECTION-LOSS-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1543,7 +1561,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1556,10 +1574,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-12"
+        "P2-AUTO-CANCELLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-12"
+        "PENDING-P3-PROTOCOL-TIMEOUT-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1569,7 +1587,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1582,10 +1600,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-13"
+        "P2-AUTO-DESTRUCTIVE-SAFETY",
+        "P2-AUTO-APPROVAL-SINGLE-USE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-13"
+        "PENDING-P3-CONFIRMATION-DIALECT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1595,7 +1614,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1608,10 +1627,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-EXE-14"
+        "P2-AUTO-SESSION-ISOLATION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-EXE-14"
+        "PENDING-P3-MANUAL-TRANSACTION-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1621,7 +1640,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1634,10 +1653,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-1"
+        "P2-AUTO-STREAM-BACKPRESSURE",
+        "P2-AUTO-EVENT-INTEGRITY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-1"
+        "PENDING-P3-STREAMING-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1647,7 +1667,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1660,10 +1680,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-2"
+        "P2-AUTO-VIRTUAL-GRID",
+        "P2-PERF-FIRST-BATCH"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-2"
+        "PENDING-P5-WEBVIEW-FPS-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1673,7 +1694,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1686,10 +1707,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-3"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-EVENT-INTEGRITY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-3"
+        "PENDING-P3-MULTIPLE-RESULT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1699,7 +1721,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1712,10 +1734,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-4"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-EXPORT-JSON"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-4"
+        "PENDING-P3-TYPE-FIDELITY-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1725,7 +1748,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -1738,10 +1761,10 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-5"
+        "P2-AUTO-VIRTUAL-GRID"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-5"
+        "PENDING-P5-GRID-INTERACTION-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1751,7 +1774,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1764,10 +1787,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-6"
+        "P2-AUTO-VIRTUAL-GRID"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-6"
+        "PENDING-P5-LARGE-VALUE-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1777,7 +1800,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1790,10 +1813,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-7"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-EXPORT-INTERRUPTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-7"
+        "PENDING-P5-EXPORT-DIALOG-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1803,7 +1827,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1816,10 +1840,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-8"
+        "P2-AUTO-CANCELLATION",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-8"
+        "PENDING-P5-RESOURCE-MEMORY-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1829,7 +1854,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1842,10 +1867,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-9"
+        "P2-AUTO-CURSOR-EXPIRY",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-9"
+        "PENDING-P5-CURSOR-LIFETIME-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1855,7 +1881,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1868,10 +1894,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-10"
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P2-AUTO-STREAM-BACKPRESSURE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-10"
+        "PENDING-P3-EVENT-INTEGRITY-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1881,7 +1908,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1894,10 +1921,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-11"
+        "P2-AUTO-EXPORT-CSV"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-11"
+        "PENDING-P5-CSV-DIALOG-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1907,7 +1934,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1920,10 +1947,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-12"
+        "P2-AUTO-EXPORT-JSON"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-12"
+        "PENDING-P5-JSON-EXPORT-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1933,7 +1960,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1946,10 +1973,12 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-13"
+        "P2-AUTO-VIRTUAL-GRID",
+        "P2-AUTO-EXPORT-CSV",
+        "P2-AUTO-EXPORT-JSON"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-13"
+        "PENDING-P5-HOSTILE-VALUE-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1959,7 +1988,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -1972,10 +2001,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-RES-14"
+        "P2-AUTO-VIRTUAL-GRID"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-RES-14"
+        "PENDING-P5-CLIPBOARD-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1985,7 +2014,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -2749,15 +2778,16 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-05"
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SELECTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-05"
+        "PENDING-P4-EDITOR-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -2770,15 +2800,17 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-06"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-STREAM-BACKPRESSURE",
+        "P2-AUTO-VIRTUAL-GRID"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-06"
+        "PENDING-P3-P4-RESULT-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -2791,15 +2823,17 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-07"
+        "P2-AUTO-VIRTUAL-GRID",
+        "P2-PERF-FIRST-BATCH",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-07"
+        "PENDING-P5-NATIVE-PERFORMANCE-MATRIX"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -2812,15 +2846,16 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-08"
+        "P2-AUTO-SQLITE-METADATA",
+        "P2-AUTO-SCHEMA-CACHE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-08"
+        "PENDING-P3-SCHEMA-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -2854,15 +2889,16 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-10"
+        "P2-AUTO-DESTRUCTIVE-SAFETY",
+        "P2-AUTO-APPROVAL-SINGLE-USE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-10"
+        "PENDING-P3-DESTRUCTIVE-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -2980,15 +3016,17 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-16"
+        "P2-AUTO-SESSION-ISOLATION",
+        "P2-AUTO-CANCELLATION",
+        "P2-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-16"
+        "PENDING-P3-CONNECTION-LOSS-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -3001,15 +3039,18 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-17"
+        "P2-AUTO-STREAM-BACKPRESSURE",
+        "P2-AUTO-CURSOR-EXPIRY",
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P2-AUTO-EXPORT-INTERRUPTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-17"
+        "PENDING-P3-RESULT-CONTRACT-MATRIX"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -3043,15 +3084,18 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-19"
+        "P1-AUTO-MIGRATION-ROLLBACK",
+        "P1-AUTO-VAULT-REFUSAL",
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P2-AUTO-EXPORT-INTERRUPTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-19"
+        "PENDING-P5-DISK-FULL-AND-RELOAD-MATRIX"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
