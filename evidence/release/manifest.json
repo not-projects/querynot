@@ -4,6 +4,10 @@
   "source_commit": null,
   "reviewed_artifacts": [],
   "checksums": [],
+  "phase_validation_reports": [
+    "evidence/phase-0/validation-report.json",
+    "evidence/phase-1/validation-report.json"
+  ],
   "dependency_license_vulnerability_report": "evidence/phase-0/dependency-review.json",
   "adapter_conformance_reports": [
     "evidence/phase-0/feasibility-report.json"
@@ -17,7 +21,8 @@
   "beta_record": null,
   "known_limitations": [
     "Phase 0 has commit-addressed local Linux validation; the configured cross-platform CI matrix still requires execution from a pushed commit.",
-    "Phase 1 through Phase 6 behavior and release evidence are not implemented or claimed."
+    "Phase 1 has commit-addressed local Linux automation and build evidence; real OS-vault integration, target-platform accessibility review, and cross-platform CI execution remain pending.",
+    "Phase 2 through Phase 6 behavior and release evidence are not implemented or claimed."
   ],
   "approved_exceptions": []
 }

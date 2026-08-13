@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "phase": 1,
+  "source_commit": "d040f6c991cedb5336ad9a099c455acce43e08a3",
+  "status": "pass_local",
+  "started_at": "2026-08-13T15:34:02.633Z",
+  "completed_at": "2026-08-13T15:35:45.359Z",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "node": "v22.22.1",
+    "npm": "10.9.4",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)"
+  },
+  "checks": [
+    {
+      "id": "P1-NPM-CI",
+      "command": "npm ci",
+      "status": "pass",
+      "duration_ms": 4954
+    },
+    {
+      "id": "P1-CONTRACTS",
+      "command": "npm run test:contracts",
+      "status": "pass",
+      "duration_ms": 514
+    },
+    {
+      "id": "P1-TRACEABILITY",
+      "command": "npm run test:traceability",
+      "status": "pass",
+      "duration_ms": 753
+    },
+    {
+      "id": "P1-SVELTE-CHECK",
+      "command": "npm run check",
+      "status": "pass",
+      "duration_ms": 2561
+    },
+    {
+      "id": "P1-FRONTEND-TEST",
+      "command": "npm run test",
+      "status": "pass",
+      "duration_ms": 2442
+    },
+    {
+      "id": "P1-FRONTEND-BUILD",
+      "command": "npm run build",
+      "status": "pass",
+      "duration_ms": 3910
+    },
+    {
+      "id": "P1-FORMAT",
+      "command": "npm run format:check",
+      "status": "pass",
+      "duration_ms": 1332
+    },
+    {
+      "id": "P1-RUSTFMT",
+      "command": "cargo fmt --all -- --check",
+      "status": "pass",
+      "duration_ms": 85
+    },
+    {
+      "id": "P1-CARGO-CHECK",
+      "command": "cargo check --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 286
+    },
+    {
+      "id": "P1-CARGO-TEST",
+      "command": "cargo test --locked --workspace",
+      "status": "pass",
+      "duration_ms": 774
+    },
+    {
+      "id": "P1-CLIPPY",
+      "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
+      "status": "pass",
+      "duration_ms": 312
+    },
+    {
+      "id": "P1-CARGO-DENY",
+      "command": "cargo deny check advisories licenses bans sources",
+      "status": "pass",
+      "duration_ms": 1389
+    },
+    {
+      "id": "P1-TAURI-BUILD",
+      "command": "npm run tauri -- build --no-bundle",
+      "status": "pass",
+      "duration_ms": 83414
+    }
+  ],
+  "executable_test_ids": {
+    "P1-AUTO-STATE-MACHINES": "querynot_core::state::tests::every_required_machine_has_valid_and_safe_invalid_transitions",
+    "P1-AUTO-OWNERSHIP": "querynot_core::ownership::tests::cross_profile_and_cross_window_access_fails_closed",
+    "P1-AUTO-RELOAD-CLEANUP": "querynot_core::ownership::tests::frontend_reload_produces_native_cleanup_plan",
+    "P1-AUTO-MIGRATION-ROLLBACK": "querynot_core::store::tests::migrations_are_forward_only_transactional_and_preserve_last_valid_version",
+    "P1-AUTO-STORE-CORRUPTION": "querynot_core::store::tests::corruption_never_causes_replacement_with_a_fresh_store",
+    "P1-AUTO-SECRET-EXCLUSION": "querynot_core::store::tests::local_store_contains_only_an_opaque_reference_never_secret_material",
+    "P1-AUTO-VAULT-REFUSAL": "querynot_core::vault::tests::rejected_replacement_preserves_existing_secret_and_never_formats_it",
+    "P1-AUTO-PROFILE-DELETION": "querynot_core::store::tests::deletion_is_recoverable_retriable_and_relabels_retained_drafts",
+    "P1-AUTO-OFFLINE-RESTORE": "querynot_core::workspace::tests::restoration_preserves_drafts_binding_order_and_context_without_execution_state",
+    "P1-AUTO-SETTINGS-RESET": "querynot_core::store::tests::settings_profiles_and_offline_workspace_round_trip",
+    "P1-AUTO-REDACTED-LOG": "querynot_core::diagnostics::tests::log_is_structured_bounded_retained_and_contains_no_arbitrary_sensitive_fields",
+    "P1-AUTO-FIRST-RUN-A11Y": "src/workbench.test.ts > offers every keyboard-reachable first-run route without execution controls",
+    "P1-AUTO-SETTINGS-A11Y": "src/workbench.test.ts > renders an accessible settings dialog with all documented local defaults",
+    "P1-AUTO-THEME-CONTRAST": "src/phase1-boundaries.test.ts > keeps normal text and semantic accents above WCAG AA contrast in every theme",
+    "P1-AUTO-FILE-PROVENANCE": "src/phase1-boundaries.test.ts > allocates tab IDs and file grants natively and never exposes a native SQLite path",
+    "P1-AUTO-NO-TELEMETRY": "src/phase1-boundaries.test.ts > has no query-execution command and no frontend filesystem or network capability"
+  },
+  "phase_gate": {
+    "local_store_transactional_migrations": "pass",
+    "vault_abstraction_and_fault_injection": "pass_fake_vault",
+    "secret_exclusion": "pass",
+    "required_state_machines": "8_of_8_pass",
+    "native_resource_ownership": "pass",
+    "native_file_grant_boundary": "pass",
+    "offline_restore_without_execution": "pass",
+    "settings_logs_and_diagnostics": "pass",
+    "local_linux_accessibility_automation": "pass",
+    "local_linux_desktop_build": "pass",
+    "real_os_vault_integration": "pending Windows/macOS/Linux desktop-platform integration procedure",
+    "target_platform_manual_accessibility": "pending Windows/macOS/Linux Phase 5 manual review",
+    "cross_platform_ci": "configured; Windows/macOS/Linux execution requires a pushed commit"
+  },
+  "release_blockers_remaining": [
+    "Real OS-vault behavior remains unverified on Windows, macOS, and Linux desktop sessions.",
+    "The Phase 1 shell has not completed target-platform manual keyboard, screen-reader, scale, narrow-width, and visual review.",
+    "Later phase connection, query, results, editing, packaging, dogfood, beta, and release gates remain incomplete."
+  ],
+  "failure": null
+}
