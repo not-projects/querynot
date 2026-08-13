@@ -26,7 +26,7 @@
     "Phase 0 has commit-addressed local Linux validation; the configured cross-platform CI matrix still requires execution from a pushed commit.",
     "Phase 1 has commit-addressed local Linux automation and build evidence; real OS-vault integration, target-platform accessibility review, and cross-platform CI execution remain pending.",
     "Phase 2 has commit-addressed local Linux SQLite journey, fault, hostile-value, result-contract, release-build benchmark, and desktop-build evidence; native target-platform WebView FPS/memory, accessibility, dialogs/clipboard, and manual safety review remain pending.",
-    "Phase 3 has local five-server MySQL/MariaDB conformance and implementation; the validation and conformance reports require an exact clean-commit rerun before the phase exit is claimed.",
+    "Phase 3 has commit-addressed local Linux five-server MySQL/MariaDB conformance, complete SQLite regression, dependency gates, and an optimized desktop build; native target-platform trust stores, interaction evidence, accessibility, and packaging remain pending Phase 5 procedures.",
     "Phase 4 through Phase 6 behavior and release evidence are not implemented or claimed."
   ],
   "approved_exceptions": []

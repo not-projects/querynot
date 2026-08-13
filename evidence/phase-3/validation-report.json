@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "phase": 3,
+  "source_commit": "50b9021bade96d08b932cad121975dbc509d09fe",
+  "status": "pass_local",
+  "started_at": "2026-08-13T18:51:25.886Z",
+  "completed_at": "2026-08-13T18:55:38.924Z",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "node": "v22.22.1",
+    "npm": "10.9.4",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)"
+  },
+  "checks": [
+    {
+      "id": "P3-NPM-CI",
+      "command": "npm ci",
+      "status": "pass",
+      "duration_ms": 5121
+    },
+    {
+      "id": "P3-CONTRACTS",
+      "command": "npm run test:contracts",
+      "status": "pass",
+      "duration_ms": 473
+    },
+    {
+      "id": "P3-TRACEABILITY",
+      "command": "npm run test:traceability",
+      "status": "pass",
+      "duration_ms": 483
+    },
+    {
+      "id": "P3-NPM-POLICY",
+      "command": "npm run test:dependencies",
+      "status": "pass",
+      "duration_ms": 542
+    },
+    {
+      "id": "P3-SVELTE-CHECK",
+      "command": "npm run check",
+      "status": "pass",
+      "duration_ms": 3075
+    },
+    {
+      "id": "P3-FRONTEND-TEST",
+      "command": "npm run test",
+      "status": "pass",
+      "duration_ms": 2828
+    },
+    {
+      "id": "P3-FRONTEND-BUILD",
+      "command": "npm run build",
+      "status": "pass",
+      "duration_ms": 3720
+    },
+    {
+      "id": "P3-FORMAT",
+      "command": "npm run format:check",
+      "status": "pass",
+      "duration_ms": 1662
+    },
+    {
+      "id": "P3-RUSTFMT",
+      "command": "cargo fmt --all -- --check",
+      "status": "pass",
+      "duration_ms": 170
+    },
+    {
+      "id": "P3-CARGO-CHECK",
+      "command": "cargo check --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 3009
+    },
+    {
+      "id": "P3-CARGO-TEST",
+      "command": "cargo test --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 383
+    },
+    {
+      "id": "P3-CLIPPY",
+      "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
+      "status": "pass",
+      "duration_ms": 318
+    },
+    {
+      "id": "P3-CARGO-DENY",
+      "command": "cargo deny --offline check advisories licenses bans sources",
+      "status": "pass",
+      "duration_ms": 865
+    },
+    {
+      "id": "P3-ADAPTER-CONFORMANCE",
+      "command": "npm run test:conformance:phase3",
+      "status": "pass",
+      "duration_ms": 117691
+    },
+    {
+      "id": "P3-TAURI-BUILD",
+      "command": "npm run tauri -- build --no-bundle",
+      "status": "pass",
+      "duration_ms": 112695
+    }
+  ],
+  "executable_test_ids": {
+    "P3-AUTO-ADAPTER-CONFORMANCE": "querynot-fixture-harness::check_querynot_adapter across all five exact archive fixtures",
+    "P3-AUTO-TLS-MATRIX": "adapter conformance > TLS 1.2 custom CA, private-CA system-trust rejection, and required client identity",
+    "P3-AUTO-AUTH-MATRIX": "adapter conformance > mysql_native_password and caching_sha2_password exact fixtures",
+    "P3-AUTO-METADATA-MATRIX": "adapter conformance > namespaces, tables, views, routines, columns, keys, indexes, and detail",
+    "P3-AUTO-RESULT-MATRIX": "adapter conformance > acknowledged streaming, typed edge values, zero rows, duplicate columns, and multiple results",
+    "P3-AUTO-TRANSACTION-MATRIX": "adapter conformance > manual rollback, server reconciliation, and implicit DDL commit",
+    "P3-AUTO-CANCELLATION-MATRIX": "adapter conformance > confirmed KILL QUERY and post-cancel session continuity",
+    "P3-AUTO-CONNECTION-LIFECYCLE": "querynot_lib::phase2::tests::connection_attempts_are_single_owner_cancellable_and_cleanup_safe",
+    "P3-AUTO-DIALECT-CONTRACT": "src/phase3-contracts.test.ts > Phase 3 MySQL-family adapter boundaries",
+    "P3-AUTO-SQLITE-REGRESSION": "querynot_core::tests::sqlite_vertical_slice::sqlite_read_only_query_stream_retain_and_export_journey"
+  },
+  "phase_gate": {
+    "exact_five_server_matrix": "pass_local",
+    "authentication_and_tls": "pass_local",
+    "metadata_dialect_and_parser": "pass_local",
+    "transactions_and_implicit_commits": "pass_local",
+    "results_types_and_multiple_results": "pass_local",
+    "cancellation_and_session_continuity": "pass_local",
+    "unsupported_query_only_and_legacy_visibility": "pass_local",
+    "common_adapter_without_engine_ui_branch": "pass",
+    "sqlite_complete_journey_regression": "pass_local",
+    "local_linux_desktop_build": "pass",
+    "target_platform_system_trust_and_packaging": "pending Phase 5 Windows/macOS/Linux procedures"
+  },
+  "release_blockers_remaining": [
+    "Phase 4 productivity, SQL-file/history workflows, and safe table-data editing requirements remain incomplete.",
+    "Native target-platform trust stores, accessibility, performance, packaging, diagnostics, and manual safety review remain Phase 5 work.",
+    "The fixed five-day dogfood period and five-person opt-in beta cannot be inferred from automation and remain unperformed."
+  ],
+  "conformance_report": "evidence/phase-3/adapter-conformance-report.json",
+  "failure": null
+}
