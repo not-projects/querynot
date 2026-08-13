@@ -27,10 +27,11 @@
       ],
       "automated_test_ids": [
         "P1-AUTO-PROFILE-DELETION",
-        "P1-AUTO-FILE-PROVENANCE"
+        "P1-AUTO-FILE-PROVENANCE",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P2-P3-CONNECTION-JOURNEY"
+        "PENDING-P5-CONNECTION-PROFILE-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -40,9 +41,10 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-4/validation-report.json"
       ]
     },
     {
@@ -562,10 +564,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-3"
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-3"
+        "PENDING-P5-TAB-LIFECYCLE-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -573,8 +577,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "WKS-4",
@@ -613,10 +619,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-5"
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-5"
+        "PENDING-P5-SQL-FILE-DIALOG-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -624,8 +631,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "WKS-6",
@@ -637,10 +646,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "P1-AUTO-OFFLINE-RESTORE"
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P2-P3-DISCONNECT-RECONNECT"
+        "PENDING-P5-DISCONNECT-RECONNECT-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -648,9 +658,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-4/validation-report.json"
       ]
     },
     {
@@ -694,10 +705,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "P2-AUTO-SESSION-ISOLATION"
+        "P2-AUTO-SESSION-ISOLATION",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-CONTEXT-CHANGE-MATRIX"
+        "PENDING-P5-CONTEXT-CHANGE-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -705,8 +717,9 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -747,10 +760,10 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-10"
+        "P4-AUTO-WORKSPACE-FILES"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-10"
+        "PENDING-P5-EXTERNAL-FILE-CHANGE-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -758,8 +771,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "WKS-11",
@@ -772,10 +787,11 @@
       ],
       "automated_test_ids": [
         "P1-AUTO-RELOAD-CLEANUP",
-        "P1-AUTO-FIRST-RUN-A11Y"
+        "P1-AUTO-FIRST-RUN-A11Y",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-FILE-ROUTING",
         "PENDING-P5-WINDOW-CLOSE-MATRIX"
       ],
       "supported_matrix_entries": [
@@ -784,9 +800,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-4/validation-report.json"
       ]
     },
     {
@@ -888,7 +905,8 @@
       ],
       "automated_test_ids": [
         "P2-AUTO-SQLITE-METADATA",
-        "P2-AUTO-EDITOR"
+        "P2-AUTO-EDITOR",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
         "PENDING-P5-SCHEMA-STATE-ACCESSIBILITY"
@@ -901,8 +919,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1007,10 +1026,12 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "P2-AUTO-SQLITE-METADATA"
+        "P2-AUTO-SQLITE-METADATA",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-SCHEMA-ENTRY-ACTIONS"
+        "PENDING-P5-SCHEMA-ENTRY-ACTION-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1020,8 +1041,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1035,10 +1057,11 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "P2-AUTO-SCHEMA-CACHE"
+        "P2-AUTO-SCHEMA-CACHE",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-SCHEMA-CACHE-MATRIX"
+        "PENDING-P5-SCHEMA-CACHE-RECONNECT-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1048,8 +1071,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1064,7 +1088,8 @@
       ],
       "automated_test_ids": [
         "P2-AUTO-METADATA-BOUNDARY",
-        "P2-AUTO-VIRTUAL-GRID"
+        "P2-AUTO-VIRTUAL-GRID",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
         "PENDING-P5-HOSTILE-METADATA-REVIEW"
@@ -1077,8 +1102,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1151,10 +1177,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "P2-AUTO-EDITOR"
+        "P2-AUTO-EDITOR",
+        "P4-AUTO-EDITOR-COMPLETION",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-FORMATTER-FIDELITY"
+        "PENDING-P5-FORMATTER-INTERACTION-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1166,6 +1194,7 @@
       ],
       "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1179,10 +1208,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "P2-AUTO-EDITOR"
+        "P2-AUTO-EDITOR",
+        "P4-AUTO-EDITOR-COMPLETION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-COMPLETION-FIDELITY"
+        "PENDING-P5-COMPLETION-INTERACTION-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1192,8 +1222,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1208,10 +1239,11 @@
       ],
       "automated_test_ids": [
         "P2-AUTO-EDITOR",
-        "P2-AUTO-SELECTION"
+        "P2-AUTO-SELECTION",
+        "P4-AUTO-EDITOR-COMPLETION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-DIAGNOSTICS-FIDELITY"
+        "PENDING-P5-DIAGNOSTICS-INTERACTION-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1221,8 +1253,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1298,10 +1331,10 @@
         "PHASE-2"
       ],
       "automated_test_ids": [
-        "P2-AUTO-EDITOR"
+        "P2-AUTO-EDITOR",
+        "P4-AUTO-EDITOR-COMPLETION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-SHORTCUT-DOCUMENTATION",
         "PENDING-P5-SHORTCUT-MATRIX"
       ],
       "supported_matrix_entries": [
@@ -1312,8 +1345,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1359,10 +1393,11 @@
       ],
       "automated_test_ids": [
         "P2-AUTO-EDITOR",
-        "P2-AUTO-SQLITE-JOURNEY"
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-NO-IMPLICIT-EXECUTION-JOURNEY"
+        "PENDING-P5-NO-IMPLICIT-EXECUTION-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1372,8 +1407,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -1512,7 +1548,7 @@
         "P2-AUTO-SELECTION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-DESTRUCTIVE-DIALECT-MATRIX"
+        "PENDING-P5-DESTRUCTIVE-DIALECT-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1522,7 +1558,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
         "evidence/phase-2/validation-report.json"
       ]
@@ -1690,10 +1726,11 @@
       ],
       "automated_test_ids": [
         "P2-AUTO-RELOAD-CLEANUP",
-        "P2-AUTO-EVENT-INTEGRITY"
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-CONNECTION-LOSS-MATRIX"
+        "PENDING-P5-CONNECTION-LOSS-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -1703,8 +1740,9 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -2223,10 +2261,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-1"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-1"
+        "PENDING-P5-TABLE-BROWSE-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2236,8 +2276,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-2",
@@ -2249,10 +2292,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-2"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-2"
+        "PENDING-P5-TABLE-ELIGIBILITY-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2262,8 +2306,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-3",
@@ -2275,10 +2322,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-3"
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-3"
+        "PENDING-P5-TABLE-STAGING-INTERACTION"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2288,8 +2336,10 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "DAT-4",
@@ -2301,10 +2351,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-4"
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-4"
+        "PENDING-P5-TABLE-PREVIEW-INTERACTION"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2314,8 +2365,10 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "DAT-5",
@@ -2327,10 +2380,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-5"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-5"
+        "PENDING-P5-TABLE-PARAMETER-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2340,8 +2394,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-6",
@@ -2353,10 +2410,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-6"
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-6"
+        "PENDING-P5-TABLE-ROLLBACK-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2366,8 +2424,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-7",
@@ -2379,10 +2440,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-7"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-7"
+        "PENDING-P5-TABLE-CONFLICT-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2392,8 +2455,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-8",
@@ -2405,10 +2471,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-8"
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-8"
+        "PENDING-P5-TABLE-DELETE-INTERACTION"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2418,8 +2485,10 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "DAT-9",
@@ -2431,10 +2500,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-9"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-9"
+        "PENDING-P5-TABLE-FILTER-SORT-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2444,8 +2514,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-10",
@@ -2457,10 +2530,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-10"
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-10"
+        "PENDING-P5-TYPED-EDITOR-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2470,8 +2545,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-11",
@@ -2483,10 +2561,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-11"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-11"
+        "PENDING-P5-TABLE-INSERT-REFRESH-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2496,8 +2576,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "DAT-12",
@@ -2509,10 +2592,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-12"
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-12"
+        "PENDING-P5-STAGED-LIFECYCLE-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2522,8 +2607,10 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "DAT-13",
@@ -2535,10 +2622,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-DAT-13"
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-DAT-13"
+        "PENDING-P5-PREVIEW-FIDELITY-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -2548,8 +2636,10 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "HIS-1",
@@ -2561,10 +2651,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-HIS-1"
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-HIS-1"
+        "PENDING-P5-HISTORY-CONTROL-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2572,8 +2663,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "HIS-2",
@@ -2585,10 +2678,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-HIS-2"
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-HIS-2"
+        "PENDING-P5-HISTORY-PERSISTENCE-REVIEW"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2596,8 +2690,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "HIS-3",
@@ -2609,10 +2705,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-HIS-3"
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-HIS-3"
+        "PENDING-P5-HISTORY-REOPEN-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2620,8 +2717,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "HIS-4",
@@ -2633,10 +2732,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-HIS-4"
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-HIS-4"
+        "PENDING-P5-DRAFT-PERMISSION-REVIEW"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2644,8 +2744,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "HIS-5",
@@ -2657,10 +2759,12 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-HIS-5"
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-CONTEXT-LOSS",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-HIS-5"
+        "PENDING-P5-STORAGE-FAILURE-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2668,8 +2772,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "HIS-6",
@@ -2681,10 +2787,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-HIS-6"
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-HIS-6"
+        "PENDING-P5-HISTORY-DELETION-REVIEW"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2692,8 +2799,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "HIS-7",
@@ -2705,10 +2814,11 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-HIS-7"
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-HIS-7"
+        "PENDING-P5-DRAFT-CADENCE-FAULT-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2716,8 +2826,10 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "SET-1",
@@ -2890,16 +3002,25 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-01"
+        "P1-AUTO-PROFILE-DELETION",
+        "P1-AUTO-VAULT-REFUSAL",
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P4-AUTO-CREDENTIAL-BUNDLE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-01"
+        "PENDING-P5-PROFILE-VAULT-JOURNEY"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-2/validation-report.json"
+      ]
     },
     {
       "id": "AC-02",
@@ -2964,7 +3085,8 @@
       "automated_test_ids": [
         "P1-AUTO-OWNERSHIP",
         "P2-AUTO-SESSION-ISOLATION",
-        "P3-AUTO-ADAPTER-CONFORMANCE"
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
         "PENDING-P5-CONCURRENT-CONNECTION-TAB-JOURNEY"
@@ -2972,8 +3094,9 @@
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
         "evidence/phase-2/validation-report.json"
@@ -2990,16 +3113,19 @@
       ],
       "automated_test_ids": [
         "P2-AUTO-EDITOR",
-        "P2-AUTO-SELECTION"
+        "P2-AUTO-SELECTION",
+        "P4-AUTO-EDITOR-COMPLETION",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PENDING-P4-EDITOR-ACCEPTANCE"
+        "PENDING-P5-EDITOR-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -3015,16 +3141,21 @@
       "automated_test_ids": [
         "P2-AUTO-SQLITE-JOURNEY",
         "P2-AUTO-STREAM-BACKPRESSURE",
-        "P2-AUTO-VIRTUAL-GRID"
+        "P2-AUTO-VIRTUAL-GRID",
+        "P3-AUTO-RESULT-MATRIX",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-P4-RESULT-ACCEPTANCE"
+        "PENDING-P5-RESULT-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-3/adapter-conformance-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -3048,7 +3179,7 @@
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
         "evidence/phase-2/validation-report.json",
         "evidence/phase-2/benchmark-report.json"
@@ -3065,16 +3196,21 @@
       ],
       "automated_test_ids": [
         "P2-AUTO-SQLITE-METADATA",
-        "P2-AUTO-SCHEMA-CACHE"
+        "P2-AUTO-SCHEMA-CACHE",
+        "P3-AUTO-METADATA-MATRIX",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-SCHEMA-ACCEPTANCE"
+        "PENDING-P5-SCHEMA-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-3/adapter-conformance-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -3088,16 +3224,21 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-09"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-09"
+        "PENDING-P5-TABLE-EDIT-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "AC-10",
@@ -3113,12 +3254,12 @@
         "P2-AUTO-APPROVAL-SINGLE-USE"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-DESTRUCTIVE-ACCEPTANCE"
+        "PENDING-P5-DESTRUCTIVE-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
         "evidence/phase-2/validation-report.json"
       ]
@@ -3133,16 +3274,21 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-11"
+        "P1-AUTO-SECRET-EXCLUSION",
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-11"
+        "PENDING-P5-PERSISTENCE-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json"
+      ]
     },
     {
       "id": "AC-12",
@@ -3240,16 +3386,21 @@
       "automated_test_ids": [
         "P2-AUTO-SESSION-ISOLATION",
         "P2-AUTO-CANCELLATION",
-        "P2-AUTO-RELOAD-CLEANUP"
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P4-AUTO-CONTEXT-LOSS"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-CONNECTION-LOSS-ACCEPTANCE"
+        "PENDING-P5-CONNECTION-LOSS-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-3/adapter-conformance-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -3266,16 +3417,19 @@
         "P2-AUTO-STREAM-BACKPRESSURE",
         "P2-AUTO-CURSOR-EXPIRY",
         "P2-AUTO-EVENT-INTEGRITY",
-        "P2-AUTO-EXPORT-INTERRUPTION"
+        "P2-AUTO-EXPORT-INTERRUPTION",
+        "P3-AUTO-RESULT-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PENDING-P3-RESULT-CONTRACT-MATRIX"
+        "PENDING-P5-RESULT-CONTRACT-MATRIX"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-3/adapter-conformance-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -3289,16 +3443,21 @@
         "PHASE-4"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-AC-18"
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-AC-18"
+        "PENDING-P5-TABLE-CONTRACT-ACCEPTANCE"
       ],
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "planned",
-      "evidence_links": []
+      "status": "implemented",
+      "evidence_links": [
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-4/table-conformance-report.json"
+      ]
     },
     {
       "id": "AC-19",
@@ -3313,7 +3472,9 @@
         "P1-AUTO-MIGRATION-ROLLBACK",
         "P1-AUTO-VAULT-REFUSAL",
         "P2-AUTO-RELOAD-CLEANUP",
-        "P2-AUTO-EXPORT-INTERRUPTION"
+        "P2-AUTO-EXPORT-INTERRUPTION",
+        "P4-AUTO-CONTEXT-LOSS",
+        "P4-AUTO-WORKSPACE-FILES"
       ],
       "manual_procedure_ids": [
         "PENDING-P5-DISK-FULL-AND-RELOAD-MATRIX"
@@ -3321,8 +3482,9 @@
       "supported_matrix_entries": [
         "all_applicable_release_matrix_entries"
       ],
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": [
+        "evidence/phase-4/validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },

@@ -4,10 +4,22 @@ use serde::{Deserialize, Serialize};
 pub const MAX_DRAFT_BYTES: usize = 4 * 1024 * 1024;
 pub const MAX_OPEN_TABS: usize = 256;
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkspaceTabKind {
+    #[default]
+    Query,
+    TableData,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct WorkspaceTab {
     pub id: TabId,
     pub title: String,
+    #[serde(default)]
+    pub kind: WorkspaceTabKind,
+    #[serde(default)]
+    pub pinned: bool,
     pub profile_id: Option<ProfileId>,
     pub profile_label: Option<String>,
     pub context_label: Option<String>,
@@ -16,6 +28,14 @@ pub struct WorkspaceTab {
     pub position: u16,
     pub source_file_path: Option<String>,
     pub source_file_modified_ms: Option<i64>,
+    #[serde(default)]
+    pub source_file_size: Option<u64>,
+    #[serde(default)]
+    pub source_file_identity: Option<String>,
+    #[serde(default)]
+    pub table_namespace: Option<String>,
+    #[serde(default)]
+    pub table_name: Option<String>,
     pub reconnectable: bool,
 }
 
@@ -42,6 +62,8 @@ pub enum WorkspaceValidationError {
     DuplicateTab,
     #[error("active tab does not exist")]
     UnknownActiveTab,
+    #[error("workspace tab metadata is invalid")]
+    InvalidTab,
 }
 
 impl WorkspaceSnapshot {
@@ -54,6 +76,32 @@ impl WorkspaceSnapshot {
         for tab in &self.tabs {
             if tab.sql.len() > MAX_DRAFT_BYTES {
                 return Err(WorkspaceValidationError::DraftTooLarge);
+            }
+            if tab.title.is_empty()
+                || tab.title.len() > 256
+                || tab.title.bytes().any(|byte| byte == 0)
+                || matches!(
+                    (
+                        &tab.source_file_modified_ms,
+                        &tab.source_file_size,
+                        &tab.source_file_identity
+                    ),
+                    (Some(_), None, _)
+                        | (Some(_), _, None)
+                        | (None, Some(_), _)
+                        | (None, _, Some(_))
+                )
+                || (tab.kind == WorkspaceTabKind::TableData
+                    && (tab.profile_id.is_none()
+                        || tab.context_label.is_none()
+                        || tab.table_namespace.is_none()
+                        || tab.table_name.is_none()
+                        || tab.source_file_path.is_some()
+                        || tab.dirty))
+                || (tab.kind == WorkspaceTabKind::Query
+                    && (tab.table_namespace.is_some() || tab.table_name.is_some()))
+            {
+                return Err(WorkspaceValidationError::InvalidTab);
             }
             if !ids.insert(tab.id) || !positions.insert(tab.position) {
                 return Err(WorkspaceValidationError::DuplicateTab);
@@ -91,6 +139,8 @@ mod tests {
                 WorkspaceTab {
                     id: first,
                     title: "fixture query".to_owned(),
+                    kind: WorkspaceTabKind::Query,
+                    pinned: false,
                     profile_id: Some(profile),
                     profile_label: Some("Local fixture".to_owned()),
                     context_label: Some("main".to_owned()),
@@ -99,11 +149,17 @@ mod tests {
                     position: 0,
                     source_file_path: None,
                     source_file_modified_ms: None,
+                    source_file_size: None,
+                    source_file_identity: None,
+                    table_namespace: None,
+                    table_name: None,
                     reconnectable: true,
                 },
                 WorkspaceTab {
                     id: second,
                     title: "offline.sql".to_owned(),
+                    kind: WorkspaceTabKind::Query,
+                    pinned: true,
                     profile_id: None,
                     profile_label: None,
                     context_label: None,
@@ -112,6 +168,10 @@ mod tests {
                     position: 1,
                     source_file_path: Some("/fixture/offline.sql".to_owned()),
                     source_file_modified_ms: Some(10),
+                    source_file_size: Some(8),
+                    source_file_identity: Some("fixture".to_owned()),
+                    table_namespace: None,
+                    table_name: None,
                     reconnectable: false,
                 },
             ],

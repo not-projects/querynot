@@ -175,6 +175,30 @@ function applyOverrides(records, overrideFile) {
 
 function attachGeneratedEvidence(records) {
   for (const record of records) {
+    if (record.automated_test_ids.some((id) => id.startsWith('P4-'))) {
+      if (
+        !record.evidence_links.includes(
+          'evidence/phase-4/validation-report.json'
+        )
+      ) {
+        record.evidence_links.push('evidence/phase-4/validation-report.json');
+      }
+    }
+    if (
+      record.automated_test_ids.some((id) =>
+        [
+          'P4-AUTO-TABLE-MATRIX',
+          'P4-AUTO-TABLE-METADATA-COMPATIBILITY'
+        ].includes(id)
+      ) &&
+      !record.evidence_links.includes(
+        'evidence/phase-4/table-conformance-report.json'
+      )
+    ) {
+      record.evidence_links.push(
+        'evidence/phase-4/table-conformance-report.json'
+      );
+    }
     if (record.automated_test_ids.some((id) => id.startsWith('P3-'))) {
       if (
         !record.evidence_links.includes(

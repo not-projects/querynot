@@ -6,12 +6,17 @@ use crate::result::{
     ResultBatch, ResultColumn, ResultTerminal, ResultTerminalState, tagged_value_size,
 };
 use crate::sql::{ExecutionPlan, leading_statement_keyword};
+use crate::table::{
+    BrowseInput, MutationApplyResult, MutationPlan, TableDefinition, TableDialect, TablePage,
+    plan_browse, validate_table_page_values,
+};
 use crate::{ExecutionId, QueryNotError, ResultSetId, TaggedValue};
 use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteRow};
+use sqlx::query::Query;
+use sqlx::sqlite::{SqliteArguments, SqliteConnectOptions, SqliteJournalMode, SqliteRow};
 use sqlx::{
-    AssertSqlSafe, Column, ConnectOptions, Connection, Either, Executor, Row, SqlSafeStr,
+    AssertSqlSafe, Column, ConnectOptions, Connection, Either, Executor, Row, SqlSafeStr, Sqlite,
     SqliteConnection, Statement, TypeInfo, ValueRef,
 };
 use std::path::Path;
@@ -57,6 +62,7 @@ pub struct SchemaColumn {
     pub nullable: bool,
     pub primary_key_position: u32,
     pub default_expression: Option<String>,
+    pub generated: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -76,6 +82,8 @@ pub struct SchemaIndex {
     pub unique: bool,
     pub origin: String,
     pub columns: Vec<String>,
+    pub partial: bool,
+    pub has_expressions: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -222,6 +230,147 @@ impl SqliteSession {
     ) -> Result<SchemaObjectDetail, QueryNotError> {
         let mut connection = self.connection.lock().await;
         load_object_detail_connection(&mut connection, namespace, object_name).await
+    }
+
+    pub async fn change_context(&self, context: &str) -> Result<String, QueryNotError> {
+        if context != "main" {
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::UnsupportedCapability,
+                "SQLite initial-release tabs use the main database context; attached-database context switching is not supported.",
+                false,
+            ));
+        }
+        let mut connection = self.connection.lock().await;
+        ensure_namespace(&mut connection, context).await?;
+        Ok("main".to_owned())
+    }
+
+    pub async fn browse_table(
+        &self,
+        namespace: &str,
+        table: &str,
+        input: &BrowseInput,
+    ) -> Result<TablePage, QueryNotError> {
+        let mut connection = self.connection.lock().await;
+        let detail = load_object_detail_connection(&mut connection, namespace, table).await?;
+        let definition = TableDefinition::from_detail(&detail, self.read_only, !self.read_only);
+        let plan = plan_browse(&definition, TableDialect::Sqlite, input)?;
+        let mut query = sqlx::query(AssertSqlSafe(plan.sql.as_str()));
+        for value in plan.parameters.iter().cloned() {
+            query = bind_sqlite_value(query, value)?;
+        }
+        let rows = query
+            .fetch_all(&mut *connection)
+            .await
+            .map_err(map_sqlite_execution_error)?;
+        let mut values = rows
+            .iter()
+            .map(sqlite_values)
+            .collect::<Result<Vec<_>, _>>()?;
+        if values
+            .iter()
+            .any(|row| row.len() != definition.columns.len())
+        {
+            return Err(QueryNotError::internal(
+                "SQLite table paging returned a stale row shape.",
+            ));
+        }
+        validate_table_page_values(&values)?;
+        let has_more = values.len() > plan.page_size;
+        values.truncate(plan.page_size);
+        let next_cursor = if plan.keyset && has_more {
+            values.last().map_or_else(Vec::new, |row| {
+                plan.order_column_indexes
+                    .iter()
+                    .map(|index| row[*index].clone())
+                    .collect()
+            })
+        } else {
+            Vec::new()
+        };
+        Ok(TablePage {
+            definition,
+            next_offset: if plan.keyset {
+                0
+            } else {
+                input.offset.saturating_add(values.len() as u64)
+            },
+            rows: values,
+            has_more,
+            next_cursor,
+            unstable: plan.unstable,
+        })
+    }
+
+    pub async fn apply_table_mutations(
+        &self,
+        plan: &MutationPlan,
+    ) -> Result<MutationApplyResult, QueryNotError> {
+        if self.read_only {
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::UnsupportedCapability,
+                "This SQLite session is read-only.",
+                false,
+            ));
+        }
+        if !self.automatic.load(Ordering::Acquire)
+            || transaction_certainty(&self.transaction) != TransactionCertainty::Clean
+        {
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::Transaction,
+                "Table changes require a clean auto-commit table session.",
+                false,
+            ));
+        }
+        let mut connection = self.connection.lock().await;
+        connection
+            .execute("BEGIN IMMEDIATE")
+            .await
+            .map_err(map_sqlite_execution_error)?;
+        let mut affected_rows = 0_u64;
+        for operation in &plan.operations {
+            let mut query = sqlx::query(AssertSqlSafe(operation.sql.as_str()));
+            for value in operation.parameters.iter().cloned() {
+                query = match bind_sqlite_value(query, value) {
+                    Ok(bound) => bound,
+                    Err(error) => {
+                        rollback_sqlite_mutations(self, &mut connection).await?;
+                        return Err(error);
+                    }
+                };
+            }
+            match query.execute(&mut *connection).await {
+                Ok(result) if result.rows_affected() == operation.expected_rows => {
+                    affected_rows = affected_rows.saturating_add(result.rows_affected());
+                }
+                Ok(_) => {
+                    rollback_sqlite_mutations(self, &mut connection).await?;
+                    return Err(QueryNotError::database(
+                        crate::ErrorCategory::Constraint,
+                        "A staged row no longer matched exactly one original row. The complete batch was rolled back and remains staged.",
+                        false,
+                    ));
+                }
+                Err(error) => {
+                    let mapped = map_sqlite_execution_error(error);
+                    rollback_sqlite_mutations(self, &mut connection).await?;
+                    return Err(mapped);
+                }
+            }
+        }
+        if connection.execute("COMMIT").await.is_err() {
+            set_transaction_certainty(&self.transaction, TransactionCertainty::Unknown);
+            let _ = connection.execute("ROLLBACK").await;
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::Transaction,
+                "SQLite could not confirm whether the mutation commit completed. Reconnect and inspect the affected rows before another write.",
+                false,
+            ));
+        }
+        Ok(MutationApplyResult {
+            affected_rows,
+            refreshed: true,
+        })
     }
 
     pub async fn transaction_state(&self) -> SqliteTransactionState {
@@ -768,7 +917,7 @@ async fn load_object_detail_connection(
         validate_metadata(definition)?;
     }
     let columns = sqlx::query(
-        "SELECT name, type, \"notnull\", dflt_value, pk FROM pragma_table_xinfo(?) ORDER BY cid",
+        "SELECT name, type, \"notnull\", dflt_value, pk, hidden FROM pragma_table_xinfo(?) WHERE hidden != 1 ORDER BY cid",
     )
     .bind(object_name)
     .fetch_all(&mut *connection)
@@ -786,6 +935,14 @@ async fn load_object_detail_connection(
         if let Some(default_expression) = &default_expression {
             validate_metadata(default_expression)?;
         }
+        let primary_key_position = row
+            .try_get::<i64, _>("pk")
+            .map_err(map_sqlite_execution_error)? as u32;
+        let hidden = row
+            .try_get::<i64, _>("hidden")
+            .map_err(map_sqlite_execution_error)?;
+        let generated = hidden >= 2
+            || (primary_key_position > 0 && declared_type.eq_ignore_ascii_case("INTEGER"));
         Ok(SchemaColumn {
             name,
             declared_type,
@@ -793,10 +950,9 @@ async fn load_object_detail_connection(
                 .try_get::<i64, _>("notnull")
                 .map_err(map_sqlite_execution_error)?
                 == 0,
-            primary_key_position: row
-                .try_get::<i64, _>("pk")
-                .map_err(map_sqlite_execution_error)? as u32,
+            primary_key_position,
             default_expression,
+            generated,
         })
     })
     .collect::<Result<Vec<_>, QueryNotError>>()?;
@@ -832,25 +988,34 @@ async fn load_object_detail_connection(
         })
     })
     .collect::<Result<Vec<_>, QueryNotError>>()?;
-    let index_rows =
-        sqlx::query("SELECT name, \"unique\", origin FROM pragma_index_list(?) ORDER BY seq")
-            .bind(object_name)
-            .fetch_all(&mut *connection)
-            .await
-            .map_err(map_sqlite_execution_error)?;
+    let index_rows = sqlx::query(
+        "SELECT name, \"unique\", origin, partial FROM pragma_index_list(?) ORDER BY seq",
+    )
+    .bind(object_name)
+    .fetch_all(&mut *connection)
+    .await
+    .map_err(map_sqlite_execution_error)?;
     let mut indexes = Vec::new();
     for index in index_rows {
         let name: String = index.try_get("name").map_err(map_sqlite_execution_error)?;
         validate_metadata(&name)?;
-        let columns: Vec<String> =
-            sqlx::query("SELECT name FROM pragma_index_info(?) ORDER BY seqno")
+        let key_columns =
+            sqlx::query("SELECT name FROM pragma_index_xinfo(?) WHERE key = 1 ORDER BY seqno")
                 .bind(&name)
                 .fetch_all(&mut *connection)
                 .await
+                .map_err(map_sqlite_execution_error)?;
+        let mut has_expressions = false;
+        let mut columns = Vec::new();
+        for row in key_columns {
+            match row
+                .try_get::<Option<String>, _>("name")
                 .map_err(map_sqlite_execution_error)?
-                .into_iter()
-                .filter_map(|row| row.try_get::<Option<String>, _>("name").ok().flatten())
-                .collect();
+            {
+                Some(column) => columns.push(column),
+                None => has_expressions = true,
+            }
+        }
         for column in &columns {
             validate_metadata(column)?;
         }
@@ -866,6 +1031,11 @@ async fn load_object_detail_connection(
                 != 0,
             origin,
             columns,
+            partial: index
+                .try_get::<i64, _>("partial")
+                .map_err(map_sqlite_execution_error)?
+                != 0,
+            has_expressions,
         });
     }
     Ok(SchemaObjectDetail {
@@ -918,7 +1088,7 @@ async fn connection_info(
             cancellation: true,
             transactions: true,
             multiple_results: true,
-            safe_table_mutations: false,
+            safe_table_mutations: !read_only,
         },
         read_only,
         context: "main".to_owned(),
@@ -997,6 +1167,49 @@ fn sqlite_values(row: &SqliteRow) -> Result<Vec<TaggedValue>, QueryNotError> {
                 .map_err(map_sqlite_execution_error)
         })
         .collect()
+}
+
+fn bind_sqlite_value<'q>(
+    query: Query<'q, Sqlite, SqliteArguments>,
+    value: TaggedValue,
+) -> Result<Query<'q, Sqlite, SqliteArguments>, QueryNotError> {
+    Ok(match value {
+        TaggedValue::Null => query.bind(Option::<String>::None),
+        TaggedValue::Text(value) => query.bind(value),
+        TaggedValue::Bytes(value) => query.bind(value),
+        TaggedValue::SignedInteger(value) => query.bind(value.parse::<i64>().map_err(|_| {
+            QueryNotError::authorization("A staged SQLite integer is out of range.")
+        })?),
+        TaggedValue::UnsignedInteger(value) => {
+            let parsed = value.parse::<u64>().map_err(|_| {
+                QueryNotError::authorization("A staged SQLite integer is out of range.")
+            })?;
+            match i64::try_from(parsed) {
+                Ok(parsed) => query.bind(parsed),
+                Err(_) => query.bind(value),
+            }
+        }
+        TaggedValue::Decimal(value) => query.bind(value),
+        TaggedValue::Float(value) => query.bind(value),
+        TaggedValue::Boolean(value) => query.bind(value),
+        TaggedValue::DateTime { raw, .. } => query.bind(raw),
+        TaggedValue::AdapterSpecific { raw, .. } => query.bind(raw),
+    })
+}
+
+async fn rollback_sqlite_mutations(
+    session: &SqliteSession,
+    connection: &mut SqliteConnection,
+) -> Result<(), QueryNotError> {
+    if connection.execute("ROLLBACK").await.is_err() {
+        set_transaction_certainty(&session.transaction, TransactionCertainty::Unknown);
+        return Err(QueryNotError::database(
+            crate::ErrorCategory::Transaction,
+            "SQLite could not confirm rollback of the failed mutation batch. Reconnect before another write.",
+            false,
+        ));
+    }
+    Ok(())
 }
 
 fn make_batch(
@@ -1274,10 +1487,164 @@ mod tests {
         connection.execute(
             "CREATE TABLE parent(id INTEGER PRIMARY KEY, label TEXT NOT NULL UNIQUE);\n\
              CREATE TABLE child(id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent(id), payload BLOB);\n\
+             CREATE TABLE editable(id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL UNIQUE, counter INTEGER NOT NULL DEFAULT 7, note TEXT);\n\
              CREATE VIEW child_view AS SELECT id, parent_id FROM child;"
         ).await.unwrap();
         connection.close().await.unwrap();
         (directory, path)
+    }
+
+    fn browse_input() -> BrowseInput {
+        BrowseInput {
+            filters: Vec::new(),
+            sorts: Vec::new(),
+            cursor: Vec::new(),
+            offset: 0,
+            page_size: 25,
+        }
+    }
+
+    #[tokio::test]
+    async fn table_mutations_refresh_generated_values_and_roll_back_every_operation_on_conflict() {
+        use crate::table::{
+            MutationCell, MutationCellMode, MutationInput, MutationKind, TableDialect,
+            plan_mutations,
+        };
+
+        let (_directory, path) = fixture().await;
+        let session = SqliteSession::open(&path, false).await.unwrap();
+        let empty = session
+            .browse_table("main", "editable", &browse_input())
+            .await
+            .unwrap();
+        assert!(empty.definition.editable);
+        assert_eq!(empty.definition.identity.as_ref().unwrap().columns, ["id"]);
+        assert!(empty.definition.columns[0].generated);
+
+        let insert = plan_mutations(
+            &empty.definition,
+            TableDialect::Sqlite,
+            1,
+            &[MutationInput {
+                kind: MutationKind::Insert,
+                original: Vec::new(),
+                cells: vec![
+                    MutationCell {
+                        column: "id".to_owned(),
+                        mode: MutationCellMode::DatabaseDefault,
+                    },
+                    MutationCell {
+                        column: "label".to_owned(),
+                        mode: MutationCellMode::Value(TaggedValue::Text("first".to_owned())),
+                    },
+                    MutationCell {
+                        column: "counter".to_owned(),
+                        mode: MutationCellMode::DatabaseDefault,
+                    },
+                    MutationCell {
+                        column: "note".to_owned(),
+                        mode: MutationCellMode::Value(TaggedValue::Null),
+                    },
+                ],
+            }],
+        )
+        .unwrap();
+        session.apply_table_mutations(&insert).await.unwrap();
+        let inserted = session
+            .browse_table("main", "editable", &browse_input())
+            .await
+            .unwrap();
+        assert_eq!(inserted.rows.len(), 1);
+        assert_eq!(
+            inserted.rows[0][0],
+            TaggedValue::SignedInteger("1".to_owned())
+        );
+        assert_eq!(
+            inserted.rows[0][2],
+            TaggedValue::SignedInteger("7".to_owned())
+        );
+
+        let update = plan_mutations(
+            &inserted.definition,
+            TableDialect::Sqlite,
+            2,
+            &[MutationInput {
+                kind: MutationKind::Update,
+                original: inserted.rows[0].clone(),
+                cells: vec![MutationCell {
+                    column: "note".to_owned(),
+                    mode: MutationCellMode::Value(TaggedValue::Text("updated".to_owned())),
+                }],
+            }],
+        )
+        .unwrap();
+        session.apply_table_mutations(&update).await.unwrap();
+        let updated = session
+            .browse_table("main", "editable", &browse_input())
+            .await
+            .unwrap();
+        assert_eq!(updated.rows[0][3], TaggedValue::Text("updated".to_owned()));
+
+        let conflict = plan_mutations(
+            &updated.definition,
+            TableDialect::Sqlite,
+            3,
+            &[
+                MutationInput {
+                    kind: MutationKind::Update,
+                    original: updated.rows[0].clone(),
+                    cells: vec![MutationCell {
+                        column: "note".to_owned(),
+                        mode: MutationCellMode::Value(TaggedValue::Text(
+                            "must roll back".to_owned(),
+                        )),
+                    }],
+                },
+                MutationInput {
+                    kind: MutationKind::Update,
+                    original: updated.rows[0].clone(),
+                    cells: vec![MutationCell {
+                        column: "label".to_owned(),
+                        mode: MutationCellMode::Value(TaggedValue::Text("second".to_owned())),
+                    }],
+                },
+            ],
+        )
+        .unwrap();
+        assert!(session.apply_table_mutations(&conflict).await.is_err());
+        let rolled_back = session
+            .browse_table("main", "editable", &browse_input())
+            .await
+            .unwrap();
+        assert_eq!(
+            rolled_back.rows[0][1],
+            TaggedValue::Text("first".to_owned())
+        );
+        assert_eq!(
+            rolled_back.rows[0][3],
+            TaggedValue::Text("updated".to_owned())
+        );
+
+        let delete = plan_mutations(
+            &rolled_back.definition,
+            TableDialect::Sqlite,
+            4,
+            &[MutationInput {
+                kind: MutationKind::Delete,
+                original: rolled_back.rows[0].clone(),
+                cells: Vec::new(),
+            }],
+        )
+        .unwrap();
+        session.apply_table_mutations(&delete).await.unwrap();
+        assert!(
+            session
+                .browse_table("main", "editable", &browse_input())
+                .await
+                .unwrap()
+                .rows
+                .is_empty()
+        );
     }
 
     #[tokio::test]
@@ -1287,7 +1654,7 @@ mod tests {
         assert_eq!(info.identity.product, "SQLite");
         assert!(info.capabilities.streaming);
         let objects = load_objects(&path, true, "main").await.unwrap();
-        assert_eq!(objects.len(), 3);
+        assert_eq!(objects.len(), 4);
         let detail = load_object_detail(&path, true, "main", "child")
             .await
             .unwrap();

@@ -8,12 +8,14 @@
     "evidence/phase-0/validation-report.json",
     "evidence/phase-1/validation-report.json",
     "evidence/phase-2/validation-report.json",
-    "evidence/phase-3/validation-report.json"
+    "evidence/phase-3/validation-report.json",
+    "evidence/phase-4/validation-report.json"
   ],
-  "dependency_license_vulnerability_report": "evidence/phase-0/dependency-review.json",
+  "dependency_license_vulnerability_report": "evidence/phase-4/dependency-review.json",
   "adapter_conformance_reports": [
     "evidence/phase-0/feasibility-report.json",
-    "evidence/phase-3/adapter-conformance-report.json"
+    "evidence/phase-3/adapter-conformance-report.json",
+    "evidence/phase-4/table-conformance-report.json"
   ],
   "operating_system_results": [],
   "accessibility_results": [],
@@ -27,7 +29,8 @@
     "Phase 1 has commit-addressed local Linux automation and build evidence; real OS-vault integration, target-platform accessibility review, and cross-platform CI execution remain pending.",
     "Phase 2 has commit-addressed local Linux SQLite journey, fault, hostile-value, result-contract, release-build benchmark, and desktop-build evidence; native target-platform WebView FPS/memory, accessibility, dialogs/clipboard, and manual safety review remain pending.",
     "Phase 3 has commit-addressed local Linux five-server MySQL/MariaDB conformance, complete SQLite regression, dependency gates, and an optimized desktop build; native target-platform trust stores, interaction evidence, accessibility, and packaging remain pending Phase 5 procedures.",
-    "Phase 4 through Phase 6 behavior and release evidence are not implemented or claimed."
+    "Phase 4 has commit-addressed local productivity, persistence, SQL-file, table planner/fault, five-server table conformance, dependency, and optimized desktop-build evidence; native target-platform interaction, accessibility, performance, diagnostics, and manual safety review remain pending Phase 5 procedures.",
+    "Phase 5 dogfood, beta, cross-platform release-candidate evidence, and Phase 6 publication remain incomplete."
   ],
   "approved_exceptions": []
 }

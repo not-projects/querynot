@@ -139,12 +139,25 @@ impl OwnershipRegistry {
         }
     }
 
-    pub fn unregister_profile(&mut self, profile_id: ProfileId) -> Result<(), OwnershipError> {
+    pub fn unregister_profile(
+        &mut self,
+        profile_id: ProfileId,
+        retained_tabs: &HashSet<TabId>,
+    ) -> Result<(), OwnershipError> {
         if self.has_active_profile_resources(profile_id) {
             return Err(OwnershipError::NotOwned);
         }
-        self.tabs
-            .retain(|_, owner| owner.profile_id != Some(profile_id));
+        self.tabs.retain(|tab_id, owner| {
+            if owner.profile_id != Some(profile_id) {
+                return true;
+            }
+            if retained_tabs.contains(tab_id) {
+                owner.profile_id = None;
+                true
+            } else {
+                false
+            }
+        });
         if self.profiles.remove(&profile_id).is_none() {
             return Err(OwnershipError::NotOwned);
         }
@@ -300,6 +313,14 @@ impl OwnershipRegistry {
                 .any(|owner| owner.profile_id == profile_id)
     }
 
+    #[must_use]
+    pub fn profile_tab_ids(&self, profile_id: ProfileId) -> HashSet<TabId> {
+        self.tabs
+            .iter()
+            .filter_map(|(tab_id, owner)| (owner.profile_id == Some(profile_id)).then_some(*tab_id))
+            .collect()
+    }
+
     pub fn cleanup_window(&mut self, window_id: WindowId) -> CleanupPlan {
         let executions = self
             .executions
@@ -410,5 +431,29 @@ mod tests {
         assert_eq!(cleanup.sessions, vec![session]);
         assert_eq!(cleanup.tabs, vec![tab]);
         assert!(!owners.has_active_profile_resources(profile));
+    }
+
+    #[test]
+    fn profile_deletion_rebinds_only_retained_offline_tabs() {
+        let window = WindowId::new();
+        let profile = ProfileId::new();
+        let retained = TabId::new();
+        let removed = TabId::new();
+        let mut owners = OwnershipRegistry::default();
+        owners.register_profile(window, profile).unwrap();
+        owners
+            .register_tab(window, Some(profile), retained)
+            .unwrap();
+        owners.register_tab(window, Some(profile), removed).unwrap();
+
+        owners
+            .unregister_profile(profile, &HashSet::from([retained]))
+            .unwrap();
+
+        assert!(owners.authorize_tab(window, None, retained).is_ok());
+        assert_eq!(
+            owners.authorize_tab(window, None, removed),
+            Err(OwnershipError::NotOwned)
+        );
     }
 }

@@ -51,6 +51,7 @@ opaque_id!(ResultSetId);
 opaque_id!(StatementId);
 opaque_id!(ExportId);
 opaque_id!(MutationPlanId);
+opaque_id!(HistoryEntryId);
 opaque_id!(SecretRef);
 opaque_id!(FileGrantId);
 

@@ -26,6 +26,15 @@
   },
   "bundle": {
     "active": false,
-    "targets": "all"
+    "targets": "all",
+    "fileAssociations": [
+      {
+        "ext": ["sql"],
+        "name": "SQL source file",
+        "description": "SQL source file opened offline in QueryNot",
+        "role": "Editor",
+        "mimeType": "application/sql"
+      }
+    ]
   }
 }

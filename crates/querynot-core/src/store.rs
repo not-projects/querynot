@@ -1,16 +1,19 @@
+#[cfg(test)]
+use crate::history::HistoryEntryInput;
+use crate::history::{HistoryEntry, MAX_HISTORY_RESULTS};
 use crate::profile::ConnectionProfile;
 use crate::settings::AppSettings;
 use crate::state::LocalStoreState;
 use crate::vault::{SecretVault, VaultError};
-use crate::workspace::WorkspaceSnapshot;
-use crate::{ProfileId, SecretRef};
+use crate::workspace::{WorkspaceSnapshot, WorkspaceTabKind};
+use crate::{HistoryEntryId, ProfileId, SecretRef};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::{Connection, Row, SqliteConnection, SqlitePool};
+use sqlx::{Connection, Executor, Row, SqliteConnection, SqlitePool};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-pub const CURRENT_STORE_VERSION: u32 = 2;
+pub const CURRENT_STORE_VERSION: u32 = 3;
 
 const MIGRATION_1: &[&str] = &[
     "CREATE TABLE profiles (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, metadata_json TEXT NOT NULL, deletion_state TEXT NOT NULL DEFAULT 'active', created_at_ms INTEGER NOT NULL, updated_at_ms INTEGER NOT NULL)",
@@ -24,6 +27,11 @@ const MIGRATION_2: &[&str] = &[
     "CREATE TABLE profile_deletions (profile_id TEXT PRIMARY KEY NOT NULL, secret_reference TEXT, delete_history INTEGER NOT NULL, delete_drafts INTEGER NOT NULL, vault_deleted INTEGER NOT NULL DEFAULT 0, requested_at_ms INTEGER NOT NULL)",
     "CREATE INDEX history_profile_idx ON history(profile_id)",
     "CREATE INDEX schema_cache_profile_idx ON schema_cache(profile_id)",
+];
+
+const MIGRATION_3: &[&str] = &[
+    "ALTER TABLE history ADD COLUMN timestamp_ms INTEGER NOT NULL DEFAULT 0",
+    "CREATE INDEX history_timestamp_idx ON history(timestamp_ms DESC, id)",
 ];
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -160,6 +168,12 @@ impl LocalStore {
             .map_err(|_| StoreError::InvalidData)?;
         if quick_check != "ok" {
             return Err(StoreError::InvalidData);
+        }
+        if !existed {
+            connection
+                .execute("PRAGMA auto_vacuum = INCREMENTAL")
+                .await
+                .map_err(|_| StoreError::Unavailable)?;
         }
 
         migrate(&mut connection, fault).await?;
@@ -300,6 +314,132 @@ impl LocalStore {
             }
             None => Ok(WorkspaceSnapshot::default()),
         }
+    }
+
+    pub async fn clear_workspace(&self) -> Result<bool, StoreError> {
+        Ok(sqlx::query("DELETE FROM workspace WHERE singleton = 1")
+            .execute(&self.pool)
+            .await
+            .map_err(|_| StoreError::Unavailable)?
+            .rows_affected()
+            == 1)
+    }
+
+    pub async fn save_history_entry(&self, entry: &HistoryEntry) -> Result<(), StoreError> {
+        entry.validate().map_err(|_| StoreError::InvalidData)?;
+        let metadata = serde_json::to_string(entry).map_err(|_| StoreError::InvalidData)?;
+        sqlx::query(
+            "INSERT INTO history (id, profile_id, profile_label, metadata_json, timestamp_ms) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(entry.id.to_string())
+        .bind(entry.profile_id.map(|id| id.to_string()))
+        .bind(&entry.profile_label)
+        .bind(metadata)
+        .bind(entry.timestamp_ms)
+        .execute(&self.pool)
+        .await
+        .map_err(|_| StoreError::Unavailable)?;
+        Ok(())
+    }
+
+    pub async fn list_history(
+        &self,
+        search: &str,
+        limit: usize,
+    ) -> Result<Vec<HistoryEntry>, StoreError> {
+        if search.len() > 4_096 || search.bytes().any(|byte| byte == 0) {
+            return Err(StoreError::InvalidData);
+        }
+        let limit = limit.clamp(1, MAX_HISTORY_RESULTS) as i64;
+        let pattern = format!(
+            "%{}%",
+            search
+                .replace('\\', "\\\\")
+                .replace('%', "\\%")
+                .replace('_', "\\_")
+        );
+        let rows = sqlx::query(
+            "SELECT profile_id, profile_label, metadata_json FROM history WHERE ? = '' OR metadata_json LIKE ? ESCAPE '\\' ORDER BY timestamp_ms DESC, id DESC LIMIT ?",
+        )
+        .bind(search)
+        .bind(pattern)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| StoreError::Unavailable)?;
+        rows.into_iter()
+            .map(|row| {
+                let metadata: String = row
+                    .try_get("metadata_json")
+                    .map_err(|_| StoreError::InvalidData)?;
+                let mut entry: HistoryEntry =
+                    serde_json::from_str(&metadata).map_err(|_| StoreError::InvalidData)?;
+                entry.profile_id = row
+                    .try_get::<Option<String>, _>("profile_id")
+                    .map_err(|_| StoreError::InvalidData)?
+                    .map(|value| ProfileId::from_str(&value).map_err(|_| StoreError::InvalidData))
+                    .transpose()?;
+                entry.profile_label = row
+                    .try_get("profile_label")
+                    .map_err(|_| StoreError::InvalidData)?;
+                entry.validate().map_err(|_| StoreError::InvalidData)?;
+                Ok(entry)
+            })
+            .collect()
+    }
+
+    pub async fn delete_history_entry(&self, id: HistoryEntryId) -> Result<bool, StoreError> {
+        let deleted = sqlx::query("DELETE FROM history WHERE id = ?")
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(|_| StoreError::Unavailable)?
+            .rows_affected()
+            == 1;
+        if deleted {
+            let _ = self.compact_history().await;
+        }
+        Ok(deleted)
+    }
+
+    pub async fn clear_history(&self) -> Result<u64, StoreError> {
+        let deleted = sqlx::query("DELETE FROM history")
+            .execute(&self.pool)
+            .await
+            .map_err(|_| StoreError::Unavailable)?
+            .rows_affected();
+        if deleted > 0 {
+            let _ = self.compact_history().await;
+        }
+        Ok(deleted)
+    }
+
+    pub async fn prune_history(&self, cutoff_ms: i64) -> Result<u64, StoreError> {
+        if cutoff_ms < 0 {
+            return Err(StoreError::InvalidData);
+        }
+        let deleted = sqlx::query("DELETE FROM history WHERE timestamp_ms < ?")
+            .bind(cutoff_ms)
+            .execute(&self.pool)
+            .await
+            .map_err(|_| StoreError::Unavailable)?
+            .rows_affected();
+        if deleted > 0 {
+            let _ = self.compact_history().await;
+        }
+        Ok(deleted)
+    }
+
+    async fn compact_history(&self) -> Result<(), StoreError> {
+        sqlx::query("PRAGMA optimize")
+            .execute(&self.pool)
+            .await
+            .map_err(|_| StoreError::Unavailable)?;
+        sqlx::query("PRAGMA incremental_vacuum(128)")
+            .execute(&self.pool)
+            .await
+            .map_err(|_| StoreError::Unavailable)?;
+        Ok(())
     }
 
     pub async fn save_schema_cache<T: serde::Serialize>(
@@ -460,13 +600,10 @@ impl LocalStore {
             workspace
                 .tabs
                 .retain(|tab| tab.profile_id != Some(profile_id));
-            if workspace
-                .active_tab_id
-                .is_some_and(|active| !workspace.tabs.iter().any(|tab| tab.id == active))
-            {
-                workspace.active_tab_id = workspace.tabs.first().map(|tab| tab.id);
-            }
         } else {
+            workspace.tabs.retain(|tab| {
+                tab.profile_id != Some(profile_id) || tab.kind == WorkspaceTabKind::Query
+            });
             for tab in &mut workspace.tabs {
                 if tab.profile_id == Some(profile_id) {
                     tab.profile_id = None;
@@ -475,6 +612,16 @@ impl LocalStore {
                 }
             }
         }
+        if workspace
+            .active_tab_id
+            .is_some_and(|active| !workspace.tabs.iter().any(|tab| tab.id == active))
+        {
+            workspace.active_tab_id = workspace.tabs.first().map(|tab| tab.id);
+        }
+        for (position, tab) in workspace.tabs.iter_mut().enumerate() {
+            tab.position = position as u16;
+        }
+        workspace.validate().map_err(|_| StoreError::InvalidData)?;
 
         let serialized_workspace =
             serde_json::to_string(&workspace).map_err(|_| StoreError::InvalidData)?;
@@ -498,14 +645,36 @@ impl LocalStore {
                 .await
                 .map_err(|_| StoreError::Unavailable)?;
         } else {
-            sqlx::query(
-                "UPDATE history SET profile_id = NULL, profile_label = ? WHERE profile_id = ?",
+            let retained = sqlx::query(
+                "SELECT id, metadata_json FROM history WHERE profile_id = ? ORDER BY id",
             )
-            .bind(&profile_label)
             .bind(profile_id.to_string())
-            .execute(&mut *transaction)
+            .fetch_all(&mut *transaction)
             .await
             .map_err(|_| StoreError::Unavailable)?;
+            for row in retained {
+                let id: String = row.try_get("id").map_err(|_| StoreError::InvalidData)?;
+                let metadata: String = row
+                    .try_get("metadata_json")
+                    .map_err(|_| StoreError::InvalidData)?;
+                let mut entry: HistoryEntry =
+                    serde_json::from_str(&metadata).map_err(|_| StoreError::InvalidData)?;
+                entry.profile_id = None;
+                entry.profile_label = profile_label.clone();
+                entry.validate().map_err(|_| StoreError::InvalidData)?;
+                let metadata =
+                    serde_json::to_string(&entry).map_err(|_| StoreError::InvalidData)?;
+                sqlx::query(
+                    "UPDATE history SET profile_id = NULL, profile_label = ?, metadata_json = ? WHERE id = ? AND profile_id = ?",
+                )
+                .bind(&profile_label)
+                .bind(metadata)
+                .bind(id)
+                .bind(profile_id.to_string())
+                .execute(&mut *transaction)
+                .await
+                .map_err(|_| StoreError::Unavailable)?;
+            }
         }
         sqlx::query("DELETE FROM schema_cache WHERE profile_id = ?")
             .bind(profile_id.to_string())
@@ -525,7 +694,11 @@ impl LocalStore {
         transaction
             .commit()
             .await
-            .map_err(|_| StoreError::Unavailable)
+            .map_err(|_| StoreError::Unavailable)?;
+        if operation.delete_history {
+            let _ = self.compact_history().await;
+        }
+        Ok(())
     }
 }
 
@@ -581,6 +754,7 @@ async fn migrate(
         let statements = match version {
             1 => MIGRATION_1,
             2 => MIGRATION_2,
+            3 => MIGRATION_3,
             _ => return Err(StoreError::MigrationFailed),
         };
         let mut transaction = connection
@@ -599,6 +773,7 @@ async fn migrate(
         let version_statement = match version {
             1 => "PRAGMA user_version = 1",
             2 => "PRAGMA user_version = 2",
+            3 => "PRAGMA user_version = 3",
             _ => return Err(StoreError::MigrationFailed),
         };
         sqlx::query(version_statement)
@@ -649,6 +824,7 @@ fn restrict_file(_path: &Path) -> Result<(), StoreError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::history::HistoryStatus;
     use crate::profile::{ConnectionTarget, TlsMode};
     use crate::vault::{VaultError, VaultFailureKind};
     use crate::workspace::{PanelSizes, WorkspaceTab};
@@ -711,6 +887,43 @@ mod tests {
                 .unwrap(),
             CURRENT_STORE_VERSION
         );
+
+        let phase_four_path = directory.path().join("querynot-phase4.sqlite3");
+        let interrupted_phase_four =
+            LocalStore::bootstrap_with_fault(&phase_four_path, MigrationFault::before(3)).await;
+        assert_eq!(
+            interrupted_phase_four.state,
+            LocalStoreState::MigrationFailed
+        );
+        assert!(interrupted_phase_four.store.is_none());
+        let options = SqliteConnectOptions::new().filename(&phase_four_path);
+        let mut connection = SqliteConnection::connect_with(&options).await.unwrap();
+        let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+            .fetch_one(&mut connection)
+            .await
+            .unwrap();
+        assert_eq!(version, 2);
+        let timestamp_columns: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM pragma_table_info('history') WHERE name = 'timestamp_ms'",
+        )
+        .fetch_one(&mut connection)
+        .await
+        .unwrap();
+        assert_eq!(timestamp_columns, 0);
+        connection.close().await.unwrap();
+
+        let recovered_phase_four = LocalStore::bootstrap(&phase_four_path).await;
+        assert_eq!(recovered_phase_four.state, LocalStoreState::Healthy);
+        assert_eq!(
+            recovered_phase_four
+                .store
+                .as_ref()
+                .unwrap()
+                .schema_version()
+                .await
+                .unwrap(),
+            CURRENT_STORE_VERSION
+        );
     }
 
     #[tokio::test]
@@ -746,6 +959,8 @@ mod tests {
             tabs: vec![WorkspaceTab {
                 id: tab_id,
                 title: "Draft".to_owned(),
+                kind: crate::workspace::WorkspaceTabKind::Query,
+                pinned: false,
                 profile_id: Some(profile.id),
                 profile_label: Some(profile.name.clone()),
                 context_label: Some("fixture".to_owned()),
@@ -754,6 +969,10 @@ mod tests {
                 position: 0,
                 source_file_path: None,
                 source_file_modified_ms: None,
+                source_file_size: None,
+                source_file_identity: None,
+                table_namespace: None,
+                table_name: None,
                 reconnectable: true,
             }],
             active_tab_id: Some(tab_id),
@@ -770,6 +989,71 @@ mod tests {
         assert_eq!(store.load_settings().await.unwrap(), reset);
         assert_eq!(store.profile(profile.id).await.unwrap(), profile);
         assert_eq!(store.load_workspace().await.unwrap(), workspace);
+    }
+
+    #[tokio::test]
+    async fn history_search_delete_retention_and_clear_are_immediate() {
+        let directory = tempfile::tempdir().unwrap();
+        let store = LocalStore::bootstrap(directory.path().join("querynot.sqlite3"))
+            .await
+            .store
+            .unwrap();
+        let auto_vacuum: i64 = sqlx::query_scalar("PRAGMA auto_vacuum")
+            .fetch_one(&store.pool)
+            .await
+            .unwrap();
+        assert_eq!(auto_vacuum, 2);
+        let profile = profile(100);
+        let first = HistoryEntry::new(HistoryEntryInput {
+            sql: "select alpha".to_owned(),
+            timestamp_ms: 100,
+            profile_id: profile.id,
+            profile_label: profile.name.clone(),
+            engine: "fixture-engine".to_owned(),
+            context: "fixture".to_owned(),
+            duration_ms: 5,
+            status: HistoryStatus::Succeeded,
+            affected_rows: 0,
+            received_rows: 1,
+            error_category: None,
+        });
+        let second = HistoryEntry::new(HistoryEntryInput {
+            sql: "update beta set value = 1".to_owned(),
+            timestamp_ms: 200,
+            profile_id: profile.id,
+            profile_label: profile.name.clone(),
+            engine: "fixture-engine".to_owned(),
+            context: "fixture".to_owned(),
+            duration_ms: 8,
+            status: HistoryStatus::Failed,
+            affected_rows: 0,
+            received_rows: 0,
+            error_category: Some(crate::ErrorCategory::Constraint),
+        });
+        store.save_history_entry(&first).await.unwrap();
+        store.save_history_entry(&second).await.unwrap();
+
+        assert_eq!(
+            store
+                .list_history("", 10)
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|entry| entry.id)
+                .collect::<Vec<_>>(),
+            vec![second.id, first.id]
+        );
+        assert_eq!(
+            store.list_history("alpha", 10).await.unwrap(),
+            vec![first.clone()]
+        );
+        assert!(store.delete_history_entry(first.id).await.unwrap());
+        assert_eq!(store.prune_history(201).await.unwrap(), 1);
+        assert!(store.list_history("", 10).await.unwrap().is_empty());
+
+        store.save_history_entry(&second).await.unwrap();
+        assert_eq!(store.clear_history().await.unwrap(), 1);
+        assert!(store.list_history("", 10).await.unwrap().is_empty());
     }
 
     #[tokio::test]
@@ -876,24 +1160,66 @@ mod tests {
         let mut profile = profile(100);
         profile.attach_secret_reference(SecretRef::new(), 101);
         store.save_profile(&profile).await.unwrap();
+        let history = HistoryEntry::new(HistoryEntryInput {
+            sql: "select retained_history".to_owned(),
+            timestamp_ms: 101,
+            profile_id: profile.id,
+            profile_label: profile.name.clone(),
+            engine: "fixture-engine".to_owned(),
+            context: "fixture".to_owned(),
+            duration_ms: 1,
+            status: HistoryStatus::Succeeded,
+            affected_rows: 0,
+            received_rows: 1,
+            error_category: None,
+        });
+        store.save_history_entry(&history).await.unwrap();
         let tab_id = crate::TabId::new();
+        let table_tab_id = crate::TabId::new();
         store
             .save_workspace(
                 &WorkspaceSnapshot {
-                    tabs: vec![WorkspaceTab {
-                        id: tab_id,
-                        title: "Retained".to_owned(),
-                        profile_id: Some(profile.id),
-                        profile_label: Some(profile.name.clone()),
-                        context_label: Some("fixture".to_owned()),
-                        sql: "select 1".to_owned(),
-                        dirty: true,
-                        position: 0,
-                        source_file_path: None,
-                        source_file_modified_ms: None,
-                        reconnectable: true,
-                    }],
-                    active_tab_id: Some(tab_id),
+                    tabs: vec![
+                        WorkspaceTab {
+                            id: tab_id,
+                            title: "Retained".to_owned(),
+                            kind: crate::workspace::WorkspaceTabKind::Query,
+                            pinned: false,
+                            profile_id: Some(profile.id),
+                            profile_label: Some(profile.name.clone()),
+                            context_label: Some("fixture".to_owned()),
+                            sql: "select 1".to_owned(),
+                            dirty: true,
+                            position: 0,
+                            source_file_path: None,
+                            source_file_modified_ms: None,
+                            source_file_size: None,
+                            source_file_identity: None,
+                            table_namespace: None,
+                            table_name: None,
+                            reconnectable: true,
+                        },
+                        WorkspaceTab {
+                            id: table_tab_id,
+                            title: "Ephemeral table data".to_owned(),
+                            kind: crate::workspace::WorkspaceTabKind::TableData,
+                            pinned: false,
+                            profile_id: Some(profile.id),
+                            profile_label: Some(profile.name.clone()),
+                            context_label: Some("fixture".to_owned()),
+                            sql: String::new(),
+                            dirty: false,
+                            position: 1,
+                            source_file_path: None,
+                            source_file_modified_ms: None,
+                            source_file_size: None,
+                            source_file_identity: None,
+                            table_namespace: Some("fixture".to_owned()),
+                            table_name: Some("items".to_owned()),
+                            reconnectable: true,
+                        },
+                    ],
+                    active_tab_id: Some(table_tab_id),
                     panel_sizes: PanelSizes::default(),
                 },
                 102,
@@ -923,11 +1249,26 @@ mod tests {
             Err(StoreError::ProfileNotFound)
         );
         let workspace = store.load_workspace().await.unwrap();
+        assert_eq!(workspace.tabs.len(), 1);
+        assert_eq!(workspace.active_tab_id, Some(tab_id));
         assert_eq!(workspace.tabs[0].profile_id, None);
         assert_eq!(
             workspace.tabs[0].profile_label.as_deref(),
             Some("Deleted profile: Fixture")
         );
         assert!(!workspace.tabs[0].reconnectable);
+        let retained_history = store.list_history("retained_history", 10).await.unwrap();
+        assert_eq!(retained_history[0].profile_id, None);
+        assert_eq!(
+            retained_history[0].profile_label,
+            "Deleted profile: Fixture"
+        );
+        assert!(
+            store
+                .list_history("\"profile_id\":\"", 10)
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 }

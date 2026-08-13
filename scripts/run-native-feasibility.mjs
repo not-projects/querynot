@@ -18,10 +18,15 @@ const root = resolve(import.meta.dirname, '..');
 const temporaryRoot = process.platform === 'linux' ? '/tmp' : tmpdir();
 const argumentsList = process.argv.slice(2);
 const phase3 = argumentsList.includes('--phase3');
+const phase4 = argumentsList.includes('--phase4');
+if (phase3 && phase4) {
+  throw new Error('choose only one retained conformance phase');
+}
 const cacheIndex = argumentsList.indexOf('--cache');
 const cacheArgument = cacheIndex >= 0 ? argumentsList[cacheIndex + 1] : null;
 const recognizedArguments = new Set([
   '--phase3',
+  '--phase4',
   ...(cacheIndex >= 0 ? ['--cache', cacheArgument] : [])
 ]);
 if (
@@ -29,7 +34,7 @@ if (
   argumentsList.some((argument) => !recognizedArguments.has(argument))
 ) {
   throw new Error(
-    'usage: node scripts/run-native-feasibility.mjs [--phase3] [--cache /absolute/path]'
+    'usage: node scripts/run-native-feasibility.mjs [--phase3|--phase4] [--cache /absolute/path]'
   );
 }
 const cache = resolve(
@@ -192,6 +197,13 @@ CREATE TABLE transaction_fixture (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   value_text VARCHAR(128) NOT NULL
 );
+CREATE TABLE table_edit_fixture (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  note VARCHAR(128) NULL,
+  defaulted VARCHAR(32) NOT NULL DEFAULT 'server-default'
+);
+INSERT INTO table_edit_fixture (name, note) VALUES ('alpha', NULL), ('beta', 'original');
 CREATE VIEW fixture_view AS SELECT sequence_number FROM stream_fixture;
 DELIMITER //
 CREATE PROCEDURE fixture_multi_results()
@@ -712,7 +724,7 @@ CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password U
     tested_source:
       command('git', ['status', '--porcelain'], { capture: true }) === ''
         ? command('git', ['rev-parse', 'HEAD'], { capture: true })
-        : `working tree; exact committed rerun is required before the Phase ${phase3 ? '3' : '0'} exit gate closes`,
+        : `working tree; exact committed rerun is required before the Phase ${phase4 ? '4' : phase3 ? '3' : '0'} exit gate closes`,
     environment: {
       os: process.platform,
       architecture: process.arch,
@@ -721,9 +733,11 @@ CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password U
       rustc: command('rustc', ['--version'], { capture: true })
     },
     fixture: 'querynot-disposable-fixture-v1',
-    command: phase3
-      ? 'npm run test:conformance:phase3'
-      : 'npm run test:feasibility:native',
+    command: phase4
+      ? 'npm run test:conformance:phase4'
+      : phase3
+        ? 'npm run test:conformance:phase3'
+        : 'npm run test:feasibility:native',
     archive_checksums: Object.values(archives).map(
       ({ file, algorithm, digest: value, vendor_digest }) => ({
         file,
@@ -738,13 +752,17 @@ CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password U
   const evidenceDirectory = resolve(
     root,
     'evidence',
-    phase3 ? 'phase-3' : 'phase-0'
+    phase4 ? 'phase-4' : phase3 ? 'phase-3' : 'phase-0'
   );
   mkdirSync(evidenceDirectory, { recursive: true });
   writeFileSync(
     resolve(
       evidenceDirectory,
-      phase3 ? 'adapter-conformance-report.json' : 'feasibility-report.json'
+      phase4
+        ? 'table-conformance-report.json'
+        : phase3
+          ? 'adapter-conformance-report.json'
+          : 'feasibility-report.json'
     ),
     `${JSON.stringify(evidence, null, 2)}\n`
   );

@@ -279,6 +279,14 @@ fn atomic_write(
     result
 }
 
+pub fn write_local_bytes_atomically(
+    destination: &Path,
+    bytes: &[u8],
+    overwrite_confirmed: bool,
+) -> Result<(), ExportError> {
+    atomic_write(destination, bytes, overwrite_confirmed, &NoExportFault)
+}
+
 fn temporary_path(parent: &Path, file_name: &str) -> PathBuf {
     parent.join(format!(
         ".{file_name}.querynot-{}.tmp",

@@ -6,11 +6,16 @@ use futures_util::TryStreamExt;
 use querynot_core::profile::{ConnectionProfile, ConnectionTarget, TlsMode};
 use querynot_core::sql::{SqlDialect, plan_execution_for_dialect};
 use querynot_core::sqlite::{ExecutionControl, SqliteExecutionEvent, TransactionCertainty};
+use querynot_core::table::{
+    BrowseInput, FilterOperator, MutationCell, MutationCellMode, MutationInput, MutationKind,
+    SortDirection, TableDialect, TableFilter, TableSort, plan_browse, plan_mutations,
+};
+use querynot_core::vault::ConnectionSecrets;
 use querynot_core::{
     AdapterSession, CompatibilityStatus, DatabaseFamily, ExecutionId, FixtureManifest,
     FixtureTarget, TaggedValue,
 };
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::ExposeSecret;
 use serde::Serialize;
 use sqlx::{Connection, MySqlConnection, Row, mysql::MySqlConnectOptions};
 use tokio::sync::mpsc;
@@ -47,6 +52,17 @@ struct AdapterConformanceReport {
     session_usable_after_cancel: bool,
     system_trust_rejected_private_ca: bool,
     client_certificate_required_and_verified: Option<bool>,
+    table_editing: TableConformanceReport,
+}
+
+#[derive(Debug, Serialize)]
+struct TableConformanceReport {
+    deterministic_keyset_paging: bool,
+    bound_structured_filters: bool,
+    typed_validation: bool,
+    insert_update_delete: bool,
+    generated_value_refresh: bool,
+    optimistic_conflict_atomic_rollback: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -334,12 +350,12 @@ async fn check_querynot_adapter(
         0,
     )
     .map_err(|_| format!("{} adapter profile is invalid", target.id))?;
-    let password = SecretString::new(
+    let password = ConnectionSecrets::new(
         parsed
             .password()
             .ok_or_else(|| format!("{} adapter password is absent", target.id))?
-            .to_owned()
-            .into_boxed_str(),
+            .to_owned(),
+        String::new(),
     );
     let system_trust_profile = ConnectionProfile::new(
         format!("system-trust-fixture-{}", target.id),
@@ -594,6 +610,10 @@ async fn check_querynot_adapter(
         )
     })?;
 
+    let table_editing = check_table_editing(&session)
+        .await
+        .map_err(|error| format!("{} adapter table editing: {error}", target.id))?;
+
     let cancellation_confirmed = run_adapter_cancellation(&session)
         .await
         .map_err(|error| format!("{} adapter cancellation: {error}", target.id))?;
@@ -616,6 +636,7 @@ async fn check_querynot_adapter(
         session_usable_after_cancel: usable.finished,
         system_trust_rejected_private_ca,
         client_certificate_required_and_verified,
+        table_editing,
     };
     if !report.exact_identity
         || !report.supported_capability_profile
@@ -631,6 +652,12 @@ async fn check_querynot_adapter(
         || !report.session_usable_after_cancel
         || !report.system_trust_rejected_private_ca
         || report.client_certificate_required_and_verified == Some(false)
+        || !report.table_editing.deterministic_keyset_paging
+        || !report.table_editing.bound_structured_filters
+        || !report.table_editing.typed_validation
+        || !report.table_editing.insert_update_delete
+        || !report.table_editing.generated_value_refresh
+        || !report.table_editing.optimistic_conflict_atomic_rollback
     {
         return Err(format!(
             "{} failed one or more QueryNot adapter conformance assertions",
@@ -638,6 +665,260 @@ async fn check_querynot_adapter(
         ));
     }
     Ok(report)
+}
+
+async fn check_table_editing(session: &AdapterSession) -> Result<TableConformanceReport, String> {
+    let namespace = "querynot_fixture";
+    let table = "table_edit_fixture";
+    let input = BrowseInput {
+        filters: Vec::new(),
+        sorts: vec![TableSort {
+            column: "name".to_owned(),
+            direction: SortDirection::Ascending,
+        }],
+        cursor: Vec::new(),
+        offset: 0,
+        page_size: 25,
+    };
+    session
+        .object_detail(namespace, table)
+        .await
+        .map_err(|error| {
+            format!(
+                "initial table detail: {} {}",
+                error.safe_message,
+                error.safe_detail.unwrap_or_default()
+            )
+        })?;
+    let initial = session
+        .browse_table(namespace, table, &input)
+        .await
+        .map_err(|error| {
+            format!(
+                "initial browse: {} {}",
+                error.safe_message,
+                error.safe_detail.unwrap_or_default()
+            )
+        })?;
+    let definition = initial.definition.clone();
+    let deterministic_keyset_paging = !initial.unstable
+        && definition.editable
+        && definition
+            .identity
+            .as_ref()
+            .is_some_and(|identity| identity.columns == ["id"]);
+
+    let hostile_filter = TableFilter {
+        column: "name".to_owned(),
+        operator: FilterOperator::Contains,
+        value: Some(TaggedValue::Text("x%' OR 1=1 --".to_owned())),
+    };
+    let hostile_input = BrowseInput {
+        filters: vec![hostile_filter],
+        ..input.clone()
+    };
+    let bound_plan = plan_browse(&definition, TableDialect::MySql, &hostile_input)
+        .map_err(|error| format!("hostile filter planning: {}", error.safe_message))?;
+    let filtered = session
+        .browse_table(namespace, table, &hostile_input)
+        .await
+        .map_err(|error| format!("hostile filter browse: {}", error.safe_message))?;
+    let bound_structured_filters = !bound_plan.sql.contains("OR 1=1")
+        && matches!(bound_plan.parameters.first(), Some(TaggedValue::Text(_)))
+        && filtered.rows.is_empty();
+
+    let original = initial
+        .rows
+        .first()
+        .cloned()
+        .ok_or_else(|| "table-edit fixture has no initial row".to_owned())?;
+    let typed_validation = plan_mutations(
+        &definition,
+        TableDialect::MySql,
+        1,
+        &[MutationInput {
+            kind: MutationKind::Update,
+            original,
+            cells: vec![MutationCell {
+                column: "name".to_owned(),
+                mode: MutationCellMode::Value(TaggedValue::SignedInteger("7".to_owned())),
+            }],
+        }],
+    )
+    .is_err();
+
+    let insert = plan_mutations(
+        &definition,
+        TableDialect::MySql,
+        2,
+        &[MutationInput {
+            kind: MutationKind::Insert,
+            original: Vec::new(),
+            cells: vec![
+                MutationCell {
+                    column: "id".to_owned(),
+                    mode: MutationCellMode::DatabaseDefault,
+                },
+                MutationCell {
+                    column: "name".to_owned(),
+                    mode: MutationCellMode::Value(TaggedValue::Text("phase4-insert".to_owned())),
+                },
+                MutationCell {
+                    column: "note".to_owned(),
+                    mode: MutationCellMode::Value(TaggedValue::Null),
+                },
+                MutationCell {
+                    column: "defaulted".to_owned(),
+                    mode: MutationCellMode::DatabaseDefault,
+                },
+            ],
+        }],
+    )
+    .map_err(|error| format!("insert planning: {}", error.safe_message))?;
+    session
+        .apply_table_mutations(&insert)
+        .await
+        .map_err(|error| format!("insert apply: {}", error.safe_message))?;
+
+    let inserted_input = BrowseInput {
+        filters: vec![TableFilter {
+            column: "name".to_owned(),
+            operator: FilterOperator::Equal,
+            value: Some(TaggedValue::Text("phase4-insert".to_owned())),
+        }],
+        sorts: Vec::new(),
+        cursor: Vec::new(),
+        offset: 0,
+        page_size: 25,
+    };
+    let inserted_page = session
+        .browse_table(namespace, table, &inserted_input)
+        .await
+        .map_err(|error| format!("insert refresh browse: {}", error.safe_message))?;
+    let inserted = inserted_page
+        .rows
+        .first()
+        .cloned()
+        .ok_or_else(|| "inserted table-edit row was not refreshed".to_owned())?;
+    let column_index = |name: &str| {
+        definition
+            .columns
+            .iter()
+            .position(|column| column.name == name)
+            .ok_or_else(|| format!("table-edit column {name} is absent"))
+    };
+    let id_index = column_index("id")?;
+    let note_index = column_index("note")?;
+    let default_index = column_index("defaulted")?;
+    let generated_value_refresh = matches!(
+        inserted.get(id_index),
+        Some(TaggedValue::UnsignedInteger(_))
+    ) && matches!(
+        inserted.get(default_index),
+        Some(TaggedValue::Text(value)) if value == "server-default"
+    );
+
+    let update = plan_mutations(
+        &definition,
+        TableDialect::MySql,
+        3,
+        &[MutationInput {
+            kind: MutationKind::Update,
+            original: inserted,
+            cells: vec![MutationCell {
+                column: "note".to_owned(),
+                mode: MutationCellMode::Value(TaggedValue::Text("updated".to_owned())),
+            }],
+        }],
+    )
+    .map_err(|error| format!("update planning: {}", error.safe_message))?;
+    session
+        .apply_table_mutations(&update)
+        .await
+        .map_err(|error| format!("update apply: {}", error.safe_message))?;
+    let updated_page = session
+        .browse_table(namespace, table, &inserted_input)
+        .await
+        .map_err(|error| format!("update refresh browse: {}", error.safe_message))?;
+    let updated = updated_page
+        .rows
+        .first()
+        .cloned()
+        .ok_or_else(|| "updated table-edit row disappeared".to_owned())?;
+    let update_visible = matches!(
+        updated.get(note_index),
+        Some(TaggedValue::Text(value)) if value == "updated"
+    );
+
+    let conflict = plan_mutations(
+        &definition,
+        TableDialect::MySql,
+        4,
+        &[
+            MutationInput {
+                kind: MutationKind::Update,
+                original: updated.clone(),
+                cells: vec![MutationCell {
+                    column: "note".to_owned(),
+                    mode: MutationCellMode::Value(TaggedValue::Text("must-roll-back".to_owned())),
+                }],
+            },
+            MutationInput {
+                kind: MutationKind::Update,
+                original: updated.clone(),
+                cells: vec![MutationCell {
+                    column: "note".to_owned(),
+                    mode: MutationCellMode::Value(TaggedValue::Text("must-conflict".to_owned())),
+                }],
+            },
+        ],
+    )
+    .map_err(|error| format!("conflict planning: {}", error.safe_message))?;
+    let conflict_detected = session.apply_table_mutations(&conflict).await.is_err();
+    let after_conflict = session
+        .browse_table(namespace, table, &inserted_input)
+        .await
+        .map_err(|error| format!("conflict refresh browse: {}", error.safe_message))?;
+    let rollback_preserved = matches!(
+        after_conflict.rows.first().and_then(|row| row.get(note_index)),
+        Some(TaggedValue::Text(value)) if value == "updated"
+    );
+
+    let current = after_conflict
+        .rows
+        .first()
+        .cloned()
+        .ok_or_else(|| "table-edit row disappeared after conflict".to_owned())?;
+    let delete = plan_mutations(
+        &definition,
+        TableDialect::MySql,
+        5,
+        &[MutationInput {
+            kind: MutationKind::Delete,
+            original: current,
+            cells: Vec::new(),
+        }],
+    )
+    .map_err(|error| format!("delete planning: {}", error.safe_message))?;
+    session
+        .apply_table_mutations(&delete)
+        .await
+        .map_err(|error| format!("delete apply: {}", error.safe_message))?;
+    let deleted = session
+        .browse_table(namespace, table, &inserted_input)
+        .await
+        .map_err(|error| format!("delete refresh browse: {}", error.safe_message))?
+        .rows
+        .is_empty();
+
+    Ok(TableConformanceReport {
+        deterministic_keyset_paging,
+        bound_structured_filters,
+        typed_validation,
+        insert_update_delete: update_visible && deleted,
+        generated_value_refresh,
+        optimistic_conflict_atomic_rollback: conflict_detected && rollback_preserved,
+    })
 }
 
 struct AdapterExecutionReport {

@@ -45,6 +45,10 @@
       "request": "WorkspaceView",
       "response": "WorkspaceSaveResponse"
     },
+    "clear_saved_workspace": {
+      "request": "ConfirmedActionRequest",
+      "response": "FileActionResponse"
+    },
     "create_offline_tab": {
       "request": "NewOfflineTabRequest",
       "response": "WorkspaceTabView"
@@ -56,6 +60,22 @@
     "pick_sql_file": {
       "request": null,
       "response": "FilePickerResponse"
+    },
+    "save_sql_file": {
+      "request": "SaveSqlFileRequest",
+      "response": "SqlFileActionResponse"
+    },
+    "save_sql_file_as": {
+      "request": "SaveSqlFileAsRequest",
+      "response": "SqlFileActionResponse"
+    },
+    "review_sql_file": {
+      "request": "ReviewSqlFileRequest",
+      "response": "FilePickerResponse"
+    },
+    "take_pending_sql_files": {
+      "request": null,
+      "response": "PendingSqlFilesResponse"
     },
     "pick_sqlite_file": {
       "request": null,
@@ -113,6 +133,14 @@
       "request": "SchemaObjectRequest",
       "response": "SchemaObjectDetailView"
     },
+    "qualified_schema_name": {
+      "request": "SchemaObjectRequest",
+      "response": "SchemaTextResponse"
+    },
+    "starter_query": {
+      "request": "SchemaObjectRequest",
+      "response": "SchemaTextResponse"
+    },
     "format_sql": {
       "request": "FormatSqlRequest",
       "response": "FormatSqlResponse"
@@ -164,10 +192,43 @@
     "clear_operational_log": {
       "request": "ConfirmedActionRequest",
       "response": "FileActionResponse"
+    },
+    "list_history": {
+      "request": "HistoryQueryRequest",
+      "response": "HistoryResponse"
+    },
+    "delete_history_entry": {
+      "request": "DeleteHistoryEntryRequest",
+      "response": "FileActionResponse"
+    },
+    "clear_history": {
+      "request": "ConfirmedActionRequest",
+      "response": "FileActionResponse"
+    },
+    "browse_table": {
+      "request": "TableBrowseRequest",
+      "response": "TablePageView"
+    },
+    "preview_table_mutations": {
+      "request": "PreviewTableMutationsRequest",
+      "response": "MutationPreviewView"
+    },
+    "apply_table_mutations": {
+      "request": "ApplyTableMutationsRequest",
+      "response": "MutationApplyResponse"
+    },
+    "discard_mutation_plan": {
+      "request": "MutationPlanIdRequest",
+      "response": "FileActionResponse"
+    },
+    "change_tab_context": {
+      "request": "ChangeTabContextRequest",
+      "response": "SessionContextResponse"
     }
   },
   "events": {
-    "query_execution": "ExecutionEventView"
+    "query_execution": "ExecutionEventView",
+    "querynot_open_files": "PendingSqlFilesSignal"
   },
   "types": {
     "ApplicationStatusResponse": {
@@ -224,7 +285,8 @@
     },
     "SaveProfileSecretRequest": {
       "profile_id": "string",
-      "secret": "string",
+      "database_password": "string",
+      "client_key_passphrase": "string",
       "session_only": "bool"
     },
     "SecretActionResponse": {
@@ -274,6 +336,8 @@
     "WorkspaceTabView": {
       "id": "string",
       "title": "string",
+      "kind": "string",
+      "pinned": "bool",
       "profile_id": "string?",
       "profile_label": "string?",
       "context_label": "string?",
@@ -281,6 +345,8 @@
       "dirty": "bool",
       "position": "u16",
       "source_file_grant_id": "string?",
+      "table_namespace": "string?",
+      "table_name": "string?",
       "reconnectable": "bool"
     },
     "WorkspaceView": {
@@ -305,6 +371,36 @@
       "display_name": "string?",
       "content": "string?"
     },
+    "PendingSqlFilesResponse": {
+      "files": "FilePickerResponse[]"
+    },
+    "PendingSqlFilesSignal": {
+      "queued": "bool"
+    },
+    "SaveSqlFileRequest": {
+      "profile_id": "string?",
+      "tab_id": "string",
+      "file_grant_id": "string",
+      "content": "string"
+    },
+    "SaveSqlFileAsRequest": {
+      "profile_id": "string?",
+      "tab_id": "string",
+      "suggested_name": "string",
+      "content": "string"
+    },
+    "ReviewSqlFileRequest": {
+      "profile_id": "string?",
+      "tab_id": "string",
+      "file_grant_id": "string"
+    },
+    "SqlFileActionResponse": {
+      "status": "string",
+      "cancelled": "bool",
+      "file_grant_id": "string?",
+      "display_name": "string?",
+      "message": "string"
+    },
     "DiagnosticEventView": {
       "timestamp_ms": "i64",
       "area": "string",
@@ -325,6 +421,150 @@
     },
     "ConfirmedActionRequest": {
       "confirmed": "bool"
+    },
+    "HistoryQueryRequest": {
+      "search": "string",
+      "limit": "u32"
+    },
+    "DeleteHistoryEntryRequest": {
+      "history_id": "string"
+    },
+    "HistoryEntryView": {
+      "id": "string",
+      "sql": "string",
+      "timestamp_ms": "i64",
+      "profile_id": "string?",
+      "profile_label": "string",
+      "engine": "string",
+      "context": "string",
+      "duration_ms": "u64",
+      "status": "string",
+      "affected_rows": "u64",
+      "received_rows": "u64",
+      "error_category": "string?"
+    },
+    "HistoryResponse": {
+      "entries": "HistoryEntryView[]",
+      "warning": "string?"
+    },
+    "TableFilterView": {
+      "column": "string",
+      "operator": "string",
+      "value": "TaggedValueView?"
+    },
+    "TableSortView": {
+      "column": "string",
+      "direction": "string"
+    },
+    "TableBrowseRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "namespace": "string",
+      "table": "string",
+      "filters": "TableFilterView[]",
+      "sorts": "TableSortView[]",
+      "cursor": "TaggedValueView[]",
+      "offset": "u64",
+      "page_size": "u32"
+    },
+    "TableColumnView": {
+      "name": "string",
+      "declared_type": "string",
+      "nullable": "bool",
+      "primary_key_position": "u32",
+      "has_default": "bool",
+      "generated": "bool",
+      "editor": "string",
+      "editable": "bool",
+      "read_only_reason": "string?"
+    },
+    "TableDefinitionView": {
+      "namespace": "string",
+      "table": "string",
+      "columns": "TableColumnView[]",
+      "identity_source": "string?",
+      "identity_columns": "string[]",
+      "editable": "bool",
+      "read_only_reason": "string?"
+    },
+    "TableRowView": {
+      "values": "TaggedValueView[]"
+    },
+    "TablePageView": {
+      "definition": "TableDefinitionView",
+      "rows": "TableRowView[]",
+      "has_more": "bool",
+      "next_cursor": "TaggedValueView[]",
+      "next_offset": "u64",
+      "unstable": "bool",
+      "message": "string"
+    },
+    "MutationCellView": {
+      "column": "string",
+      "mode": "string",
+      "value": "TaggedValueView?"
+    },
+    "TableMutationView": {
+      "kind": "string",
+      "original": "TaggedValueView[]",
+      "cells": "MutationCellView[]"
+    },
+    "PreviewTableMutationsRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "namespace": "string",
+      "table": "string",
+      "staging_revision": "u64",
+      "operations": "TableMutationView[]"
+    },
+    "MutationParameterPreviewView": {
+      "value_type": "string",
+      "display": "string",
+      "truncated": "bool"
+    },
+    "MutationOperationPreviewView": {
+      "kind": "string",
+      "sql_template": "string",
+      "parameters": "MutationParameterPreviewView[]",
+      "expected_rows": "u64"
+    },
+    "MutationPreviewView": {
+      "plan_id": "string",
+      "staging_revision": "u64",
+      "target": "string",
+      "affected_row_count": "u32",
+      "operations": "MutationOperationPreviewView[]",
+      "message": "string"
+    },
+    "ApplyTableMutationsRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "plan_id": "string",
+      "staging_revision": "u64"
+    },
+    "MutationPlanIdRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "plan_id": "string"
+    },
+    "MutationApplyResponse": {
+      "affected_rows": "u64",
+      "refreshed": "bool",
+      "message": "string"
+    },
+    "ChangeTabContextRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "context": "string"
+    },
+    "SessionContextResponse": {
+      "context": "string",
+      "message": "string"
     },
     "AdapterCapabilitiesView": {
       "metadata": "bool",
@@ -361,6 +601,7 @@
       "tab_id": "string",
       "session_id": "string",
       "state": "string",
+      "context": "string",
       "transaction": "TransactionStateView"
     },
     "TransactionStateView": {
@@ -396,12 +637,17 @@
       "namespace": "string",
       "object_name": "string"
     },
+    "SchemaTextResponse": {
+      "text": "string",
+      "message": "string"
+    },
     "SchemaColumnView": {
       "name": "string",
       "declared_type": "string",
       "nullable": "bool",
       "primary_key_position": "u32",
-      "default_expression": "string?"
+      "default_expression": "string?",
+      "generated": "bool"
     },
     "SchemaForeignKeyView": {
       "id": "i64",

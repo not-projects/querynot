@@ -2,6 +2,7 @@ use crate::phase1::{AppRuntimeState, available_store, lock, parse_id};
 use base64::Engine;
 use querynot_core::export::{ExportFormat, ExportOptions, NoExportFault, write_received_rows};
 use querynot_core::generated::contracts::*;
+use querynot_core::history::{HistoryEntry, HistoryEntryInput, HistoryStatus};
 use querynot_core::result::{MAX_RETAINED_ROWS, ResultRegistry, RetainedResult};
 use querynot_core::sql::{
     SafetyReason, SqlDialect, execution_is_provably_read_only, plan_execution_for_dialect,
@@ -10,14 +11,20 @@ use querynot_core::sqlite::{
     ExecutionControl, SchemaObjectDetail, SchemaObjectKind, SqliteConnectionInfo,
     SqliteExecutionEvent, SqliteTransactionState, TransactionCertainty,
 };
+use querynot_core::store::{LocalStore, unix_time_ms};
+use querynot_core::table::{
+    BrowseInput, FilterOperator, MutationCell, MutationCellMode, MutationInput, MutationKind,
+    MutationPlan, SortDirection, TableDefinition, TableDialect, TableEditorKind, TableFilter,
+    TablePage, TableSort, plan_mutations, quote_identifier,
+};
 use querynot_core::{AdapterSession, CompatibilityStatus};
 use querynot_core::{
-    ErrorCategory, ExecutionId, NativeSessionId, ProfileId, QueryNotError, ResultSetId, TabId,
-    TaggedValue,
+    ErrorCategory, ExecutionId, MutationPlanId, NativeSessionId, ProfileId, QueryNotError,
+    ResultSetId, TabId, TaggedValue,
 };
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tokio::sync::{mpsc, watch};
@@ -43,6 +50,7 @@ struct TabSessionResource {
     profile_id: ProfileId,
     tab_id: TabId,
     session: AdapterSession,
+    context: String,
 }
 
 #[derive(Clone)]
@@ -70,6 +78,37 @@ struct PendingApproval {
     plan_fingerprint: String,
 }
 
+struct HistoryCapture {
+    store: LocalStore,
+    warning: Arc<Mutex<Option<String>>>,
+    sql: String,
+    timestamp_ms: i64,
+    profile_id: ProfileId,
+    profile_label: String,
+    engine: String,
+    context: String,
+    started_at: Instant,
+}
+
+#[derive(Clone)]
+struct MutationPlanResource {
+    profile_id: ProfileId,
+    tab_id: TabId,
+    session_id: NativeSessionId,
+    context: String,
+    plan: MutationPlan,
+}
+
+struct ExecutionBridgeContext {
+    app: AppHandle,
+    runtime: Phase2Runtime,
+    ownership: Arc<Mutex<querynot_core::ownership::OwnershipRegistry>>,
+    window_id: querynot_core::WindowId,
+    lifecycle_epoch: u64,
+    owner: ResultOwner,
+    history_capture: Option<HistoryCapture>,
+}
+
 #[derive(Clone, Default)]
 pub(crate) struct Phase2Runtime {
     connected: Arc<Mutex<HashMap<ProfileId, ConnectedProfile>>>,
@@ -79,6 +118,7 @@ pub(crate) struct Phase2Runtime {
     result_owners: Arc<Mutex<HashMap<ResultSetId, ResultOwner>>>,
     pending_approvals: Arc<Mutex<HashMap<String, PendingApproval>>>,
     connection_attempts: Arc<Mutex<ConnectionAttemptRegistry>>,
+    mutation_plans: Arc<Mutex<HashMap<MutationPlanId, MutationPlanResource>>>,
     lifecycle_epoch: Arc<Mutex<u64>>,
 }
 
@@ -123,6 +163,9 @@ impl Phase2Runtime {
                 let _ = cancel.send(true);
             }
             attempts.clear();
+        }
+        if let Ok(mut plans) = self.mutation_plans.lock() {
+            plans.clear();
         }
     }
 
@@ -209,7 +252,7 @@ pub(crate) async fn test_profile_connection(
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
     lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
     let profile = available_store(&state)?.profile(profile_id).await?;
-    let secret = state.database_secret(&profile).await?;
+    let secrets = state.connection_secrets(&profile).await?;
     let mut cancel = state
         .phase2
         .begin_connection_attempt(profile_id, ConnectionAttemptKind::Test)?;
@@ -221,7 +264,7 @@ pub(crate) async fn test_profile_connection(
         },
         result = tokio::time::timeout(
             Duration::from_secs(profile.connection_timeout_seconds.into()),
-            AdapterSession::test_connection(&profile, &secret),
+            AdapterSession::test_connection(&profile, &secrets),
         ) => result.map_err(|_| connection_timeout_error(true)).and_then(|value| value),
     };
     state
@@ -246,12 +289,12 @@ pub(crate) async fn connect_profile(
         ));
     }
     let profile = available_store(&state)?.profile(profile_id).await?;
-    let secret = state.database_secret(&profile).await?;
+    let secrets = state.connection_secrets(&profile).await?;
     let mut cancel = state
         .phase2
         .begin_connection_attempt(profile_id, ConnectionAttemptKind::Connect)?;
     let connecting = async {
-        let session = AdapterSession::open(&profile, &secret).await?;
+        let session = AdapterSession::open(&profile, &secrets).await?;
         let info = session.connection_info(&profile).await?;
         Ok::<_, QueryNotError>((session, info))
     };
@@ -349,6 +392,7 @@ pub(crate) async fn disconnect_profile(
             false,
         ));
     }
+    state.clear_session_secret(profile_id)?;
     let removed = lock(&state.phase2.connected)?.remove(&profile_id).is_some();
     Ok(FileActionResponse {
         completed: removed,
@@ -389,12 +433,14 @@ pub(crate) async fn open_tab_session(
             profile_id,
             tab_id,
             session_id,
+            &resource.context,
             resource.session.transaction_state().await,
         ));
     }
     let profile = available_store(&state)?.profile(profile_id).await?;
-    let secret = state.database_secret(&profile).await?;
-    let session = AdapterSession::open(&profile, &secret).await?;
+    let secrets = state.connection_secrets(&profile).await?;
+    let session = AdapterSession::open(&profile, &secrets).await?;
+    let context = session.connection_info(&profile).await?.context;
     let session_id = NativeSessionId::new();
     lock(&state.ownership)?.register_session(state.window_id, profile_id, tab_id, session_id)?;
     lock(&state.phase2.sessions)?.insert(
@@ -403,12 +449,14 @@ pub(crate) async fn open_tab_session(
             profile_id,
             tab_id,
             session: session.clone(),
+            context: context.clone(),
         },
     );
     Ok(session_view(
         profile_id,
         tab_id,
         session_id,
+        &context,
         session.transaction_state().await,
     ))
 }
@@ -421,6 +469,17 @@ pub(crate) async fn close_tab_session(
     let (profile_id, tab_id, session_id) = session_ids(&request)?;
     lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
     let resource = session_resource(&state, profile_id, tab_id, session_id)?;
+    ensure_session_idle(&state, session_id)?;
+    if lock(&state.phase2.mutation_plans)?
+        .values()
+        .any(|plan| plan.session_id == session_id)
+    {
+        return Err(QueryNotError::database(
+            ErrorCategory::Transaction,
+            "Apply or discard the staged table preview before disconnecting this session.",
+            false,
+        ));
+    }
     let transaction = resource.session.transaction_state().await;
     if transaction.certainty != TransactionCertainty::Clean {
         return Err(QueryNotError::database(
@@ -447,6 +506,7 @@ pub(crate) async fn load_schema_namespaces(
 ) -> Result<SchemaNamespacesResponse, QueryNotError> {
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
     lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    invalidate_profile_mutation_plans(&state, profile_id)?;
     let connected = connected_profile(&state, profile_id)?;
     let cache_key = schema_cache_key(&connected.info, "namespaces", &[])?;
     match connected.metadata.namespaces().await {
@@ -490,6 +550,7 @@ pub(crate) async fn load_schema_objects(
 ) -> Result<SchemaObjectsResponse, QueryNotError> {
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
     lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    invalidate_profile_mutation_plans(&state, profile_id)?;
     let connected = connected_profile(&state, profile_id)?;
     let cache_key = schema_cache_key(&connected.info, "objects", &[&request.namespace])?;
     match connected.metadata.objects(&request.namespace).await {
@@ -525,6 +586,7 @@ pub(crate) async fn load_schema_object_detail(
 ) -> Result<SchemaObjectDetailView, QueryNotError> {
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
     lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    invalidate_profile_mutation_plans(&state, profile_id)?;
     let connected = connected_profile(&state, profile_id)?;
     let cache_key = schema_cache_key(
         &connected.info,
@@ -557,16 +619,321 @@ pub(crate) async fn load_schema_object_detail(
 }
 
 #[tauri::command]
+pub(crate) async fn qualified_schema_name(
+    state: State<'_, AppRuntimeState>,
+    request: SchemaObjectRequest,
+) -> Result<SchemaTextResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    let connected = connected_profile(&state, profile_id)?;
+    let dialect = table_dialect(&connected.info.dialect)?;
+    let detail = connected
+        .metadata
+        .object_detail(&request.namespace, &request.object_name)
+        .await?;
+    Ok(SchemaTextResponse {
+        text: format!(
+            "{}.{}",
+            quote_identifier(dialect, &detail.object.namespace),
+            quote_identifier(dialect, &detail.object.name)
+        ),
+        message: "The adapter quoted the qualified metadata name; it was not interpreted as a command or path."
+            .to_owned(),
+    })
+}
+
+#[tauri::command]
+pub(crate) async fn starter_query(
+    state: State<'_, AppRuntimeState>,
+    request: SchemaObjectRequest,
+) -> Result<SchemaTextResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    let connected = connected_profile(&state, profile_id)?;
+    let dialect = table_dialect(&connected.info.dialect)?;
+    let detail = connected
+        .metadata
+        .object_detail(&request.namespace, &request.object_name)
+        .await?;
+    if !matches!(
+        detail.object.kind,
+        SchemaObjectKind::Table | SchemaObjectKind::View
+    ) {
+        return Err(QueryNotError::database(
+            ErrorCategory::UnsupportedCapability,
+            "Starter queries are available for tables and views.",
+            false,
+        ));
+    }
+    let qualified = format!(
+        "{}.{}",
+        quote_identifier(dialect, &detail.object.namespace),
+        quote_identifier(dialect, &detail.object.name)
+    );
+    Ok(SchemaTextResponse {
+        text: format!("SELECT *\nFROM {qualified}\nLIMIT 100;"),
+        message:
+            "Created an offline starter draft with adapter-quoted identifiers; it was not executed."
+                .to_owned(),
+    })
+}
+
+#[tauri::command]
+pub(crate) async fn browse_table(
+    state: State<'_, AppRuntimeState>,
+    request: TableBrowseRequest,
+) -> Result<TablePageView, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    let tab_id = parse_id::<TabId>(&request.tab_id)?;
+    let session_id = parse_id::<NativeSessionId>(&request.session_id)?;
+    let resource = session_resource_from_parts(
+        &state,
+        &request.profile_id,
+        &request.tab_id,
+        &request.session_id,
+    )?;
+    if request.namespace != resource.context {
+        return Err(QueryNotError::authorization(
+            "The table namespace no longer matches this tab's confirmed context.",
+        ));
+    }
+    ensure_session_idle(&state, session_id)?;
+    let input = BrowseInput {
+        filters: request
+            .filters
+            .into_iter()
+            .map(table_filter_from_view)
+            .collect::<Result<Vec<_>, _>>()?,
+        sorts: request
+            .sorts
+            .into_iter()
+            .map(table_sort_from_view)
+            .collect::<Result<Vec<_>, _>>()?,
+        cursor: request
+            .cursor
+            .into_iter()
+            .map(tagged_value_from_view)
+            .collect::<Result<Vec<_>, _>>()?,
+        offset: request.offset,
+        page_size: request.page_size,
+    };
+    let result = resource
+        .session
+        .browse_table(&request.namespace, &request.table, &input)
+        .await;
+    close_lost_session_if_needed(&state, profile_id, tab_id, session_id, &result);
+    let page = result?;
+    Ok(table_page_view(page))
+}
+
+#[tauri::command]
+pub(crate) async fn preview_table_mutations(
+    state: State<'_, AppRuntimeState>,
+    request: PreviewTableMutationsRequest,
+) -> Result<MutationPreviewView, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    let tab_id = parse_id::<TabId>(&request.tab_id)?;
+    let session_id = parse_id::<NativeSessionId>(&request.session_id)?;
+    lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
+    let resource = session_resource(&state, profile_id, tab_id, session_id)?;
+    if request.namespace != resource.context {
+        return Err(QueryNotError::authorization(
+            "The staged table namespace no longer matches this tab's confirmed context.",
+        ));
+    }
+    ensure_session_idle(&state, session_id)?;
+    let transaction = resource.session.transaction_state().await;
+    if !transaction.automatic || transaction.certainty != TransactionCertainty::Clean {
+        return Err(QueryNotError::database(
+            ErrorCategory::Transaction,
+            "Previewing table changes requires a clean auto-commit table session.",
+            false,
+        ));
+    }
+    let connected = connected_profile(&state, profile_id)?;
+    let detail_result = resource
+        .session
+        .object_detail(&request.namespace, &request.table)
+        .await;
+    close_lost_session_if_needed(&state, profile_id, tab_id, session_id, &detail_result);
+    let detail = detail_result?;
+    let definition = TableDefinition::from_detail(
+        &detail,
+        resource.session.read_only(),
+        connected.info.capabilities.safe_table_mutations,
+    );
+    let dialect = table_dialect(&connected.info.dialect)?;
+    let inputs = request
+        .operations
+        .into_iter()
+        .map(mutation_from_view)
+        .collect::<Result<Vec<_>, _>>()?;
+    let plan = plan_mutations(&definition, dialect, request.staging_revision, &inputs)?;
+    let preview = mutation_preview_view(&plan);
+    let plan_id = plan.id;
+    let mut plans = lock(&state.phase2.mutation_plans)?;
+    plans.retain(|_, existing| existing.tab_id != tab_id);
+    plans.insert(
+        plan_id,
+        MutationPlanResource {
+            profile_id,
+            tab_id,
+            session_id,
+            context: resource.context,
+            plan,
+        },
+    );
+    Ok(preview)
+}
+
+#[tauri::command]
+pub(crate) async fn apply_table_mutations(
+    state: State<'_, AppRuntimeState>,
+    request: ApplyTableMutationsRequest,
+) -> Result<MutationApplyResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    let tab_id = parse_id::<TabId>(&request.tab_id)?;
+    let session_id = parse_id::<NativeSessionId>(&request.session_id)?;
+    let plan_id = parse_id::<MutationPlanId>(&request.plan_id)?;
+    lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
+    ensure_session_idle(&state, session_id)?;
+    let resource = session_resource(&state, profile_id, tab_id, session_id)?;
+    let planned = {
+        let mut plans = lock(&state.phase2.mutation_plans)?;
+        let planned = plans.get(&plan_id).ok_or_else(|| {
+            QueryNotError::authorization("The one-use mutation preview is unknown or invalidated.")
+        })?;
+        if planned.profile_id != profile_id
+            || planned.tab_id != tab_id
+            || planned.session_id != session_id
+            || planned.context != resource.context
+            || planned.plan.staging_revision != request.staging_revision
+        {
+            return Err(QueryNotError::authorization(
+                "The mutation preview no longer matches the tab, context, session, or staged revision.",
+            ));
+        }
+        plans
+            .remove(&plan_id)
+            .expect("the validated mutation preview remains present while locked")
+    };
+    let result = resource.session.apply_table_mutations(&planned.plan).await;
+    close_lost_session_if_needed(&state, profile_id, tab_id, session_id, &result);
+    let result = result?;
+    Ok(MutationApplyResponse {
+        affected_rows: result.affected_rows,
+        refreshed: result.refreshed,
+        message: format!(
+            "Applied {} staged operations atomically, then requested a server refresh for generated and coerced values. Inserted or changed rows may move outside the current page after refresh.",
+            planned.plan.operations.len()
+        ),
+    })
+}
+
+#[tauri::command]
+pub(crate) fn discard_mutation_plan(
+    state: State<'_, AppRuntimeState>,
+    request: MutationPlanIdRequest,
+) -> Result<FileActionResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    let tab_id = parse_id::<TabId>(&request.tab_id)?;
+    let session_id = parse_id::<NativeSessionId>(&request.session_id)?;
+    let plan_id = parse_id::<MutationPlanId>(&request.plan_id)?;
+    lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
+    let removed = {
+        let mut plans = lock(&state.phase2.mutation_plans)?;
+        match plans.get(&plan_id) {
+            Some(plan)
+                if plan.profile_id == profile_id
+                    && plan.tab_id == tab_id
+                    && plan.session_id == session_id =>
+            {
+                plans.remove(&plan_id);
+                true
+            }
+            _ => false,
+        }
+    };
+    Ok(FileActionResponse {
+        completed: removed,
+        cancelled: false,
+        message: if removed {
+            "The immutable mutation preview was invalidated; no database change was made."
+        } else {
+            "The mutation preview was already absent or invalidated."
+        }
+        .to_owned(),
+    })
+}
+
+#[tauri::command]
+pub(crate) async fn change_tab_context(
+    state: State<'_, AppRuntimeState>,
+    request: ChangeTabContextRequest,
+) -> Result<SessionContextResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    let tab_id = parse_id::<TabId>(&request.tab_id)?;
+    let session_id = parse_id::<NativeSessionId>(&request.session_id)?;
+    lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
+    ensure_session_idle(&state, session_id)?;
+    if lock(&state.phase2.mutation_plans)?
+        .values()
+        .any(|plan| plan.session_id == session_id)
+    {
+        return Err(QueryNotError::database(
+            ErrorCategory::Transaction,
+            "Discard or apply the staged table preview before changing context.",
+            false,
+        ));
+    }
+    let resource = session_resource(&state, profile_id, tab_id, session_id)?;
+    let transaction = resource.session.transaction_state().await;
+    if transaction.certainty != TransactionCertainty::Clean {
+        return Err(QueryNotError::database(
+            ErrorCategory::Transaction,
+            "Commit, roll back, or reconnect before changing this tab's context.",
+            false,
+        ));
+    }
+    let result = resource.session.change_context(&request.context).await;
+    close_lost_session_if_needed(&state, profile_id, tab_id, session_id, &result);
+    let confirmed = result?;
+    let mut sessions = lock(&state.phase2.sessions)?;
+    let stored = sessions.get_mut(&session_id).ok_or_else(|| {
+        QueryNotError::authorization("The tab session was invalidated during context change.")
+    })?;
+    if stored.profile_id != profile_id || stored.tab_id != tab_id {
+        return Err(QueryNotError::authorization(
+            "The tab session owner changed unexpectedly.",
+        ));
+    }
+    stored.context = confirmed.clone();
+    Ok(SessionContextResponse {
+        context: confirmed.clone(),
+        message: format!(
+            "The adapter confirmed {confirmed} for this tab only; no SQL was executed from the editor."
+        ),
+    })
+}
+
+#[tauri::command]
 pub(crate) fn format_sql(
     state: State<'_, AppRuntimeState>,
     request: FormatSqlRequest,
+) -> Result<FormatSqlResponse, QueryNotError> {
+    let settings = lock(&state.settings)?.clone();
+    format_sql_request(request, &settings)
+}
+
+fn format_sql_request(
+    request: FormatSqlRequest,
+    settings: &querynot_core::settings::AppSettings,
 ) -> Result<FormatSqlResponse, QueryNotError> {
     if request.sql.len() > 4 * 1024 * 1024 {
         return Err(QueryNotError::authorization(
             "SQL formatting is limited to a 4 MiB document.",
         ));
     }
-    let settings = lock(&state.settings)?.clone();
     let options = sqlformat::FormatOptions {
         uppercase: Some(settings.formatter_uppercase_keywords),
         indent: sqlformat::Indent::Spaces(settings.formatter_indent_spaces),
@@ -658,7 +1025,7 @@ pub(crate) async fn start_execution(
         dialect,
         &request.profile_id,
         &request.session_id,
-        &connected.info.context,
+        &resource.context,
     )
     .map_err(|error| QueryNotError::database(ErrorCategory::Syntax, error.to_string(), false))?;
     if resource.session.read_only() && !execution_is_provably_read_only(&plan) {
@@ -729,6 +1096,29 @@ pub(crate) async fn start_execution(
         }
     }
 
+    let history_capture = if lock(&state.settings)?.history_enabled {
+        state.store.clone().map(|store| HistoryCapture {
+            store,
+            warning: Arc::clone(&state.history_warning),
+            sql: plan
+                .statements
+                .iter()
+                .map(|statement| statement.sql.as_str())
+                .collect::<Vec<_>>()
+                .join(";\n"),
+            timestamp_ms: unix_time_ms(),
+            profile_id,
+            profile_label: connected.profile_name.clone(),
+            engine: format!(
+                "{} {}",
+                connected.info.identity.product, connected.info.identity.exact_version
+            ),
+            context: resource.context.clone(),
+            started_at: Instant::now(),
+        })
+    } else {
+        None
+    };
     let execution_id = ExecutionId::new();
     dispose_tab_results(&state.phase2, tab_id);
     lock(&state.ownership)?.register_execution(
@@ -763,16 +1153,19 @@ pub(crate) async fn start_execution(
     let window_id = state.window_id;
     tokio::spawn(async move {
         bridge_execution_events(
-            app,
-            runtime,
-            ownership,
-            window_id,
-            lifecycle_epoch,
-            ResultOwner {
-                execution_id,
-                profile_id,
-                tab_id,
-                session_id,
+            ExecutionBridgeContext {
+                app,
+                runtime,
+                ownership,
+                window_id,
+                lifecycle_epoch,
+                owner: ResultOwner {
+                    execution_id,
+                    profile_id,
+                    tab_id,
+                    session_id,
+                },
+                history_capture,
             },
             event_rx,
         )
@@ -855,15 +1248,18 @@ pub(crate) async fn set_transaction_mode(
     state: State<'_, AppRuntimeState>,
     request: TransactionModeRequest,
 ) -> Result<TransactionStateView, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    let tab_id = parse_id::<TabId>(&request.tab_id)?;
+    let session_id = parse_id::<NativeSessionId>(&request.session_id)?;
     let session = session_resource_from_parts(
         &state,
         &request.profile_id,
         &request.tab_id,
         &request.session_id,
     )?;
-    Ok(transaction_view(
-        session.session.set_automatic(request.automatic).await?,
-    ))
+    let result = session.session.set_automatic(request.automatic).await;
+    close_lost_session_if_needed(&state, profile_id, tab_id, session_id, &result);
+    Ok(transaction_view(result?))
 }
 
 #[tauri::command]
@@ -874,7 +1270,9 @@ pub(crate) async fn commit_transaction(
     let (profile_id, tab_id, session_id) = session_ids(&request)?;
     lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
     let session = session_resource(&state, profile_id, tab_id, session_id)?;
-    Ok(transaction_view(session.session.commit().await?))
+    let result = session.session.commit().await;
+    close_lost_session_if_needed(&state, profile_id, tab_id, session_id, &result);
+    Ok(transaction_view(result?))
 }
 
 #[tauri::command]
@@ -885,7 +1283,9 @@ pub(crate) async fn rollback_transaction(
     let (profile_id, tab_id, session_id) = session_ids(&request)?;
     lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
     let session = session_resource(&state, profile_id, tab_id, session_id)?;
-    Ok(transaction_view(session.session.rollback().await?))
+    let result = session.session.rollback().await;
+    close_lost_session_if_needed(&state, profile_id, tab_id, session_id, &result);
+    Ok(transaction_view(result?))
 }
 
 #[tauri::command]
@@ -1089,14 +1489,23 @@ async fn send_result_control(
 }
 
 async fn bridge_execution_events(
-    app: AppHandle,
-    runtime: Phase2Runtime,
-    ownership: Arc<Mutex<querynot_core::ownership::OwnershipRegistry>>,
-    window_id: querynot_core::WindowId,
-    lifecycle_epoch: u64,
-    owner: ResultOwner,
+    context: ExecutionBridgeContext,
     mut events: mpsc::Receiver<SqliteExecutionEvent>,
 ) {
+    let ExecutionBridgeContext {
+        app,
+        runtime,
+        ownership,
+        window_id,
+        lifecycle_epoch,
+        owner,
+        history_capture,
+    } = context;
+    let mut history_status = None;
+    let mut history_error_category = None;
+    let mut affected_rows = 0_u64;
+    let mut received_rows = 0_u64;
+    let mut connection_lost = false;
     while let Some(event) = events.recv().await {
         let Ok(epoch) = runtime.lifecycle_epoch.lock() else {
             break;
@@ -1124,9 +1533,36 @@ async fn bridge_execution_events(
             let _ = app.emit("query_execution", failure);
             break;
         }
+        match &event {
+            SqliteExecutionEvent::Batch(batch) => {
+                received_rows = received_rows.saturating_add(batch.rows.len() as u64);
+            }
+            SqliteExecutionEvent::StatementMessage { rows_affected, .. } => {
+                affected_rows = affected_rows.saturating_add(*rows_affected);
+            }
+            SqliteExecutionEvent::Finished {
+                received_rows: total,
+                ..
+            } => {
+                received_rows = *total as u64;
+                history_status = Some(HistoryStatus::Succeeded);
+            }
+            SqliteExecutionEvent::Failed { error, .. } => {
+                history_status = Some(HistoryStatus::Failed);
+                history_error_category = Some(error.category);
+                connection_lost = error.category == ErrorCategory::Connectivity;
+            }
+            SqliteExecutionEvent::Cancelled { .. } => {
+                history_status = Some(HistoryStatus::Cancelled);
+                history_error_category = Some(ErrorCategory::Cancelled);
+            }
+            _ => {}
+        }
         let terminal = matches!(
             event,
-            SqliteExecutionEvent::Finished { .. } | SqliteExecutionEvent::Cancelled { .. }
+            SqliteExecutionEvent::Finished { .. }
+                | SqliteExecutionEvent::Failed { .. }
+                | SqliteExecutionEvent::Cancelled { .. }
         );
         let mut view = execution_event_view(event);
         view.profile_id = owner.profile_id.to_string();
@@ -1153,6 +1589,46 @@ async fn bridge_execution_events(
             owner.session_id,
             owner.execution_id,
         );
+        if connection_lost {
+            let _ = ownership.unregister_session(
+                window_id,
+                owner.profile_id,
+                owner.tab_id,
+                owner.session_id,
+            );
+        }
+    }
+    if connection_lost {
+        if let Ok(mut sessions) = runtime.sessions.lock() {
+            sessions.remove(&owner.session_id);
+        }
+        if let Ok(mut plans) = runtime.mutation_plans.lock() {
+            plans.retain(|_, plan| plan.session_id != owner.session_id);
+        }
+        dispose_tab_results(&runtime, owner.tab_id);
+    }
+    if let (Some(capture), Some(status)) = (history_capture, history_status) {
+        let entry = HistoryEntry::new(HistoryEntryInput {
+            sql: capture.sql,
+            timestamp_ms: capture.timestamp_ms,
+            profile_id: capture.profile_id,
+            profile_label: capture.profile_label,
+            engine: capture.engine,
+            context: capture.context,
+            duration_ms: capture.started_at.elapsed().as_millis() as u64,
+            status,
+            affected_rows,
+            received_rows,
+            error_category: history_error_category,
+        });
+        if capture.store.save_history_entry(&entry).await.is_err()
+            && let Ok(mut warning) = capture.warning.lock()
+        {
+            *warning = Some(
+                "Query history could not be persisted. Execution completed and current in-memory work remains available."
+                    .to_owned(),
+            );
+        }
     }
 }
 
@@ -1449,6 +1925,294 @@ fn value_view(
     }
 }
 
+fn tagged_value_from_view(view: TaggedValueView) -> Result<TaggedValue, QueryNotError> {
+    let invalid = || QueryNotError::authorization("A tagged table value is malformed.");
+    match view.value_type.as_str() {
+        "null"
+            if view.text.is_none()
+                && view.boolean.is_none()
+                && view.bytes_base64.is_none()
+                && view.timezone_or_offset.is_none() =>
+        {
+            Ok(TaggedValue::Null)
+        }
+        "text" => Ok(TaggedValue::Text(view.text.ok_or_else(invalid)?)),
+        "bytes" => {
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(view.bytes_base64.ok_or_else(invalid)?)
+                .map_err(|_| invalid())?;
+            if bytes.len() > 4 * 1024 * 1024 {
+                return Err(QueryNotError::authorization(
+                    "A staged binary value exceeds the 4 MiB command boundary.",
+                ));
+            }
+            Ok(TaggedValue::Bytes(bytes))
+        }
+        "signed_integer" => Ok(TaggedValue::SignedInteger(view.text.ok_or_else(invalid)?)),
+        "unsigned_integer" => Ok(TaggedValue::UnsignedInteger(view.text.ok_or_else(invalid)?)),
+        "decimal" => Ok(TaggedValue::Decimal(view.text.ok_or_else(invalid)?)),
+        "float" => Ok(TaggedValue::Float(
+            view.text
+                .ok_or_else(invalid)?
+                .parse::<f64>()
+                .map_err(|_| invalid())?,
+        )),
+        "boolean" => Ok(TaggedValue::Boolean(view.boolean.ok_or_else(invalid)?)),
+        "date_time" => Ok(TaggedValue::DateTime {
+            raw: view.text.ok_or_else(invalid)?,
+            timezone_or_offset: view.timezone_or_offset,
+        }),
+        value_type if value_type.starts_with("adapter:") && value_type.len() <= 256 => {
+            let type_name = value_type.trim_start_matches("adapter:");
+            if type_name.is_empty() {
+                return Err(invalid());
+            }
+            Ok(TaggedValue::AdapterSpecific {
+                type_name: type_name.to_owned(),
+                raw: view.text.ok_or_else(invalid)?,
+            })
+        }
+        _ => Err(invalid()),
+    }
+}
+
+fn table_filter_from_view(view: TableFilterView) -> Result<TableFilter, QueryNotError> {
+    let operator = match view.operator.as_str() {
+        "equal" => FilterOperator::Equal,
+        "not_equal" => FilterOperator::NotEqual,
+        "less_than" => FilterOperator::LessThan,
+        "less_or_equal" => FilterOperator::LessOrEqual,
+        "greater_than" => FilterOperator::GreaterThan,
+        "greater_or_equal" => FilterOperator::GreaterOrEqual,
+        "contains" => FilterOperator::Contains,
+        "starts_with" => FilterOperator::StartsWith,
+        "is_null" => FilterOperator::IsNull,
+        "is_not_null" => FilterOperator::IsNotNull,
+        _ => {
+            return Err(QueryNotError::authorization(
+                "The structured table filter operator is unsupported.",
+            ));
+        }
+    };
+    Ok(TableFilter {
+        column: view.column,
+        operator,
+        value: view.value.map(tagged_value_from_view).transpose()?,
+    })
+}
+
+fn table_sort_from_view(view: TableSortView) -> Result<TableSort, QueryNotError> {
+    let direction = match view.direction.as_str() {
+        "ascending" => SortDirection::Ascending,
+        "descending" => SortDirection::Descending,
+        _ => {
+            return Err(QueryNotError::authorization(
+                "The structured table sort direction is unsupported.",
+            ));
+        }
+    };
+    Ok(TableSort {
+        column: view.column,
+        direction,
+    })
+}
+
+fn mutation_from_view(view: TableMutationView) -> Result<MutationInput, QueryNotError> {
+    let kind = match view.kind.as_str() {
+        "insert" => MutationKind::Insert,
+        "update" => MutationKind::Update,
+        "delete" => MutationKind::Delete,
+        _ => {
+            return Err(QueryNotError::authorization(
+                "The staged table operation is unsupported.",
+            ));
+        }
+    };
+    Ok(MutationInput {
+        kind,
+        original: view
+            .original
+            .into_iter()
+            .map(tagged_value_from_view)
+            .collect::<Result<Vec<_>, _>>()?,
+        cells: view
+            .cells
+            .into_iter()
+            .map(|cell| {
+                let mode = match (cell.mode.as_str(), cell.value) {
+                    ("value", Some(value)) => {
+                        MutationCellMode::Value(tagged_value_from_view(value)?)
+                    }
+                    ("database_default", None) => MutationCellMode::DatabaseDefault,
+                    _ => {
+                        return Err(QueryNotError::authorization(
+                            "A staged mutation cell mode and value do not match.",
+                        ));
+                    }
+                };
+                Ok(MutationCell {
+                    column: cell.column,
+                    mode,
+                })
+            })
+            .collect::<Result<Vec<_>, QueryNotError>>()?,
+    })
+}
+
+fn table_dialect(dialect: &str) -> Result<TableDialect, QueryNotError> {
+    match dialect {
+        "sqlite" => Ok(TableDialect::Sqlite),
+        "mysql" => Ok(TableDialect::MySql),
+        _ => Err(QueryNotError::internal(
+            "The adapter reported an unknown table-mutation dialect.",
+        )),
+    }
+}
+
+fn table_page_view(page: TablePage) -> TablePageView {
+    TablePageView {
+        definition: table_definition_view(page.definition),
+        rows: page
+            .rows
+            .into_iter()
+            .map(|values| TableRowView {
+                values: values.into_iter().map(tagged_value_view).collect(),
+            })
+            .collect(),
+        has_more: page.has_more,
+        next_cursor: page
+            .next_cursor
+            .into_iter()
+            .map(tagged_value_view)
+            .collect(),
+        next_offset: page.next_offset,
+        unstable: page.unstable,
+        message: if page.unstable {
+            "This object has no usable declared identity. Paging is capped, offset-based, read-only, and may be unstable during concurrent changes."
+        } else {
+            "Rows were loaded with deterministic keyset paging and typed bound filters."
+        }
+        .to_owned(),
+    }
+}
+
+fn table_definition_view(definition: TableDefinition) -> TableDefinitionView {
+    let (identity_source, identity_columns) =
+        definition.identity.map_or((None, Vec::new()), |identity| {
+            (Some(identity.source), identity.columns)
+        });
+    TableDefinitionView {
+        namespace: definition.namespace,
+        table: definition.table,
+        columns: definition
+            .columns
+            .into_iter()
+            .map(|column| TableColumnView {
+                name: column.name,
+                declared_type: column.declared_type,
+                nullable: column.nullable,
+                primary_key_position: column.primary_key_position,
+                has_default: column.has_default,
+                generated: column.generated,
+                editor: match column.editor {
+                    TableEditorKind::Text => "text",
+                    TableEditorKind::Integer => "integer",
+                    TableEditorKind::Decimal => "decimal",
+                    TableEditorKind::Float => "float",
+                    TableEditorKind::Boolean => "boolean",
+                    TableEditorKind::DateTime => "date_time",
+                    TableEditorKind::EnumLike => "enum_like",
+                    TableEditorKind::ReadOnly => "read_only",
+                }
+                .to_owned(),
+                editable: column.editable,
+                read_only_reason: column.read_only_reason,
+            })
+            .collect(),
+        identity_source,
+        identity_columns,
+        editable: definition.editable,
+        read_only_reason: definition.read_only_reason,
+    }
+}
+
+fn mutation_preview_view(plan: &MutationPlan) -> MutationPreviewView {
+    MutationPreviewView {
+        plan_id: plan.id.to_string(),
+        staging_revision: plan.staging_revision,
+        target: format!("{}.{}", plan.namespace, plan.table),
+        affected_row_count: plan.operations.len() as u32,
+        operations: plan
+            .operations
+            .iter()
+            .map(|operation| MutationOperationPreviewView {
+                kind: mutation_kind_name(operation.kind).to_owned(),
+                sql_template: operation.sql.clone(),
+                parameters: operation
+                    .parameters
+                    .iter()
+                    .map(mutation_parameter_preview)
+                    .collect(),
+                expected_rows: operation.expected_rows,
+            })
+            .collect(),
+        message: "This one-use immutable native plan is the exact operation batch that Apply will execute. Parameter values are separate from SQL templates."
+            .to_owned(),
+    }
+}
+
+fn mutation_kind_name(kind: MutationKind) -> &'static str {
+    match kind {
+        MutationKind::Insert => "insert",
+        MutationKind::Update => "update",
+        MutationKind::Delete => "delete",
+    }
+}
+
+fn mutation_parameter_preview(value: &TaggedValue) -> MutationParameterPreviewView {
+    let (value_type, raw) = match value {
+        TaggedValue::Null => ("null", "NULL".to_owned()),
+        TaggedValue::Text(value) => ("text", value.clone()),
+        TaggedValue::Bytes(value) => ("bytes", format!("<{} bytes>", value.len())),
+        TaggedValue::SignedInteger(value) => ("signed_integer", value.clone()),
+        TaggedValue::UnsignedInteger(value) => ("unsigned_integer", value.clone()),
+        TaggedValue::Decimal(value) => ("decimal", value.clone()),
+        TaggedValue::Float(value) => ("float", value.to_string()),
+        TaggedValue::Boolean(value) => ("boolean", value.to_string()),
+        TaggedValue::DateTime { raw, .. } => ("date_time", raw.clone()),
+        TaggedValue::AdapterSpecific { type_name, raw } => (type_name.as_str(), raw.clone()),
+    };
+    let truncated = raw.chars().count() > 120;
+    let display = if truncated {
+        format!("{}…", raw.chars().take(120).collect::<String>())
+    } else {
+        raw
+    };
+    MutationParameterPreviewView {
+        value_type: value_type.to_owned(),
+        display,
+        truncated,
+    }
+}
+
+fn ensure_session_idle(
+    state: &State<'_, AppRuntimeState>,
+    session_id: NativeSessionId,
+) -> Result<(), QueryNotError> {
+    if lock(&state.phase2.executions)?
+        .values()
+        .any(|execution| execution.session_id == session_id)
+    {
+        Err(QueryNotError::database(
+            ErrorCategory::Transaction,
+            "This tab already has an active database operation.",
+            false,
+        ))
+    } else {
+        Ok(())
+    }
+}
+
 fn connected_profile(
     state: &State<'_, AppRuntimeState>,
     profile_id: ProfileId,
@@ -1473,6 +2237,42 @@ fn session_ids(
         parse_id(&request.tab_id)?,
         parse_id(&request.session_id)?,
     ))
+}
+
+fn invalidate_profile_mutation_plans(
+    state: &AppRuntimeState,
+    profile_id: ProfileId,
+) -> Result<(), QueryNotError> {
+    lock(&state.phase2.mutation_plans)?.retain(|_, plan| plan.profile_id != profile_id);
+    Ok(())
+}
+
+fn close_lost_session_if_needed<T>(
+    state: &AppRuntimeState,
+    profile_id: ProfileId,
+    tab_id: TabId,
+    session_id: NativeSessionId,
+    result: &Result<T, QueryNotError>,
+) {
+    if !result
+        .as_ref()
+        .is_err_and(|error| error.category == ErrorCategory::Connectivity)
+    {
+        return;
+    }
+    if let Ok(mut ownership) = state.ownership.lock() {
+        let _ = ownership.unregister_session(state.window_id, profile_id, tab_id, session_id);
+    }
+    if let Ok(mut sessions) = state.phase2.sessions.lock() {
+        sessions.remove(&session_id);
+    }
+    if let Ok(mut plans) = state.phase2.mutation_plans.lock() {
+        plans.retain(|_, plan| plan.session_id != session_id);
+    }
+    if let Ok(mut approvals) = state.phase2.pending_approvals.lock() {
+        approvals.retain(|_, approval| approval.session_id != session_id);
+    }
+    dispose_tab_results(&state.phase2, tab_id);
 }
 
 fn session_resource_from_parts(
@@ -1561,6 +2361,7 @@ fn session_view(
     profile_id: ProfileId,
     tab_id: TabId,
     session_id: NativeSessionId,
+    context: &str,
     transaction: SqliteTransactionState,
 ) -> SessionView {
     SessionView {
@@ -1568,6 +2369,7 @@ fn session_view(
         tab_id: tab_id.to_string(),
         session_id: session_id.to_string(),
         state: "ready".to_owned(),
+        context: context.to_owned(),
         transaction: transaction_view(transaction),
     }
 }
@@ -1609,6 +2411,7 @@ fn schema_detail_view(detail: SchemaObjectDetail, stale: bool) -> SchemaObjectDe
                 nullable: column.nullable,
                 primary_key_position: column.primary_key_position,
                 default_expression: column.default_expression,
+                generated: column.generated,
             })
             .collect(),
         foreign_keys: detail
@@ -1824,5 +2627,32 @@ mod tests {
             .unwrap();
         runtime.cleanup();
         assert!(*cleanup_receiver.borrow());
+    }
+
+    #[test]
+    fn formatting_preserves_comments_and_only_replaces_the_requested_selection() {
+        let settings = querynot_core::settings::AppSettings::default();
+        let document = "prefix\nselect a,b -- keep this comment\nfrom sample\nsuffix";
+        let start = document.find("select").unwrap();
+        let end = document.find("\nsuffix").unwrap();
+        let response = format_sql_request(
+            FormatSqlRequest {
+                sql: document.to_owned(),
+                selection_start: Some(start as u32),
+                selection_end: Some(end as u32),
+            },
+            &settings,
+        )
+        .unwrap();
+
+        assert!(response.sql.starts_with("prefix\n"));
+        assert!(response.sql.ends_with("\nsuffix"));
+        assert!(response.sql.contains("-- keep this comment"));
+        assert_eq!(response.selection_start, Some(start as u32));
+        assert!(
+            response
+                .selection_end
+                .is_some_and(|value| value > start as u32)
+        );
     }
 }

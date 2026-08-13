@@ -1,7 +1,9 @@
 use querynot_core::diagnostics::{
     DiagnosticArea, DiagnosticsPreview, LocalOperationalLog, OperationalEvent,
 };
+use querynot_core::export::write_local_bytes_atomically;
 use querynot_core::generated::contracts::*;
+use querynot_core::history::{HistoryEntry, HistoryStatus};
 use querynot_core::ownership::OwnershipRegistry;
 use querynot_core::profile::{ConnectionProfile, ConnectionTarget, TlsMode};
 use querynot_core::settings::{AppSettings, ThemePreference};
@@ -10,15 +12,17 @@ use querynot_core::state::LocalStoreState;
 use querynot_core::store::{
     LocalStore, ProfileDeletionOutcome, delete_profile_two_step, unix_time_ms,
 };
-use querynot_core::vault::{KeyringVault, SecretVault, SessionSecretStore};
-use querynot_core::workspace::{PanelSizes, WorkspaceSnapshot, WorkspaceTab};
-use querynot_core::{ErrorCategory, FileGrantId, ProfileId, QueryNotError, TabId, WindowId};
-use secrecy::{ExposeSecret, SecretString};
+use querynot_core::vault::{ConnectionSecrets, KeyringVault, SecretVault, SessionSecretStore};
+use querynot_core::workspace::{PanelSizes, WorkspaceSnapshot, WorkspaceTab, WorkspaceTabKind};
+use querynot_core::{
+    ErrorCategory, FileGrantId, HistoryEntryId, ProfileId, QueryNotError, TabId, WindowId,
+};
 use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, MutexGuard};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
 const MAX_SQL_FILE_BYTES: u64 = 4 * 1024 * 1024;
@@ -36,6 +40,14 @@ enum FilePurpose {
 struct GrantedFile {
     path: PathBuf,
     purpose: FilePurpose,
+    stamp: Option<SqlFileStamp>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct SqlFileStamp {
+    modified_ms: i64,
+    size: u64,
+    identity: String,
 }
 
 pub(crate) struct AppRuntimeState {
@@ -46,9 +58,12 @@ pub(crate) struct AppRuntimeState {
     vault: KeyringVault,
     session_secrets: Mutex<SessionSecretStore>,
     file_grants: Mutex<HashMap<FileGrantId, GrantedFile>>,
+    pending_file_opens: Mutex<Vec<FilePickerResponse>>,
     pub(crate) ownership: Arc<Mutex<OwnershipRegistry>>,
     pub(crate) phase2: crate::phase2::Phase2Runtime,
     operational_log: Mutex<LocalOperationalLog>,
+    pub(crate) history_warning: Arc<Mutex<Option<String>>>,
+    last_history_cleanup_ms: Mutex<i64>,
     data_dir: PathBuf,
     pub(crate) window_id: WindowId,
 }
@@ -60,6 +75,20 @@ impl AppRuntimeState {
         let settings = match &bootstrap.store {
             Some(store) => store.load_settings().await.unwrap_or_default(),
             None => AppSettings::default(),
+        };
+        let now_ms = unix_time_ms();
+        let mut store_message = bootstrap.safe_message;
+        let last_history_cleanup_ms = {
+            if let Some(store) = &bootstrap.store {
+                let cutoff_ms = history_cutoff_ms(now_ms, settings.history_retention_days);
+                if store.prune_history(cutoff_ms).await.is_err() {
+                    store_message = Some(
+                        "Query history retention cleanup could not be persisted. Current database and editor work remain available."
+                            .to_owned(),
+                    );
+                }
+            }
+            now_ms
         };
         let window_id = WindowId::new();
         let mut ownership = OwnershipRegistry::default();
@@ -89,14 +118,17 @@ impl AppRuntimeState {
         Ok(Self {
             store: bootstrap.store,
             store_state: bootstrap.state,
-            store_message: bootstrap.safe_message,
+            store_message,
             settings: Mutex::new(settings),
             vault: KeyringVault,
             session_secrets: Mutex::new(SessionSecretStore::default()),
             file_grants: Mutex::new(HashMap::new()),
+            pending_file_opens: Mutex::new(Vec::new()),
             ownership: Arc::new(Mutex::new(ownership)),
             phase2: crate::phase2::Phase2Runtime::default(),
             operational_log: Mutex::new(operational_log),
+            history_warning: Arc::new(Mutex::new(None)),
+            last_history_cleanup_ms: Mutex::new(last_history_cleanup_ms),
             data_dir,
             window_id,
         })
@@ -113,25 +145,32 @@ impl AppRuntimeState {
         if let Ok(mut grants) = self.file_grants.lock() {
             grants.clear();
         }
+        if let Ok(mut pending) = self.pending_file_opens.lock() {
+            pending.clear();
+        }
     }
 
-    pub(crate) async fn database_secret(
+    pub(crate) async fn connection_secrets(
         &self,
         profile: &ConnectionProfile,
-    ) -> Result<SecretString, QueryNotError> {
+    ) -> Result<ConnectionSecrets, QueryNotError> {
         if let Some(secret) = lock(&self.session_secrets)?.get(profile.id) {
-            return Ok(SecretString::new(
-                secret.expose_secret().to_owned().into_boxed_str(),
-            ));
+            return Ok(secret.clone());
         }
         let Some(reference) = profile.secret_reference else {
-            return Ok(SecretString::new(String::new().into_boxed_str()));
+            return Ok(ConnectionSecrets::empty());
         };
         let vault = self.vault.clone();
-        tokio::task::spawn_blocking(move || vault.retrieve(reference))
+        let value = tokio::task::spawn_blocking(move || vault.retrieve(reference))
             .await
             .map_err(|_| QueryNotError::internal("Credential-vault task did not complete."))?
-            .map_err(vault_error)
+            .map_err(vault_error)?;
+        ConnectionSecrets::decode_from_vault(value).map_err(vault_error)
+    }
+
+    pub(crate) fn clear_session_secret(&self, profile_id: ProfileId) -> Result<(), QueryNotError> {
+        lock(&self.session_secrets)?.remove(profile_id);
+        Ok(())
     }
 }
 
@@ -161,7 +200,7 @@ pub(crate) async fn bootstrap_workspace(
     let workspace = workspace_to_view(&state, workspace)?;
     Ok(BootstrapWorkspaceResponse {
         contract_version: CONTRACT_VERSION,
-        phase: "phase_1_secure_local_foundation".to_owned(),
+        phase: "phase_4_productivity_and_safe_data_editing".to_owned(),
         store_state: store_state_name(state.store_state).to_owned(),
         store_message: state.store_message.clone(),
         profiles: profiles.iter().map(profile_to_view).collect(),
@@ -254,6 +293,28 @@ pub(crate) async fn delete_profile(
         ));
     }
     let store = available_store(&state)?;
+    let workspace = store.load_workspace().await?;
+    let stored_profile_tabs = workspace
+        .tabs
+        .iter()
+        .filter_map(|tab| (tab.profile_id == Some(profile_id)).then_some(tab.id))
+        .collect::<std::collections::HashSet<_>>();
+    if lock(&state.ownership)?.profile_tab_ids(profile_id) != stored_profile_tabs {
+        return Err(QueryNotError::local_storage(
+            "Save the current draft recovery snapshot before deleting this profile.",
+            true,
+        ));
+    }
+    let retained_tabs = workspace
+        .tabs
+        .iter()
+        .filter_map(|tab| {
+            (!request.delete_drafts
+                && tab.profile_id == Some(profile_id)
+                && tab.kind == WorkspaceTabKind::Query)
+                .then_some(tab.id)
+        })
+        .collect::<std::collections::HashSet<_>>();
     let outcome = delete_profile_two_step(
         store,
         &state.vault,
@@ -266,7 +327,7 @@ pub(crate) async fn delete_profile(
     match outcome {
         ProfileDeletionOutcome::Deleted => {
             lock(&state.session_secrets)?.remove(profile_id);
-            lock(&state.ownership)?.unregister_profile(profile_id)?;
+            lock(&state.ownership)?.unregister_profile(profile_id, &retained_tabs)?;
             log_event(
                 &state,
                 DiagnosticArea::ProfileLifecycle,
@@ -316,14 +377,17 @@ pub(crate) async fn save_profile_secret(
     request: SaveProfileSecretRequest,
 ) -> Result<SecretActionResponse, QueryNotError> {
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
-    if request.secret.is_empty() || request.secret.len() > 16 * 1024 {
+    if (request.database_password.is_empty() && request.client_key_passphrase.is_empty())
+        || request.database_password.len() > 16 * 1024
+        || request.client_key_passphrase.len() > 16 * 1024
+    {
         return Err(QueryNotError::authorization(
-            "Credential must contain between 1 and 16,384 bytes.",
+            "At least one credential is required and each must not exceed 16,384 bytes.",
         ));
     }
-    let secret = SecretString::new(request.secret.into_boxed_str());
+    let secrets = ConnectionSecrets::new(request.database_password, request.client_key_passphrase);
     if request.session_only {
-        lock(&state.session_secrets)?.replace(profile_id, secret);
+        lock(&state.session_secrets)?.replace(profile_id, secrets);
         log_event(
             &state,
             DiagnosticArea::Vault,
@@ -342,6 +406,7 @@ pub(crate) async fn save_profile_secret(
     let mut profile = store.profile(profile_id).await?;
     let existing_reference = profile.secret_reference;
     let reference = existing_reference.unwrap_or_default();
+    let secret = secrets.encode_for_vault().map_err(vault_error)?;
     let vault = state.vault.clone();
     let write = tokio::task::spawn_blocking(move || vault.store(reference, &secret))
         .await
@@ -468,6 +533,29 @@ pub(crate) async fn save_workspace(
 }
 
 #[tauri::command]
+pub(crate) async fn clear_saved_workspace(
+    state: State<'_, AppRuntimeState>,
+    request: ConfirmedActionRequest,
+) -> Result<FileActionResponse, QueryNotError> {
+    if !request.confirmed {
+        return Err(QueryNotError::authorization(
+            "Clearing saved draft recovery requires explicit confirmation.",
+        ));
+    }
+    let cleared = available_store(&state)?.clear_workspace().await?;
+    Ok(FileActionResponse {
+        completed: true,
+        cancelled: false,
+        message: if cleared {
+            "Cleared saved workspace recovery data. Current in-memory tabs remain open; disable restoration to prevent a later edit from saving them again."
+        } else {
+            "No saved workspace recovery snapshot was present. Current in-memory tabs remain open."
+        }
+        .to_owned(),
+    })
+}
+
+#[tauri::command]
 pub(crate) async fn create_offline_tab(
     state: State<'_, AppRuntimeState>,
     request: NewOfflineTabRequest,
@@ -489,6 +577,8 @@ pub(crate) async fn create_offline_tab(
     Ok(WorkspaceTabView {
         id: tab_id.to_string(),
         title: "Untitled query".to_owned(),
+        kind: "query".to_owned(),
+        pinned: false,
         profile_id: profile.as_ref().map(|profile| profile.id.to_string()),
         profile_label: profile.as_ref().map(|profile| profile.name.clone()),
         context_label: None,
@@ -496,6 +586,8 @@ pub(crate) async fn create_offline_tab(
         dirty: false,
         position: 0,
         source_file_grant_id: None,
+        table_namespace: None,
+        table_name: None,
         reconnectable: profile.is_some(),
     })
 }
@@ -530,6 +622,11 @@ pub(crate) async fn pick_sql_file(
     let path = selected.into_path().map_err(|_| {
         QueryNotError::authorization("Only local filesystem SQL files are supported.")
     })?;
+    if !is_sql_path(&path) {
+        return Err(QueryNotError::authorization(
+            "Only files with the .sql extension can be opened as SQL source files.",
+        ));
+    }
     let metadata = std::fs::metadata(&path)
         .map_err(|_| QueryNotError::local_storage("The selected SQL file is unavailable.", true))?;
     if !metadata.is_file() || metadata.len() > MAX_SQL_FILE_BYTES {
@@ -543,7 +640,12 @@ pub(crate) async fn pick_sql_file(
             false,
         )
     })?;
-    let grant_id = grant_file(&state, path.clone(), FilePurpose::SqlDraft)?;
+    validate_sql_file_content(&content)?;
+    let path = std::fs::canonicalize(&path).map_err(|_| {
+        QueryNotError::local_storage("The selected SQL file identity is unavailable.", true)
+    })?;
+    let stamp = sql_file_stamp(&path, content.as_bytes())?;
+    let grant_id = grant_sql_file(&state, path.clone(), stamp)?;
     let tab_id = TabId::new();
     lock(&state.ownership)?.register_tab(state.window_id, None, tab_id)?;
     log_event(&state, DiagnosticArea::Workspace, "sql_file_opened", None);
@@ -554,6 +656,239 @@ pub(crate) async fn pick_sql_file(
         display_name: Some(display_name(&path)),
         content: Some(content),
     })
+}
+
+#[tauri::command]
+pub(crate) async fn save_sql_file(
+    state: State<'_, AppRuntimeState>,
+    request: SaveSqlFileRequest,
+) -> Result<SqlFileActionResponse, QueryNotError> {
+    authorize_file_tab(&state, request.profile_id.as_deref(), &request.tab_id)?;
+    validate_sql_file_content(&request.content)?;
+    let grant_id = parse_id::<FileGrantId>(&request.file_grant_id)?;
+    let granted = resolve_granted(&state, grant_id, FilePurpose::SqlDraft)?;
+    let expected = granted.stamp.ok_or_else(|| {
+        QueryNotError::authorization("The SQL-file grant has no saved identity state.")
+    })?;
+    let current_bytes = match std::fs::read(&granted.path) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            return Ok(external_file_change_response(
+                "The opened SQL file moved or became unavailable. Review, Save as, or cancel; nothing was overwritten.",
+            ));
+        }
+    };
+    let current = sql_file_stamp(&granted.path, &current_bytes)?;
+    if current != expected {
+        return Ok(external_file_change_response(
+            "The opened SQL file changed outside QueryNot. Review, Save as, or cancel; nothing was overwritten.",
+        ));
+    }
+    write_sql_file(&granted.path, &request.content, true)?;
+    let updated = sql_file_stamp(&granted.path, request.content.as_bytes())?;
+    update_sql_grant(&state, grant_id, updated)?;
+    log_event(&state, DiagnosticArea::Workspace, "sql_file_saved", None);
+    Ok(SqlFileActionResponse {
+        status: "saved".to_owned(),
+        cancelled: false,
+        file_grant_id: Some(grant_id.to_string()),
+        display_name: Some(display_name(&granted.path)),
+        message: "The SQL file was replaced atomically after its last-known identity and modification state matched."
+            .to_owned(),
+    })
+}
+
+#[tauri::command]
+pub(crate) async fn save_sql_file_as(
+    app: AppHandle,
+    state: State<'_, AppRuntimeState>,
+    request: SaveSqlFileAsRequest,
+) -> Result<SqlFileActionResponse, QueryNotError> {
+    authorize_file_tab(&state, request.profile_id.as_deref(), &request.tab_id)?;
+    validate_sql_file_content(&request.content)?;
+    let suggested = if request.suggested_name.ends_with(".sql")
+        && !request.suggested_name.contains(['/', '\\', '\0'])
+        && request.suggested_name.len() <= 255
+    {
+        request.suggested_name
+    } else {
+        "query.sql".to_owned()
+    };
+    let selected = app
+        .dialog()
+        .file()
+        .add_filter("SQL files", &["sql"])
+        .set_file_name(suggested)
+        .set_title("Save SQL file as")
+        .blocking_save_file();
+    let Some(selected) = selected else {
+        return Ok(SqlFileActionResponse {
+            status: "cancelled".to_owned(),
+            cancelled: true,
+            file_grant_id: None,
+            display_name: None,
+            message: "Save as was cancelled; no file was written.".to_owned(),
+        });
+    };
+    let mut path = selected.into_path().map_err(|_| {
+        QueryNotError::authorization("SQL files can only be saved to a local path you choose.")
+    })?;
+    if !is_sql_path(&path) {
+        return Err(QueryNotError::authorization(
+            "SQL source files must use the .sql extension.",
+        ));
+    }
+    if path.exists() {
+        path = std::fs::canonicalize(&path).map_err(|_| {
+            QueryNotError::local_storage(
+                "The selected SQL destination identity is unavailable; nothing was written.",
+                true,
+            )
+        })?;
+    }
+    write_sql_file(&path, &request.content, path.exists())?;
+    let stamp = sql_file_stamp(&path, request.content.as_bytes())?;
+    let grant_id = grant_sql_file(&state, path.clone(), stamp)?;
+    log_event(&state, DiagnosticArea::Workspace, "sql_file_saved_as", None);
+    Ok(SqlFileActionResponse {
+        status: "saved".to_owned(),
+        cancelled: false,
+        file_grant_id: Some(grant_id.to_string()),
+        display_name: Some(display_name(&path)),
+        message: "The SQL file was saved through the native chooser and is now tracked for external changes."
+            .to_owned(),
+    })
+}
+
+#[tauri::command]
+pub(crate) fn review_sql_file(
+    state: State<'_, AppRuntimeState>,
+    request: ReviewSqlFileRequest,
+) -> Result<FilePickerResponse, QueryNotError> {
+    authorize_file_tab(&state, request.profile_id.as_deref(), &request.tab_id)?;
+    let grant_id = parse_id::<FileGrantId>(&request.file_grant_id)?;
+    let granted = resolve_granted(&state, grant_id, FilePurpose::SqlDraft)?;
+    let metadata = std::fs::metadata(&granted.path).map_err(|_| {
+        QueryNotError::local_storage(
+            "The external SQL file is unavailable. Your in-memory draft remains unchanged.",
+            true,
+        )
+    })?;
+    if !metadata.is_file() || metadata.len() > MAX_SQL_FILE_BYTES {
+        return Err(QueryNotError::authorization(
+            "The external SQL file is no longer a regular UTF-8 file within the 4 MiB limit.",
+        ));
+    }
+    let content = std::fs::read_to_string(&granted.path).map_err(|_| {
+        QueryNotError::local_storage(
+            "The external SQL file could not be reviewed as UTF-8. Your draft remains unchanged.",
+            false,
+        )
+    })?;
+    validate_sql_file_content(&content)?;
+    Ok(FilePickerResponse {
+        cancelled: false,
+        file_grant_id: Some(grant_id.to_string()),
+        tab_id: None,
+        display_name: Some(display_name(&granted.path)),
+        content: Some(content),
+    })
+}
+
+#[tauri::command]
+pub(crate) fn take_pending_sql_files(
+    state: State<'_, AppRuntimeState>,
+) -> Result<PendingSqlFilesResponse, QueryNotError> {
+    Ok(PendingSqlFilesResponse {
+        files: std::mem::take(&mut *lock(&state.pending_file_opens)?),
+    })
+}
+
+pub(crate) fn route_sql_file_paths(app: &AppHandle, paths: impl IntoIterator<Item = PathBuf>) {
+    let state = app.state::<AppRuntimeState>();
+    let mut added = false;
+    for path in paths {
+        let is_sql = path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("sql"));
+        if !is_sql {
+            continue;
+        }
+        let Ok(path) = std::fs::canonicalize(path) else {
+            continue;
+        };
+        let Ok(metadata) = std::fs::metadata(&path) else {
+            continue;
+        };
+        if !metadata.is_file() || metadata.len() > MAX_SQL_FILE_BYTES {
+            continue;
+        }
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        if validate_sql_file_content(&content).is_err() {
+            continue;
+        }
+        let Ok(stamp) = sql_file_stamp(&path, content.as_bytes()) else {
+            continue;
+        };
+        let grant_id = FileGrantId::new();
+        let tab_id = TabId::new();
+        let registered = state.ownership.lock().ok().is_some_and(|mut ownership| {
+            ownership
+                .register_tab(state.window_id, None, tab_id)
+                .is_ok()
+        });
+        if !registered {
+            continue;
+        }
+        let grant_inserted = state.file_grants.lock().ok().is_some_and(|mut grants| {
+            grants.insert(
+                grant_id,
+                GrantedFile {
+                    path: path.clone(),
+                    purpose: FilePurpose::SqlDraft,
+                    stamp: Some(stamp),
+                },
+            );
+            true
+        });
+        if !grant_inserted {
+            if let Ok(mut ownership) = state.ownership.lock() {
+                let _ = ownership.unregister_tab(state.window_id, tab_id);
+            }
+            continue;
+        }
+        let response = FilePickerResponse {
+            cancelled: false,
+            file_grant_id: Some(grant_id.to_string()),
+            tab_id: Some(tab_id.to_string()),
+            display_name: Some(display_name(&path)),
+            content: Some(content),
+        };
+        let queued = if let Ok(mut pending) = state.pending_file_opens.lock() {
+            pending.push(response);
+            added = true;
+            true
+        } else {
+            false
+        };
+        if !queued {
+            if let Ok(mut grants) = state.file_grants.lock() {
+                grants.remove(&grant_id);
+            }
+            if let Ok(mut ownership) = state.ownership.lock() {
+                let _ = ownership.unregister_tab(state.window_id, tab_id);
+            }
+        }
+    }
+    if added {
+        let _ = app.emit(
+            "querynot_open_files",
+            PendingSqlFilesSignal { queued: true },
+        );
+    }
 }
 
 #[tauri::command]
@@ -771,6 +1106,75 @@ pub(crate) async fn clear_operational_log(
         completed: true,
         cancelled: false,
         message: "The redacted local operational log was cleared.".to_owned(),
+    })
+}
+
+#[tauri::command]
+pub(crate) async fn list_history(
+    state: State<'_, AppRuntimeState>,
+    request: HistoryQueryRequest,
+) -> Result<HistoryResponse, QueryNotError> {
+    if request.limit == 0 || request.limit > 1_000 {
+        return Err(QueryNotError::authorization(
+            "History requests are limited to 1,000 entries.",
+        ));
+    }
+    let settings = lock(&state.settings)?.clone();
+    maybe_prune_history(&state, &settings).await;
+    let entries = available_store(&state)?
+        .list_history(&request.search, request.limit as usize)
+        .await?
+        .into_iter()
+        .map(history_to_view)
+        .collect();
+    let mut warning = lock(&state.history_warning)?.take();
+    if !settings.history_enabled && warning.is_none() {
+        warning = Some(
+            "Query history is paused. Existing entries remain local until you delete or clear them."
+                .to_owned(),
+        );
+    }
+    Ok(HistoryResponse { entries, warning })
+}
+
+#[tauri::command]
+pub(crate) async fn delete_history_entry(
+    state: State<'_, AppRuntimeState>,
+    request: DeleteHistoryEntryRequest,
+) -> Result<FileActionResponse, QueryNotError> {
+    let history_id = parse_id::<HistoryEntryId>(&request.history_id)?;
+    let deleted = available_store(&state)?
+        .delete_history_entry(history_id)
+        .await?;
+    Ok(FileActionResponse {
+        completed: deleted,
+        cancelled: false,
+        message: if deleted {
+            "The history entry was removed from QueryNot's active local store. Operating-system backups, snapshots, and storage forensics are outside this deletion guarantee."
+        } else {
+            "The history entry was already absent."
+        }
+        .to_owned(),
+    })
+}
+
+#[tauri::command]
+pub(crate) async fn clear_history(
+    state: State<'_, AppRuntimeState>,
+    request: ConfirmedActionRequest,
+) -> Result<FileActionResponse, QueryNotError> {
+    if !request.confirmed {
+        return Err(QueryNotError::authorization(
+            "Clearing all query history requires explicit confirmation.",
+        ));
+    }
+    let deleted = available_store(&state)?.clear_history().await?;
+    Ok(FileActionResponse {
+        completed: true,
+        cancelled: false,
+        message: format!(
+            "Removed {deleted} history entries from QueryNot's active local store. Operating-system backups, snapshots, and storage forensics are outside this deletion guarantee."
+        ),
     })
 }
 
@@ -1033,11 +1437,24 @@ fn workspace_to_view(
         .map(|tab| {
             let source_file_grant_id = tab.source_file_path.map(|path| {
                 let grant_id = FileGrantId::new();
+                let stamp = match (
+                    tab.source_file_modified_ms,
+                    tab.source_file_size,
+                    tab.source_file_identity.clone(),
+                ) {
+                    (Some(modified_ms), Some(size), Some(identity)) => Some(SqlFileStamp {
+                        modified_ms,
+                        size,
+                        identity,
+                    }),
+                    _ => None,
+                };
                 grants.insert(
                     grant_id,
                     GrantedFile {
                         path: PathBuf::from(path),
                         purpose: FilePurpose::SqlDraft,
+                        stamp,
                     },
                 );
                 grant_id.to_string()
@@ -1045,6 +1462,12 @@ fn workspace_to_view(
             WorkspaceTabView {
                 id: tab.id.to_string(),
                 title: tab.title,
+                kind: match tab.kind {
+                    WorkspaceTabKind::Query => "query",
+                    WorkspaceTabKind::TableData => "table_data",
+                }
+                .to_owned(),
+                pinned: tab.pinned,
                 profile_id: tab.profile_id.map(|id| id.to_string()),
                 profile_label: tab.profile_label,
                 context_label: tab.context_label,
@@ -1052,6 +1475,8 @@ fn workspace_to_view(
                 dirty: tab.dirty,
                 position: tab.position,
                 source_file_grant_id,
+                table_namespace: tab.table_namespace,
+                table_name: tab.table_name,
                 reconnectable: tab.reconnectable,
             }
         })
@@ -1079,17 +1504,33 @@ fn workspace_from_view(
                 .as_deref()
                 .map(parse_id::<ProfileId>)
                 .transpose()?;
-            let source_file_path = tab
+            let source_file = tab
                 .source_file_grant_id
                 .as_deref()
-                .map(|grant| resolve_grant(state, grant, FilePurpose::SqlDraft))
-                .transpose()?
-                .map(|path| path.to_string_lossy().into_owned());
+                .map(|grant| {
+                    let grant_id = parse_id::<FileGrantId>(grant)?;
+                    resolve_granted(state, grant_id, FilePurpose::SqlDraft)
+                })
+                .transpose()?;
+            let source_file_path = source_file
+                .as_ref()
+                .map(|granted| granted.path.to_string_lossy().into_owned());
+            let source_stamp = source_file.and_then(|granted| granted.stamp);
             let tab_id = parse_id::<TabId>(&tab.id)?;
             lock(&state.ownership)?.authorize_tab(state.window_id, profile_id, tab_id)?;
             Ok(WorkspaceTab {
                 id: tab_id,
                 title: tab.title,
+                kind: match tab.kind.as_str() {
+                    "query" => WorkspaceTabKind::Query,
+                    "table_data" => WorkspaceTabKind::TableData,
+                    _ => {
+                        return Err(QueryNotError::authorization(
+                            "Workspace tab kind is unsupported.",
+                        ));
+                    }
+                },
+                pinned: tab.pinned,
                 profile_id,
                 profile_label: tab.profile_label,
                 context_label: tab.context_label,
@@ -1097,7 +1538,11 @@ fn workspace_from_view(
                 dirty: tab.dirty,
                 position: tab.position,
                 source_file_path,
-                source_file_modified_ms: None,
+                source_file_modified_ms: source_stamp.as_ref().map(|stamp| stamp.modified_ms),
+                source_file_size: source_stamp.as_ref().map(|stamp| stamp.size),
+                source_file_identity: source_stamp.map(|stamp| stamp.identity),
+                table_namespace: tab.table_namespace,
+                table_name: tab.table_name,
                 reconnectable: profile_id.is_some() && tab.reconnectable,
             })
         })
@@ -1156,16 +1601,39 @@ fn grant_file(
     purpose: FilePurpose,
 ) -> Result<FileGrantId, QueryNotError> {
     let grant_id = FileGrantId::new();
-    lock(&state.file_grants)?.insert(grant_id, GrantedFile { path, purpose });
+    lock(&state.file_grants)?.insert(
+        grant_id,
+        GrantedFile {
+            path,
+            purpose,
+            stamp: None,
+        },
+    );
     Ok(grant_id)
 }
 
-fn resolve_grant(
+fn grant_sql_file(
     state: &AppRuntimeState,
-    grant: &str,
+    path: PathBuf,
+    stamp: SqlFileStamp,
+) -> Result<FileGrantId, QueryNotError> {
+    let grant_id = FileGrantId::new();
+    lock(&state.file_grants)?.insert(
+        grant_id,
+        GrantedFile {
+            path,
+            purpose: FilePurpose::SqlDraft,
+            stamp: Some(stamp),
+        },
+    );
+    Ok(grant_id)
+}
+
+fn resolve_granted(
+    state: &AppRuntimeState,
+    grant_id: FileGrantId,
     expected_purpose: FilePurpose,
-) -> Result<PathBuf, QueryNotError> {
-    let grant_id = parse_id::<FileGrantId>(grant)?;
+) -> Result<GrantedFile, QueryNotError> {
     let grants = lock(&state.file_grants)?;
     let granted = grants.get(&grant_id).ok_or_else(|| {
         QueryNotError::authorization(
@@ -1177,7 +1645,106 @@ fn resolve_grant(
             "The local-file grant does not authorize this operation.",
         ));
     }
-    Ok(granted.path.clone())
+    Ok(granted.clone())
+}
+
+fn resolve_grant(
+    state: &AppRuntimeState,
+    grant: &str,
+    expected_purpose: FilePurpose,
+) -> Result<PathBuf, QueryNotError> {
+    let grant_id = parse_id::<FileGrantId>(grant)?;
+    resolve_granted(state, grant_id, expected_purpose).map(|granted| granted.path)
+}
+
+fn update_sql_grant(
+    state: &AppRuntimeState,
+    grant_id: FileGrantId,
+    stamp: SqlFileStamp,
+) -> Result<(), QueryNotError> {
+    let mut grants = lock(&state.file_grants)?;
+    let granted = grants.get_mut(&grant_id).ok_or_else(|| {
+        QueryNotError::authorization("The SQL-file grant expired before save completed.")
+    })?;
+    if granted.purpose != FilePurpose::SqlDraft {
+        return Err(QueryNotError::authorization(
+            "The local-file grant does not authorize SQL-file saving.",
+        ));
+    }
+    granted.stamp = Some(stamp);
+    Ok(())
+}
+
+fn authorize_file_tab(
+    state: &AppRuntimeState,
+    profile_id: Option<&str>,
+    tab_id: &str,
+) -> Result<(), QueryNotError> {
+    let profile_id = profile_id.map(parse_id::<ProfileId>).transpose()?;
+    let tab_id = parse_id::<TabId>(tab_id)?;
+    lock(&state.ownership)?.authorize_tab(state.window_id, profile_id, tab_id)?;
+    Ok(())
+}
+
+fn validate_sql_file_content(content: &str) -> Result<(), QueryNotError> {
+    if content.len() > MAX_SQL_FILE_BYTES as usize || content.bytes().any(|byte| byte == 0) {
+        return Err(QueryNotError::authorization(
+            "SQL file content must be UTF-8 without NUL and no larger than 4 MiB.",
+        ));
+    }
+    Ok(())
+}
+
+fn sql_file_stamp(path: &Path, bytes: &[u8]) -> Result<SqlFileStamp, QueryNotError> {
+    let metadata = std::fs::metadata(path).map_err(|_| {
+        QueryNotError::local_storage("The SQL file identity could not be read.", true)
+    })?;
+    if !metadata.is_file() || metadata.len() > MAX_SQL_FILE_BYTES {
+        return Err(QueryNotError::authorization(
+            "The SQL file must remain a regular file no larger than 4 MiB.",
+        ));
+    }
+    let modified_ms = metadata
+        .modified()
+        .ok()
+        .and_then(|value| value.duration_since(std::time::UNIX_EPOCH).ok())
+        .and_then(|duration| i64::try_from(duration.as_millis()).ok())
+        .unwrap_or(0);
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    metadata.len().hash(&mut hasher);
+    std::fs::canonicalize(path)
+        .unwrap_or_else(|_| path.to_path_buf())
+        .hash(&mut hasher);
+    if let Ok(created) = metadata.created()
+        && let Ok(duration) = created.duration_since(std::time::UNIX_EPOCH)
+    {
+        duration.as_nanos().hash(&mut hasher);
+    }
+    Ok(SqlFileStamp {
+        modified_ms,
+        size: metadata.len(),
+        identity: format!("v1:{:016x}", hasher.finish()),
+    })
+}
+
+fn write_sql_file(path: &Path, content: &str, overwrite: bool) -> Result<(), QueryNotError> {
+    write_local_bytes_atomically(path, content.as_bytes(), overwrite).map_err(|_| {
+        QueryNotError::local_storage(
+            "The SQL file could not be written atomically. Existing content was preserved when possible.",
+            true,
+        )
+    })
+}
+
+fn external_file_change_response(message: &str) -> SqlFileActionResponse {
+    SqlFileActionResponse {
+        status: "external_change".to_owned(),
+        cancelled: false,
+        file_grant_id: None,
+        display_name: None,
+        message: message.to_owned(),
+    }
 }
 
 fn resolve_optional_grant(
@@ -1264,6 +1831,74 @@ fn display_name(path: &Path) -> String {
         .to_owned()
 }
 
+fn is_sql_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("sql"))
+}
+
+fn history_to_view(entry: HistoryEntry) -> HistoryEntryView {
+    HistoryEntryView {
+        id: entry.id.to_string(),
+        sql: entry.sql,
+        timestamp_ms: entry.timestamp_ms,
+        profile_id: entry.profile_id.map(|id| id.to_string()),
+        profile_label: entry.profile_label,
+        engine: entry.engine,
+        context: entry.context,
+        duration_ms: entry.duration_ms,
+        status: match entry.status {
+            HistoryStatus::Succeeded => "succeeded",
+            HistoryStatus::Failed => "failed",
+            HistoryStatus::Cancelled => "cancelled",
+        }
+        .to_owned(),
+        affected_rows: entry.affected_rows,
+        received_rows: entry.received_rows,
+        error_category: entry.error_category.map(error_category_name),
+    }
+}
+
+const HISTORY_CLEANUP_INTERVAL_MS: i64 = 24 * 60 * 60 * 1_000;
+
+fn history_cutoff_ms(now_ms: i64, retention_days: u16) -> i64 {
+    now_ms.saturating_sub(i64::from(retention_days) * HISTORY_CLEANUP_INTERVAL_MS)
+}
+
+async fn maybe_prune_history(state: &AppRuntimeState, settings: &AppSettings) {
+    let now_ms = unix_time_ms();
+    let should_prune = match state.last_history_cleanup_ms.lock() {
+        Ok(mut last_cleanup)
+            if now_ms.saturating_sub(*last_cleanup) >= HISTORY_CLEANUP_INTERVAL_MS =>
+        {
+            *last_cleanup = now_ms;
+            true
+        }
+        _ => false,
+    };
+    if should_prune
+        && let Some(store) = &state.store
+        && store
+            .prune_history(history_cutoff_ms(now_ms, settings.history_retention_days))
+            .await
+            .is_err()
+        && let Ok(mut warning) = state.history_warning.lock()
+    {
+        *warning = Some(
+            "Query history retention cleanup could not be persisted. Current database and editor work remain available."
+                .to_owned(),
+        );
+    }
+}
+
+pub(crate) async fn run_history_maintenance(state: &AppRuntimeState) {
+    let settings = match state.settings.lock() {
+        Ok(settings) => settings.clone(),
+        Err(_) => return,
+    };
+    maybe_prune_history(state, &settings).await;
+}
+
 fn store_state_name(state: LocalStoreState) -> &'static str {
     match state {
         LocalStoreState::Healthy => "healthy",
@@ -1348,5 +1983,33 @@ mod tests {
         for excluded in ["password", "host", "database", "sql", "path", "value"] {
             assert!(!serialized.contains(excluded));
         }
+    }
+
+    #[test]
+    fn sql_file_stamp_detects_external_changes_before_atomic_overwrite() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("fixture.sql");
+        write_sql_file(&path, "select 1", false).unwrap();
+        let expected = sql_file_stamp(&path, b"select 1").unwrap();
+
+        std::fs::write(&path, b"select 2 -- external").unwrap();
+        let external = std::fs::read(&path).unwrap();
+        let current = sql_file_stamp(&path, &external).unwrap();
+        assert_ne!(current, expected);
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "select 2 -- external"
+        );
+
+        write_sql_file(&path, "select 3", true).unwrap();
+        assert_eq!(std::fs::read_to_string(path).unwrap(), "select 3");
+    }
+
+    #[test]
+    fn history_cleanup_cutoff_is_bounded_and_day_based() {
+        assert_eq!(
+            history_cutoff_ms(10 * HISTORY_CLEANUP_INTERVAL_MS, 3),
+            7 * HISTORY_CLEANUP_INTERVAL_MS
+        );
     }
 }

@@ -74,7 +74,8 @@ pub struct DeleteProfileResponse {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct SaveProfileSecretRequest {
     pub profile_id: String,
-    pub secret: String,
+    pub database_password: String,
+    pub client_key_passphrase: String,
     pub session_only: bool,
 }
 
@@ -134,6 +135,8 @@ pub struct PanelSizesView {
 pub struct WorkspaceTabView {
     pub id: String,
     pub title: String,
+    pub kind: String,
+    pub pinned: bool,
     pub profile_id: Option<String>,
     pub profile_label: Option<String>,
     pub context_label: Option<String>,
@@ -141,6 +144,8 @@ pub struct WorkspaceTabView {
     pub dirty: bool,
     pub position: u16,
     pub source_file_grant_id: Option<String>,
+    pub table_namespace: Option<String>,
+    pub table_name: Option<String>,
     pub reconnectable: bool,
 }
 
@@ -177,6 +182,48 @@ pub struct FilePickerResponse {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PendingSqlFilesResponse {
+    pub files: Vec<FilePickerResponse>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PendingSqlFilesSignal {
+    pub queued: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SaveSqlFileRequest {
+    pub profile_id: Option<String>,
+    pub tab_id: String,
+    pub file_grant_id: String,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SaveSqlFileAsRequest {
+    pub profile_id: Option<String>,
+    pub tab_id: String,
+    pub suggested_name: String,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ReviewSqlFileRequest {
+    pub profile_id: Option<String>,
+    pub tab_id: String,
+    pub file_grant_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SqlFileActionResponse {
+    pub status: String,
+    pub cancelled: bool,
+    pub file_grant_id: Option<String>,
+    pub display_name: Option<String>,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DiagnosticEventView {
     pub timestamp_ms: i64,
     pub area: String,
@@ -203,6 +250,194 @@ pub struct FileActionResponse {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ConfirmedActionRequest {
     pub confirmed: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct HistoryQueryRequest {
+    pub search: String,
+    pub limit: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct DeleteHistoryEntryRequest {
+    pub history_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct HistoryEntryView {
+    pub id: String,
+    pub sql: String,
+    pub timestamp_ms: i64,
+    pub profile_id: Option<String>,
+    pub profile_label: String,
+    pub engine: String,
+    pub context: String,
+    pub duration_ms: u64,
+    pub status: String,
+    pub affected_rows: u64,
+    pub received_rows: u64,
+    pub error_category: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct HistoryResponse {
+    pub entries: Vec<HistoryEntryView>,
+    pub warning: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TableFilterView {
+    pub column: String,
+    pub operator: String,
+    pub value: Option<TaggedValueView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TableSortView {
+    pub column: String,
+    pub direction: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TableBrowseRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub namespace: String,
+    pub table: String,
+    pub filters: Vec<TableFilterView>,
+    pub sorts: Vec<TableSortView>,
+    pub cursor: Vec<TaggedValueView>,
+    pub offset: u64,
+    pub page_size: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TableColumnView {
+    pub name: String,
+    pub declared_type: String,
+    pub nullable: bool,
+    pub primary_key_position: u32,
+    pub has_default: bool,
+    pub generated: bool,
+    pub editor: String,
+    pub editable: bool,
+    pub read_only_reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TableDefinitionView {
+    pub namespace: String,
+    pub table: String,
+    pub columns: Vec<TableColumnView>,
+    pub identity_source: Option<String>,
+    pub identity_columns: Vec<String>,
+    pub editable: bool,
+    pub read_only_reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TableRowView {
+    pub values: Vec<TaggedValueView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TablePageView {
+    pub definition: TableDefinitionView,
+    pub rows: Vec<TableRowView>,
+    pub has_more: bool,
+    pub next_cursor: Vec<TaggedValueView>,
+    pub next_offset: u64,
+    pub unstable: bool,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct MutationCellView {
+    pub column: String,
+    pub mode: String,
+    pub value: Option<TaggedValueView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TableMutationView {
+    pub kind: String,
+    pub original: Vec<TaggedValueView>,
+    pub cells: Vec<MutationCellView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PreviewTableMutationsRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub namespace: String,
+    pub table: String,
+    pub staging_revision: u64,
+    pub operations: Vec<TableMutationView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct MutationParameterPreviewView {
+    pub value_type: String,
+    pub display: String,
+    pub truncated: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct MutationOperationPreviewView {
+    pub kind: String,
+    pub sql_template: String,
+    pub parameters: Vec<MutationParameterPreviewView>,
+    pub expected_rows: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct MutationPreviewView {
+    pub plan_id: String,
+    pub staging_revision: u64,
+    pub target: String,
+    pub affected_row_count: u32,
+    pub operations: Vec<MutationOperationPreviewView>,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ApplyTableMutationsRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub plan_id: String,
+    pub staging_revision: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct MutationPlanIdRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub plan_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct MutationApplyResponse {
+    pub affected_rows: u64,
+    pub refreshed: bool,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ChangeTabContextRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub context: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SessionContextResponse {
+    pub context: String,
+    pub message: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -249,6 +484,7 @@ pub struct SessionView {
     pub tab_id: String,
     pub session_id: String,
     pub state: String,
+    pub context: String,
     pub transaction: TransactionStateView,
 }
 
@@ -300,12 +536,19 @@ pub struct SchemaObjectRequest {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SchemaTextResponse {
+    pub text: String,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct SchemaColumnView {
     pub name: String,
     pub declared_type: String,
     pub nullable: bool,
     pub primary_key_position: u32,
     pub default_expression: Option<String>,
+    pub generated: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

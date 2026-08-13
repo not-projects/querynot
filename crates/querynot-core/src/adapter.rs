@@ -5,8 +5,9 @@ use crate::sqlite::{
     ExecutionControl, SchemaNamespace, SchemaObject, SchemaObjectDetail, SqliteExecutionEvent,
     SqliteSession, SqliteTransactionState,
 };
+use crate::table::{BrowseInput, MutationApplyResult, MutationPlan, TablePage};
+use crate::vault::ConnectionSecrets;
 use crate::{ExecutionId, QueryNotError};
-use secrecy::SecretString;
 use std::path::Path;
 use tokio::sync::mpsc;
 
@@ -62,7 +63,7 @@ pub enum AdapterSession {
 impl AdapterSession {
     pub async fn open(
         profile: &ConnectionProfile,
-        secret: &SecretString,
+        secrets: &ConnectionSecrets,
     ) -> Result<Self, QueryNotError> {
         match &profile.target {
             ConnectionTarget::Sqlite {
@@ -72,7 +73,7 @@ impl AdapterSession {
                 .await
                 .map(Self::Sqlite),
             ConnectionTarget::MysqlFamily { .. } => {
-                crate::mysql::MySqlSession::open(profile, secret)
+                crate::mysql::MySqlSession::open(profile, secrets)
                     .await
                     .map(Box::new)
                     .map(Self::MySql)
@@ -82,7 +83,7 @@ impl AdapterSession {
 
     pub async fn test_connection(
         profile: &ConnectionProfile,
-        secret: &SecretString,
+        secrets: &ConnectionSecrets,
     ) -> Result<AdapterConnectionInfo, QueryNotError> {
         match &profile.target {
             ConnectionTarget::Sqlite {
@@ -90,7 +91,7 @@ impl AdapterSession {
                 read_only,
             } => crate::sqlite::test_sqlite_connection(Path::new(file_path), *read_only).await,
             ConnectionTarget::MysqlFamily { .. } => {
-                crate::mysql::MySqlSession::test(profile, secret).await
+                crate::mysql::MySqlSession::test(profile, secrets).await
             }
         }
     }
@@ -142,6 +143,35 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.object_detail(namespace, object_name).await,
             Self::MySql(session) => session.object_detail(namespace, object_name).await,
+        }
+    }
+
+    pub async fn change_context(&self, context: &str) -> Result<String, QueryNotError> {
+        match self {
+            Self::Sqlite(session) => session.change_context(context).await,
+            Self::MySql(session) => session.change_context(context).await,
+        }
+    }
+
+    pub async fn browse_table(
+        &self,
+        namespace: &str,
+        table: &str,
+        input: &BrowseInput,
+    ) -> Result<TablePage, QueryNotError> {
+        match self {
+            Self::Sqlite(session) => session.browse_table(namespace, table, input).await,
+            Self::MySql(session) => session.browse_table(namespace, table, input).await,
+        }
+    }
+
+    pub async fn apply_table_mutations(
+        &self,
+        plan: &MutationPlan,
+    ) -> Result<MutationApplyResult, QueryNotError> {
+        match self {
+            Self::Sqlite(session) => session.apply_table_mutations(plan).await,
+            Self::MySql(session) => session.apply_table_mutations(plan).await,
         }
     }
 

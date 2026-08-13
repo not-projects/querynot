@@ -12,23 +12,33 @@ use crate::sqlite::{
     SchemaObjectDetail, SchemaObjectKind, SqliteExecutionEvent, SqliteTransactionState,
     TransactionCertainty,
 };
+use crate::table::{
+    BrowseInput, MutationApplyResult, MutationPlan, TableDefinition, TableDialect, TablePage,
+    plan_browse, validate_table_page_values,
+};
+use crate::vault::ConnectionSecrets;
 use crate::{ExecutionId, QueryNotError, ResultSetId, TaggedValue};
 use futures_util::TryStreamExt;
-use secrecy::{ExposeSecret, SecretString};
-use sqlx::mysql::{MySqlConnectOptions, MySqlRow, MySqlSslMode};
+use pkcs8::{EncryptedPrivateKeyInfo, SecretDocument, der::pem::LineEnding};
+use secrecy::ExposeSecret;
+use sqlx::mysql::{MySqlArguments, MySqlConnectOptions, MySqlRow, MySqlSslMode};
+use sqlx::query::Query;
 use sqlx::{
-    AssertSqlSafe, Column, ConnectOptions, Connection, Either, Executor, MySqlConnection, Row,
-    SqlSafeStr, Statement, TypeInfo, ValueRef,
+    AssertSqlSafe, Column, ConnectOptions, Connection, Either, Executor, MySql, MySqlConnection,
+    Row, SqlSafeStr, Statement, TypeInfo, ValueRef,
 };
+use std::path::Path;
 use std::sync::{
     Arc, Mutex as StdMutex,
     atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, mpsc};
+use zeroize::Zeroizing;
 
 const MAX_METADATA_BYTES: usize = 64 * 1024;
 const MAX_SCHEMA_OBJECTS: usize = 10_000;
+const MAX_CLIENT_KEY_BYTES: u64 = 1024 * 1024;
 
 #[derive(Clone)]
 pub struct MySqlSession {
@@ -57,9 +67,9 @@ impl std::fmt::Debug for MySqlSession {
 impl MySqlSession {
     pub async fn open(
         profile: &ConnectionProfile,
-        password: &SecretString,
+        secrets: &ConnectionSecrets,
     ) -> Result<Self, QueryNotError> {
-        let options = connect_options(profile, password)?;
+        let options = connect_options(profile, secrets)?;
         let mut connection = MySqlConnection::connect_with(&options)
             .await
             .map_err(map_mysql_connect_error)?;
@@ -96,9 +106,9 @@ impl MySqlSession {
 
     pub async fn test(
         profile: &ConnectionProfile,
-        password: &SecretString,
+        secrets: &ConnectionSecrets,
     ) -> Result<AdapterConnectionInfo, QueryNotError> {
-        let options = connect_options(profile, password)?;
+        let options = connect_options(profile, secrets)?;
         let mut connection = MySqlConnection::connect_with(&options)
             .await
             .map_err(map_mysql_connect_error)?;
@@ -225,6 +235,156 @@ impl MySqlSession {
         validate_metadata(object_name)?;
         let mut connection = self.connection.lock().await;
         load_object_detail(&mut connection, namespace, object_name).await
+    }
+
+    pub async fn change_context(&self, context: &str) -> Result<String, QueryNotError> {
+        validate_metadata(context)?;
+        let mut connection = self.connection.lock().await;
+        let statement = format!("USE {}", quote_identifier(context));
+        connection
+            .execute(AssertSqlSafe(statement.as_str()))
+            .await
+            .map_err(map_mysql_execution_error)?;
+        let confirmed: Option<String> = sqlx::query_scalar("SELECT DATABASE()")
+            .fetch_one(&mut *connection)
+            .await
+            .map_err(map_mysql_execution_error)?;
+        match confirmed {
+            Some(confirmed) if confirmed == context => Ok(confirmed),
+            _ => Err(QueryNotError::database(
+                crate::ErrorCategory::Connectivity,
+                "The server did not confirm the requested database context.",
+                true,
+            )),
+        }
+    }
+
+    pub async fn browse_table(
+        &self,
+        namespace: &str,
+        table: &str,
+        input: &BrowseInput,
+    ) -> Result<TablePage, QueryNotError> {
+        let mut connection = self.connection.lock().await;
+        let detail = load_object_detail(&mut connection, namespace, table).await?;
+        let definition = TableDefinition::from_detail(&detail, self.read_only, !self.read_only);
+        let plan = plan_browse(&definition, TableDialect::MySql, input)?;
+        let mut query = sqlx::query(AssertSqlSafe(plan.sql.as_str()));
+        for value in plan.parameters.iter().cloned() {
+            query = bind_mysql_value(query, value)?;
+        }
+        let rows = query
+            .fetch_all(&mut *connection)
+            .await
+            .map_err(map_mysql_execution_error)?;
+        let mut values = rows
+            .iter()
+            .map(mysql_values)
+            .collect::<Result<Vec<_>, _>>()?;
+        if values
+            .iter()
+            .any(|row| row.len() != definition.columns.len())
+        {
+            return Err(QueryNotError::internal(
+                "MySQL-family table paging returned a stale row shape.",
+            ));
+        }
+        validate_table_page_values(&values)?;
+        let has_more = values.len() > plan.page_size;
+        values.truncate(plan.page_size);
+        let next_cursor = if plan.keyset && has_more {
+            values.last().map_or_else(Vec::new, |row| {
+                plan.order_column_indexes
+                    .iter()
+                    .map(|index| row[*index].clone())
+                    .collect()
+            })
+        } else {
+            Vec::new()
+        };
+        Ok(TablePage {
+            definition,
+            next_offset: if plan.keyset {
+                0
+            } else {
+                input.offset.saturating_add(values.len() as u64)
+            },
+            rows: values,
+            has_more,
+            next_cursor,
+            unstable: plan.unstable,
+        })
+    }
+
+    pub async fn apply_table_mutations(
+        &self,
+        plan: &MutationPlan,
+    ) -> Result<MutationApplyResult, QueryNotError> {
+        if self.read_only {
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::UnsupportedCapability,
+                "This MySQL-family session is read-only.",
+                false,
+            ));
+        }
+        if !self.automatic.load(Ordering::Acquire)
+            || transaction_certainty(&self.transaction) != TransactionCertainty::Clean
+        {
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::Transaction,
+                "Table changes require a clean auto-commit table session.",
+                false,
+            ));
+        }
+        let mut connection = self.connection.lock().await;
+        connection
+            .execute("START TRANSACTION")
+            .await
+            .map_err(map_mysql_execution_error)?;
+        let mut affected_rows = 0_u64;
+        for operation in &plan.operations {
+            let mut query = sqlx::query(AssertSqlSafe(operation.sql.as_str()));
+            for value in operation.parameters.iter().cloned() {
+                query = match bind_mysql_value(query, value) {
+                    Ok(bound) => bound,
+                    Err(error) => {
+                        rollback_mysql_mutations(self, &mut connection).await?;
+                        return Err(error);
+                    }
+                };
+            }
+            match query.execute(&mut *connection).await {
+                Ok(result) if result.rows_affected() == operation.expected_rows => {
+                    affected_rows = affected_rows.saturating_add(result.rows_affected());
+                }
+                Ok(_) => {
+                    rollback_mysql_mutations(self, &mut connection).await?;
+                    return Err(QueryNotError::database(
+                        crate::ErrorCategory::Constraint,
+                        "A staged row no longer matched exactly one original row. The complete batch was rolled back and remains staged.",
+                        false,
+                    ));
+                }
+                Err(error) => {
+                    let mapped = map_mysql_execution_error(error);
+                    rollback_mysql_mutations(self, &mut connection).await?;
+                    return Err(mapped);
+                }
+            }
+        }
+        if connection.execute("COMMIT").await.is_err() {
+            set_transaction_certainty(&self.transaction, TransactionCertainty::Unknown);
+            let _ = connection.execute("ROLLBACK").await;
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::Transaction,
+                "The server could not confirm whether the mutation commit completed. Reconnect and inspect the affected rows before another write.",
+                false,
+            ));
+        }
+        Ok(MutationApplyResult {
+            affected_rows,
+            refreshed: true,
+        })
     }
 
     pub async fn transaction_state(&self) -> SqliteTransactionState {
@@ -811,7 +971,7 @@ async fn wait_for_more(
 
 fn connect_options(
     profile: &ConnectionProfile,
-    password: &SecretString,
+    secrets: &ConnectionSecrets,
 ) -> Result<MySqlConnectOptions, QueryNotError> {
     let ConnectionTarget::MysqlFamily {
         host,
@@ -839,7 +999,7 @@ fn connect_options(
         .host(host)
         .port(*port)
         .username(username)
-        .password(password.expose_secret())
+        .password(secrets.database_password().expose_secret())
         .ssl_mode(ssl_mode)
         .disable_statement_logging();
     if let Some(database) = default_database {
@@ -852,9 +1012,86 @@ fn connect_options(
         options = options.ssl_client_cert(path);
     }
     if let Some(path) = tls_client_key_path {
-        options = options.ssl_client_key(path);
+        let passphrase = secrets.client_key_passphrase().expose_secret();
+        if passphrase.is_empty() {
+            options = options.ssl_client_key(path);
+        } else {
+            let decrypted_pem = decrypt_client_key_pem(Path::new(path), passphrase)?;
+            options = options.ssl_client_key_from_pem(decrypted_pem.as_bytes());
+        }
     }
     Ok(options)
+}
+
+fn decrypt_client_key_pem(
+    path: &Path,
+    passphrase: &str,
+) -> Result<Zeroizing<String>, QueryNotError> {
+    let metadata = std::fs::metadata(path).map_err(|_| {
+        QueryNotError::database(
+            crate::ErrorCategory::Tls,
+            "The granted client private key is unavailable; no connection was attempted.",
+            false,
+        )
+    })?;
+    if !metadata.is_file() {
+        return Err(QueryNotError::database(
+            crate::ErrorCategory::Tls,
+            "The granted client private key is not a regular file; no connection was attempted.",
+            false,
+        ));
+    }
+    if metadata.len() > MAX_CLIENT_KEY_BYTES {
+        return Err(QueryNotError::database(
+            crate::ErrorCategory::Tls,
+            "The client private key exceeds the 1 MiB safety limit.",
+            false,
+        ));
+    }
+    let encrypted_pem = Zeroizing::new(std::fs::read_to_string(path).map_err(|_| {
+        QueryNotError::database(
+            crate::ErrorCategory::Tls,
+            "The granted client private key could not be read safely.",
+            false,
+        )
+    })?);
+    let (label, document) = SecretDocument::from_pem(&encrypted_pem).map_err(|_| {
+        QueryNotError::database(
+            crate::ErrorCategory::Tls,
+            "The client private key is not a supported PEM document.",
+            false,
+        )
+    })?;
+    if label != "ENCRYPTED PRIVATE KEY" {
+        return Err(QueryNotError::database(
+            crate::ErrorCategory::Tls,
+            "A client-key passphrase was supplied, but the key is not encrypted PKCS#8 PEM.",
+            false,
+        ));
+    }
+    let encrypted = EncryptedPrivateKeyInfo::try_from(document.as_bytes()).map_err(|_| {
+        QueryNotError::database(
+            crate::ErrorCategory::Tls,
+            "The encrypted client private key has an invalid PKCS#8 structure.",
+            false,
+        )
+    })?;
+    let decrypted = encrypted.decrypt(passphrase.as_bytes()).map_err(|_| {
+        QueryNotError::database(
+            crate::ErrorCategory::Authorization,
+            "The client private key could not be unlocked with the supplied passphrase.",
+            false,
+        )
+    })?;
+    decrypted
+        .to_pem("PRIVATE KEY", LineEnding::LF)
+        .map_err(|_| {
+            QueryNotError::database(
+                crate::ErrorCategory::Tls,
+                "The unlocked client private key could not be prepared for TLS.",
+                false,
+            )
+        })
 }
 
 async fn connection_info(
@@ -932,7 +1169,7 @@ async fn connection_info(
             cancellation: true,
             transactions: !read_only,
             multiple_results: true,
-            safe_table_mutations: false,
+            safe_table_mutations: !read_only,
         },
         read_only,
         context: context.unwrap_or_else(|| "(no default database)".to_owned()),
@@ -984,7 +1221,7 @@ async fn load_object_detail(
         SchemaObjectKind::Table
     };
     let column_rows = sqlx::query(
-        "SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT \
+        "SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA \
          FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? \
          ORDER BY ORDINAL_POSITION",
     )
@@ -1000,6 +1237,7 @@ async fn load_object_detail(
             let declared_type: String = row.try_get(1).map_err(map_mysql_execution_error)?;
             validate_metadata(&name)?;
             validate_metadata(&declared_type)?;
+            let extra: String = row.try_get(4).map_err(map_mysql_execution_error)?;
             Ok(SchemaColumn {
                 name,
                 declared_type,
@@ -1009,6 +1247,8 @@ async fn load_object_detail(
                     == "YES",
                 default_expression: row.try_get(3).map_err(map_mysql_execution_error)?,
                 primary_key_position: 0,
+                generated: extra.to_ascii_uppercase().contains("GENERATED")
+                    || extra.to_ascii_uppercase().contains("AUTO_INCREMENT"),
             })
         })
         .collect::<Result<Vec<_>, QueryNotError>>()?;
@@ -1024,9 +1264,13 @@ async fn load_object_detail(
     .map_err(map_mysql_execution_error)?;
     for row in primary_key_rows {
         let name: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-        let position = row
-            .try_get::<u64, _>(1)
-            .map_err(map_mysql_execution_error)? as u32;
+        let position = u32::try_from(mysql_metadata_counter(&row, 1)?).map_err(|_| {
+            QueryNotError::database(
+                crate::ErrorCategory::UnsupportedCapability,
+                "MySQL-family key metadata exceeds the supported ordinal range.",
+                false,
+            )
+        })?;
         if let Some(column) = columns.iter_mut().find(|column| column.name == name) {
             column.primary_key_position = position;
         }
@@ -1056,10 +1300,16 @@ async fn load_object_detail(
         }
         foreign_keys.push(SchemaForeignKey {
             id: foreign_key_id,
-            sequence: row
-                .try_get::<u64, _>(1)
-                .map_err(map_mysql_execution_error)? as i64
-                - 1,
+            sequence: i64::try_from(mysql_metadata_counter(&row, 1)?)
+                .ok()
+                .and_then(|value| value.checked_sub(1))
+                .ok_or_else(|| {
+                    QueryNotError::database(
+                        crate::ErrorCategory::UnsupportedCapability,
+                        "MySQL-family foreign-key metadata contains an invalid ordinal.",
+                        false,
+                    )
+                })?,
             referenced_table: row.try_get(2).map_err(map_mysql_execution_error)?,
             from_column: row.try_get(3).map_err(map_mysql_execution_error)?,
             to_column: row.try_get(4).map_err(map_mysql_execution_error)?,
@@ -1080,10 +1330,7 @@ async fn load_object_detail(
     let mut indexes: Vec<SchemaIndex> = Vec::new();
     for row in index_rows {
         let name: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-        let unique = row
-            .try_get::<u64, _>(1)
-            .map_err(map_mysql_execution_error)?
-            == 0;
+        let unique = mysql_metadata_counter(&row, 1)? == 0;
         let column: Option<String> = row.try_get(2).map_err(map_mysql_execution_error)?;
         if indexes.last().is_none_or(|index| index.name != name) {
             indexes.push(SchemaIndex {
@@ -1095,6 +1342,8 @@ async fn load_object_detail(
                 name,
                 unique,
                 columns: Vec::new(),
+                partial: false,
+                has_expressions: false,
             });
         }
         if let Some(column) = column {
@@ -1103,6 +1352,8 @@ async fn load_object_detail(
                 .expect("index was inserted")
                 .columns
                 .push(column);
+        } else if let Some(index) = indexes.last_mut() {
+            index.has_expressions = true;
         }
     }
     let definition = if kind == SchemaObjectKind::View {
@@ -1232,6 +1483,55 @@ fn mysql_values(row: &MySqlRow) -> Result<Vec<TaggedValue>, QueryNotError> {
                 .map_err(map_mysql_execution_error)
         })
         .collect()
+}
+
+fn mysql_metadata_counter(row: &MySqlRow, index: usize) -> Result<u64, QueryNotError> {
+    // MySQL-family information-schema counter columns vary in signedness across
+    // supported server lines. Decode the nonnegative protocol value directly,
+    // then let each caller enforce its narrower semantic range.
+    row.try_get_unchecked::<u64, _>(index)
+        .map_err(map_mysql_execution_error)
+}
+
+fn bind_mysql_value<'q>(
+    query: Query<'q, MySql, MySqlArguments>,
+    value: TaggedValue,
+) -> Result<Query<'q, MySql, MySqlArguments>, QueryNotError> {
+    Ok(match value {
+        TaggedValue::Null => query.bind(Option::<String>::None),
+        TaggedValue::Text(value) => query.bind(value),
+        TaggedValue::Bytes(value) => query.bind(value),
+        TaggedValue::SignedInteger(value) => query.bind(value.parse::<i64>().map_err(|_| {
+            QueryNotError::authorization("A staged MySQL-family integer is out of range.")
+        })?),
+        TaggedValue::UnsignedInteger(value) => query.bind(value.parse::<u64>().map_err(|_| {
+            QueryNotError::authorization("A staged MySQL-family integer is out of range.")
+        })?),
+        TaggedValue::Decimal(value) => query.bind(
+            value
+                .parse::<sqlx::types::BigDecimal>()
+                .map_err(|_| QueryNotError::authorization("A staged decimal is invalid."))?,
+        ),
+        TaggedValue::Float(value) => query.bind(value),
+        TaggedValue::Boolean(value) => query.bind(value),
+        TaggedValue::DateTime { raw, .. } => query.bind(raw),
+        TaggedValue::AdapterSpecific { raw, .. } => query.bind(raw),
+    })
+}
+
+async fn rollback_mysql_mutations(
+    session: &MySqlSession,
+    connection: &mut MySqlConnection,
+) -> Result<(), QueryNotError> {
+    if connection.execute("ROLLBACK").await.is_err() {
+        set_transaction_certainty(&session.transaction, TransactionCertainty::Unknown);
+        return Err(QueryNotError::database(
+            crate::ErrorCategory::Transaction,
+            "The server could not confirm rollback of the failed mutation batch. Reconnect before another write.",
+            false,
+        ));
+    }
+    Ok(())
 }
 
 async fn reconcile_transaction(
@@ -1496,6 +1796,28 @@ fn mysql_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const ENCRYPTED_TEST_KEY: &str = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n\
+MIGbMFcGCSqGSIb3DQEFDTBKMCkGCSqGSIb3DQEFDDAcBAh52YLnDfkaiAICCAAw\n\
+DAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEELLQLXiy79nf9pTPjgr0CSUEQNDN\n\
+bHcPS7hxdkIjBcF0AYCeImZ0znQYXSIb/aqVBpiQyIgvzgKwXUG8v1SwNVlbzUFU\n\
+syWTcIRpuGqs+IFaeys=\n\
+-----END ENCRYPTED PRIVATE KEY-----\n";
+
+    #[test]
+    fn encrypted_pkcs8_client_key_is_decrypted_only_with_the_supplied_passphrase() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("client-key.pem");
+        std::fs::write(&path, ENCRYPTED_TEST_KEY).unwrap();
+
+        let decrypted = decrypt_client_key_pem(&path, "hunter42").unwrap();
+        assert!(decrypted.starts_with("-----BEGIN PRIVATE KEY-----"));
+
+        let error = decrypt_client_key_pem(&path, "incorrect").unwrap_err();
+        assert_eq!(error.category, crate::ErrorCategory::Authorization);
+        assert!(!error.safe_message.contains("hunter42"));
+        assert!(!error.safe_message.contains("incorrect"));
+    }
 
     #[test]
     fn exact_matrix_and_legacy_classification_is_fail_closed() {

@@ -117,6 +117,13 @@ CREATE TABLE transaction_fixture (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   value_text VARCHAR(128) NOT NULL
 );
+CREATE TABLE table_edit_fixture (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  note VARCHAR(128) NULL,
+  defaulted VARCHAR(32) NOT NULL DEFAULT 'server-default'
+);
+INSERT INTO table_edit_fixture (name, note) VALUES ('alpha', NULL), ('beta', 'original');
 CREATE VIEW fixture_view AS SELECT sequence_number FROM stream_fixture;
 DELIMITER //
 CREATE PROCEDURE fixture_multi_results()

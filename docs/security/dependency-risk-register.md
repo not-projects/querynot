@@ -1,6 +1,6 @@
 # Dependency risk register
 
-Review date: 2026-08-13
+Review date: 2026-08-14 (Phase 4 lockfile change)
 
 Owner: QueryNot product owner
 Required re-review: every phase lockfile change and before the Phase 5 release-candidate gate
@@ -15,3 +15,5 @@ This register records informational or unreachable RustSec findings that remain 
 | RISK-DEP-004 | RUSTSEC-2025-0075, 0080, 0081, 0098, 0100 | Tauri utils → `urlpattern` → rust-unic crates | Informational maintenance status. The crates parse URL-pattern identifiers inside the desktop framework; QueryNot exposes no runtime code download or arbitrary URL navigation surface. | Accept the transitive dependency while tracking Tauri's replacement. | Phase 5 RC gate |
 
 The checked-in `deny.toml` contains only the advisory IDs in this register. `cargo deny check` must fail for every new advisory, yanked crate, unapproved license, wildcard dependency, or unknown source.
+
+The Phase 4 review added `pkcs8 0.10.2` with its encryption transitives and `tauri-plugin-single-instance 2.4.3`. The exact npm source/integrity/version/license policy, npm high-severity audit, and pinned `cargo-deny 0.20.2` advisories/licenses/bans/sources checks pass with no new ignored advisory or risk-register entry. Target-platform keychain and single-instance interaction review remains part of the Phase 5 release-candidate gate.

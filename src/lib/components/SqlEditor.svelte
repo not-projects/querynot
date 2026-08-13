@@ -1,10 +1,22 @@
 <script lang="ts">
   import { basicSetup } from 'codemirror';
+  import {
+    autocompletion,
+    type CompletionContext,
+    type CompletionResult
+  } from '@codemirror/autocomplete';
   import { syntaxTree } from '@codemirror/language';
-  import { MySQL, SQLite, sql } from '@codemirror/lang-sql';
+  import {
+    MySQL,
+    SQLite,
+    keywordCompletionSource,
+    schemaCompletionSource,
+    sql
+  } from '@codemirror/lang-sql';
   import { linter, type Diagnostic } from '@codemirror/lint';
   import { Compartment, EditorState } from '@codemirror/state';
   import { EditorView, keymap } from '@codemirror/view';
+  import { openSearchPanel } from '@codemirror/search';
   import type { Attachment } from 'svelte/attachments';
 
   export interface EditorRunRequest {
@@ -16,6 +28,7 @@
 
   export interface SqlEditorApi {
     focus(): void;
+    openSearch(): void;
     selection(): { start: number; end: number; cursor: number };
   }
 
@@ -50,6 +63,53 @@
   const wrapCompartment = new Compartment();
   const languageCompartment = new Compartment();
   const editableCompartment = new Compartment();
+
+  function aliasCompletion(
+    context: CompletionContext
+  ): CompletionResult | null {
+    const statementStart = Math.max(
+      context.state.doc.toString().lastIndexOf(';', context.pos - 1) + 1,
+      0
+    );
+    const statement = context.state.sliceDoc(statementStart, context.pos);
+    const aliases: string[] = [];
+    const pattern =
+      /\b(?:FROM|JOIN)\s+(?:[`"\w]+\.)?[`"\w]+\s+(?:AS\s+)?([A-Za-z_][\w$]*)/giu;
+    for (const match of statement.matchAll(pattern)) {
+      if (!aliases.includes(match[1])) aliases.push(match[1]);
+    }
+    const word = context.matchBefore(/[\w$]*/);
+    if (
+      !word ||
+      (word.from === word.to && !context.explicit) ||
+      aliases.length === 0
+    ) {
+      return null;
+    }
+    return {
+      from: word.from,
+      options: aliases.map((label) => ({
+        label,
+        type: 'variable',
+        detail: 'current-statement alias'
+      }))
+    };
+  }
+
+  function languageExtensions() {
+    const sqlDialect = dialect === 'mysql' ? MySQL : SQLite;
+    const config = { dialect: sqlDialect, schema: completionSchema };
+    return [
+      sql(config),
+      autocompletion({
+        override: [
+          aliasCompletion,
+          schemaCompletionSource(config),
+          keywordCompletionSource(sqlDialect)
+        ]
+      })
+    ];
+  }
 
   function run(runAll: boolean) {
     if (!view || disabled) return false;
@@ -86,12 +146,7 @@
       doc: value,
       extensions: [
         basicSetup,
-        languageCompartment.of(
-          sql({
-            dialect: dialect === 'mysql' ? MySQL : SQLite,
-            schema: completionSchema
-          })
-        ),
+        languageCompartment.of(languageExtensions()),
         wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
         editableCompartment.of(EditorView.editable.of(!disabled)),
         parseDiagnostics,
@@ -154,6 +209,9 @@
     view = new EditorView({ state, parent: element });
     onready?.({
       focus: () => view?.focus(),
+      openSearch: () => {
+        if (view) openSearchPanel(view);
+      },
       selection: () => {
         const selection = view?.state.selection.main;
         return {
@@ -189,12 +247,7 @@
 
   $effect(() => {
     view?.dispatch({
-      effects: languageCompartment.reconfigure(
-        sql({
-          dialect: dialect === 'mysql' ? MySQL : SQLite,
-          schema: completionSchema
-        })
-      )
+      effects: languageCompartment.reconfigure(languageExtensions())
     });
   });
 

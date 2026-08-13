@@ -43,7 +43,10 @@ describe('Phase 2 SQLite boundaries', () => {
     ]) {
       expect(commands).toContain(command);
     }
-    expect(contract.events).toEqual({ query_execution: 'ExecutionEventView' });
+    expect(contract.events).toEqual({
+      query_execution: 'ExecutionEventView',
+      querynot_open_files: 'PendingSqlFilesSignal'
+    });
     expect(commands).not.toContain('read_file');
     expect(commands).not.toContain('write_file');
     expect(commands).not.toContain('execute_sql');
@@ -142,7 +145,9 @@ describe('Phase 2 SQLite boundaries', () => {
   it('uses CodeMirror with adapter-selected parsing, completion, diagnostics, and fixed execution shortcuts', () => {
     const editor = read('src/lib/components/SqlEditor.svelte');
     expect(editor).toContain('basicSetup');
-    expect(editor).toContain('import { MySQL, SQLite, sql }');
+    expect(editor).toContain('MySQL,');
+    expect(editor).toContain('SQLite,');
+    expect(editor).toContain('schemaCompletionSource');
     expect(editor).toContain("dialect === 'mysql' ? MySQL : SQLite");
     expect(editor).toContain('syntaxTree(editor.state)');
     expect(editor).toContain("key: 'Mod-Enter'");

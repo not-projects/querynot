@@ -63,7 +63,8 @@ export interface DeleteProfileResponse {
 
 export interface SaveProfileSecretRequest {
   profile_id: string;
-  secret: string;
+  database_password: string;
+  client_key_passphrase: string;
   session_only: boolean;
 }
 
@@ -118,6 +119,8 @@ export interface PanelSizesView {
 export interface WorkspaceTabView {
   id: string;
   title: string;
+  kind: string;
+  pinned: boolean;
   profile_id: string | null;
   profile_label: string | null;
   context_label: string | null;
@@ -125,6 +128,8 @@ export interface WorkspaceTabView {
   dirty: boolean;
   position: number;
   source_file_grant_id: string | null;
+  table_namespace: string | null;
+  table_name: string | null;
   reconnectable: boolean;
 }
 
@@ -155,6 +160,42 @@ export interface FilePickerResponse {
   content: string | null;
 }
 
+export interface PendingSqlFilesResponse {
+  files: FilePickerResponse[];
+}
+
+export interface PendingSqlFilesSignal {
+  queued: boolean;
+}
+
+export interface SaveSqlFileRequest {
+  profile_id: string | null;
+  tab_id: string;
+  file_grant_id: string;
+  content: string;
+}
+
+export interface SaveSqlFileAsRequest {
+  profile_id: string | null;
+  tab_id: string;
+  suggested_name: string;
+  content: string;
+}
+
+export interface ReviewSqlFileRequest {
+  profile_id: string | null;
+  tab_id: string;
+  file_grant_id: string;
+}
+
+export interface SqlFileActionResponse {
+  status: string;
+  cancelled: boolean;
+  file_grant_id: string | null;
+  display_name: string | null;
+  message: string;
+}
+
 export interface DiagnosticEventView {
   timestamp_ms: number;
   area: string;
@@ -178,6 +219,172 @@ export interface FileActionResponse {
 
 export interface ConfirmedActionRequest {
   confirmed: boolean;
+}
+
+export interface HistoryQueryRequest {
+  search: string;
+  limit: number;
+}
+
+export interface DeleteHistoryEntryRequest {
+  history_id: string;
+}
+
+export interface HistoryEntryView {
+  id: string;
+  sql: string;
+  timestamp_ms: number;
+  profile_id: string | null;
+  profile_label: string;
+  engine: string;
+  context: string;
+  duration_ms: number;
+  status: string;
+  affected_rows: number;
+  received_rows: number;
+  error_category: string | null;
+}
+
+export interface HistoryResponse {
+  entries: HistoryEntryView[];
+  warning: string | null;
+}
+
+export interface TableFilterView {
+  column: string;
+  operator: string;
+  value: TaggedValueView | null;
+}
+
+export interface TableSortView {
+  column: string;
+  direction: string;
+}
+
+export interface TableBrowseRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  namespace: string;
+  table: string;
+  filters: TableFilterView[];
+  sorts: TableSortView[];
+  cursor: TaggedValueView[];
+  offset: number;
+  page_size: number;
+}
+
+export interface TableColumnView {
+  name: string;
+  declared_type: string;
+  nullable: boolean;
+  primary_key_position: number;
+  has_default: boolean;
+  generated: boolean;
+  editor: string;
+  editable: boolean;
+  read_only_reason: string | null;
+}
+
+export interface TableDefinitionView {
+  namespace: string;
+  table: string;
+  columns: TableColumnView[];
+  identity_source: string | null;
+  identity_columns: string[];
+  editable: boolean;
+  read_only_reason: string | null;
+}
+
+export interface TableRowView {
+  values: TaggedValueView[];
+}
+
+export interface TablePageView {
+  definition: TableDefinitionView;
+  rows: TableRowView[];
+  has_more: boolean;
+  next_cursor: TaggedValueView[];
+  next_offset: number;
+  unstable: boolean;
+  message: string;
+}
+
+export interface MutationCellView {
+  column: string;
+  mode: string;
+  value: TaggedValueView | null;
+}
+
+export interface TableMutationView {
+  kind: string;
+  original: TaggedValueView[];
+  cells: MutationCellView[];
+}
+
+export interface PreviewTableMutationsRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  namespace: string;
+  table: string;
+  staging_revision: number;
+  operations: TableMutationView[];
+}
+
+export interface MutationParameterPreviewView {
+  value_type: string;
+  display: string;
+  truncated: boolean;
+}
+
+export interface MutationOperationPreviewView {
+  kind: string;
+  sql_template: string;
+  parameters: MutationParameterPreviewView[];
+  expected_rows: number;
+}
+
+export interface MutationPreviewView {
+  plan_id: string;
+  staging_revision: number;
+  target: string;
+  affected_row_count: number;
+  operations: MutationOperationPreviewView[];
+  message: string;
+}
+
+export interface ApplyTableMutationsRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  plan_id: string;
+  staging_revision: number;
+}
+
+export interface MutationPlanIdRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  plan_id: string;
+}
+
+export interface MutationApplyResponse {
+  affected_rows: number;
+  refreshed: boolean;
+  message: string;
+}
+
+export interface ChangeTabContextRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  context: string;
+}
+
+export interface SessionContextResponse {
+  context: string;
+  message: string;
 }
 
 export interface AdapterCapabilitiesView {
@@ -219,6 +426,7 @@ export interface SessionView {
   tab_id: string;
   session_id: string;
   state: string;
+  context: string;
   transaction: TransactionStateView;
 }
 
@@ -262,12 +470,18 @@ export interface SchemaObjectRequest {
   object_name: string;
 }
 
+export interface SchemaTextResponse {
+  text: string;
+  message: string;
+}
+
 export interface SchemaColumnView {
   name: string;
   declared_type: string;
   nullable: boolean;
   primary_key_position: number;
   default_expression: string | null;
+  generated: boolean;
 }
 
 export interface SchemaForeignKeyView {
@@ -443,12 +657,29 @@ export interface QueryNotCommands {
   save_settings: { request: SettingsView; response: SettingsView };
   reset_settings: { request: ConfirmedActionRequest; response: SettingsView };
   save_workspace: { request: WorkspaceView; response: WorkspaceSaveResponse };
+  clear_saved_workspace: {
+    request: ConfirmedActionRequest;
+    response: FileActionResponse;
+  };
   create_offline_tab: {
     request: NewOfflineTabRequest;
     response: WorkspaceTabView;
   };
   close_offline_tab: { request: TabIdRequest; response: WorkspaceSaveResponse };
   pick_sql_file: { request: null; response: FilePickerResponse };
+  save_sql_file: {
+    request: SaveSqlFileRequest;
+    response: SqlFileActionResponse;
+  };
+  save_sql_file_as: {
+    request: SaveSqlFileAsRequest;
+    response: SqlFileActionResponse;
+  };
+  review_sql_file: {
+    request: ReviewSqlFileRequest;
+    response: FilePickerResponse;
+  };
+  take_pending_sql_files: { request: null; response: PendingSqlFilesResponse };
   pick_sqlite_file: { request: null; response: FilePickerResponse };
   pick_new_sqlite_file: { request: null; response: FilePickerResponse };
   pick_tls_ca_file: { request: null; response: FilePickerResponse };
@@ -484,6 +715,11 @@ export interface QueryNotCommands {
     request: SchemaObjectRequest;
     response: SchemaObjectDetailView;
   };
+  qualified_schema_name: {
+    request: SchemaObjectRequest;
+    response: SchemaTextResponse;
+  };
+  starter_query: { request: SchemaObjectRequest; response: SchemaTextResponse };
   format_sql: { request: FormatSqlRequest; response: FormatSqlResponse };
   start_execution: {
     request: StartExecutionRequest;
@@ -530,8 +766,35 @@ export interface QueryNotCommands {
     request: ConfirmedActionRequest;
     response: FileActionResponse;
   };
+  list_history: { request: HistoryQueryRequest; response: HistoryResponse };
+  delete_history_entry: {
+    request: DeleteHistoryEntryRequest;
+    response: FileActionResponse;
+  };
+  clear_history: {
+    request: ConfirmedActionRequest;
+    response: FileActionResponse;
+  };
+  browse_table: { request: TableBrowseRequest; response: TablePageView };
+  preview_table_mutations: {
+    request: PreviewTableMutationsRequest;
+    response: MutationPreviewView;
+  };
+  apply_table_mutations: {
+    request: ApplyTableMutationsRequest;
+    response: MutationApplyResponse;
+  };
+  discard_mutation_plan: {
+    request: MutationPlanIdRequest;
+    response: FileActionResponse;
+  };
+  change_tab_context: {
+    request: ChangeTabContextRequest;
+    response: SessionContextResponse;
+  };
 }
 
 export interface QueryNotEvents {
   query_execution: ExecutionEventView;
+  querynot_open_files: PendingSqlFilesSignal;
 }

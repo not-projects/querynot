@@ -35,6 +35,7 @@ Reports in these areas are especially important:
 - connection-string and database-credential storage
 - TLS verification and transport configuration
 - unintended, altered, or insufficiently confirmed SQL execution
+- unsafe table targeting, identifier/value interpolation, optimistic-conflict checks, or partial mutation rollback
 - secret leakage through logs, history, exports, screenshots, diagnostics, or crash reports
 - local persistence permissions and database-file exposure
 - import, export, and local-file handling
