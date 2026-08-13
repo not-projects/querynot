@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "status": "pass",
-  "tested_source": "working tree; exact committed rerun is required before the Phase 0 exit gate closes",
+  "tested_source": "2ee883a8547daf812017e79258ab2001acc6f215",
   "environment": {
     "os": "linux",
     "architecture": "x64",

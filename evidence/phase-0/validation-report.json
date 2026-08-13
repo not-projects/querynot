@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "phase": 0,
+  "source_commit": "2ee883a8547daf812017e79258ab2001acc6f215",
+  "status": "pass",
+  "started_at": "2026-08-13T14:37:49.470Z",
+  "completed_at": "2026-08-13T14:40:22.120Z",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "node": "v22.22.1",
+    "npm": "10.9.4",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)"
+  },
+  "checks": [
+    {
+      "id": "P0-NPM-CI",
+      "command": "npm ci",
+      "status": "pass",
+      "duration_ms": 4480
+    },
+    {
+      "id": "P0-CONTRACTS",
+      "command": "npm run test:contracts",
+      "status": "pass",
+      "duration_ms": 479
+    },
+    {
+      "id": "P0-TRACEABILITY",
+      "command": "npm run test:traceability",
+      "status": "pass",
+      "duration_ms": 502
+    },
+    {
+      "id": "P0-NPM-POLICY",
+      "command": "npm run test:dependencies",
+      "status": "pass",
+      "duration_ms": 614
+    },
+    {
+      "id": "P0-SVELTE-CHECK",
+      "command": "npm run check",
+      "status": "pass",
+      "duration_ms": 2205
+    },
+    {
+      "id": "P0-FRONTEND-TEST",
+      "command": "npm run test",
+      "status": "pass",
+      "duration_ms": 1298
+    },
+    {
+      "id": "P0-FRONTEND-BUILD",
+      "command": "npm run build",
+      "status": "pass",
+      "duration_ms": 3499
+    },
+    {
+      "id": "P0-FORMAT",
+      "command": "npm run format:check",
+      "status": "pass",
+      "duration_ms": 1261
+    },
+    {
+      "id": "P0-NPM-AUDIT",
+      "command": "npm audit --audit-level=high --json",
+      "status": "pass",
+      "duration_ms": 3112
+    },
+    {
+      "id": "P0-RUSTFMT",
+      "command": "cargo fmt --all -- --check",
+      "status": "pass",
+      "duration_ms": 60
+    },
+    {
+      "id": "P0-CARGO-CHECK",
+      "command": "cargo check --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 267
+    },
+    {
+      "id": "P0-CARGO-TEST",
+      "command": "cargo test --locked --workspace",
+      "status": "pass",
+      "duration_ms": 483
+    },
+    {
+      "id": "P0-CLIPPY",
+      "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
+      "status": "pass",
+      "duration_ms": 314
+    },
+    {
+      "id": "P0-CARGO-DENY",
+      "command": "cargo deny check advisories licenses bans sources",
+      "status": "pass",
+      "duration_ms": 1448
+    },
+    {
+      "id": "P0-TAURI-BUILD",
+      "command": "npm run tauri -- build --no-bundle",
+      "status": "pass",
+      "duration_ms": 60907
+    },
+    {
+      "id": "P0-NETWORK-FEASIBILITY",
+      "command": "npm run test:feasibility:native",
+      "status": "pass",
+      "duration_ms": 71682
+    }
+  ],
+  "phase_gate": {
+    "traceability_rows_seeded": 121,
+    "generated_contract_drift_gate": "pass",
+    "fail_closed_fixture_isolation": "pass",
+    "sqlite_feasibility": "pass",
+    "network_feasibility": "pass",
+    "dependency_policy": "pass",
+    "local_linux_desktop_build": "pass",
+    "remote_ci_matrix": "configured; execution requires a pushed commit"
+  },
+  "failure": null
+}
