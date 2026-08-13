@@ -7,6 +7,7 @@ pub mod export;
 pub mod fixture;
 pub mod generated;
 pub mod ids;
+pub mod mysql;
 pub mod ownership;
 pub mod profile;
 pub mod result;
@@ -19,7 +20,10 @@ pub mod value;
 pub mod vault;
 pub mod workspace;
 
-pub use adapter::{AdapterCapabilities, DatabaseFamily, ServerIdentity};
+pub use adapter::{
+    AdapterCapabilities, AdapterConnectionInfo, AdapterSession, CompatibilityStatus,
+    DatabaseFamily, ServerIdentity,
+};
 pub use error::{ErrorCategory, QueryNotError};
 pub use fixture::{FixtureManifest, FixtureTarget, MarkerProof};
 pub use ids::{

@@ -13,7 +13,7 @@ use querynot_core::store::{
 use querynot_core::vault::{KeyringVault, SecretVault, SessionSecretStore};
 use querynot_core::workspace::{PanelSizes, WorkspaceSnapshot, WorkspaceTab};
 use querynot_core::{ErrorCategory, FileGrantId, ProfileId, QueryNotError, TabId, WindowId};
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -27,6 +27,9 @@ const MAX_SQL_FILE_BYTES: u64 = 4 * 1024 * 1024;
 enum FilePurpose {
     SqlDraft,
     SqliteDatabase,
+    TlsCa,
+    TlsClientCertificate,
+    TlsClientKey,
 }
 
 #[derive(Clone, Debug)]
@@ -110,6 +113,25 @@ impl AppRuntimeState {
         if let Ok(mut grants) = self.file_grants.lock() {
             grants.clear();
         }
+    }
+
+    pub(crate) async fn database_secret(
+        &self,
+        profile: &ConnectionProfile,
+    ) -> Result<SecretString, QueryNotError> {
+        if let Some(secret) = lock(&self.session_secrets)?.get(profile.id) {
+            return Ok(SecretString::new(
+                secret.expose_secret().to_owned().into_boxed_str(),
+            ));
+        }
+        let Some(reference) = profile.secret_reference else {
+            return Ok(SecretString::new(String::new().into_boxed_str()));
+        };
+        let vault = self.vault.clone();
+        tokio::task::spawn_blocking(move || vault.retrieve(reference))
+            .await
+            .map_err(|_| QueryNotError::internal("Credential-vault task did not complete."))?
+            .map_err(vault_error)
     }
 }
 
@@ -605,6 +627,85 @@ pub(crate) async fn pick_new_sqlite_file(
 }
 
 #[tauri::command]
+pub(crate) async fn pick_tls_ca_file(
+    app: AppHandle,
+    state: State<'_, AppRuntimeState>,
+) -> Result<FilePickerResponse, QueryNotError> {
+    pick_tls_file(
+        &app,
+        &state,
+        FilePurpose::TlsCa,
+        "Choose trusted CA certificate",
+        &["pem", "crt", "cer"],
+    )
+}
+
+#[tauri::command]
+pub(crate) async fn pick_tls_client_certificate_file(
+    app: AppHandle,
+    state: State<'_, AppRuntimeState>,
+) -> Result<FilePickerResponse, QueryNotError> {
+    pick_tls_file(
+        &app,
+        &state,
+        FilePurpose::TlsClientCertificate,
+        "Choose client certificate",
+        &["pem", "crt", "cer"],
+    )
+}
+
+#[tauri::command]
+pub(crate) async fn pick_tls_client_key_file(
+    app: AppHandle,
+    state: State<'_, AppRuntimeState>,
+) -> Result<FilePickerResponse, QueryNotError> {
+    pick_tls_file(
+        &app,
+        &state,
+        FilePurpose::TlsClientKey,
+        "Choose client private key",
+        &["pem", "key"],
+    )
+}
+
+fn pick_tls_file(
+    app: &AppHandle,
+    state: &AppRuntimeState,
+    purpose: FilePurpose,
+    title: &str,
+    extensions: &[&str],
+) -> Result<FilePickerResponse, QueryNotError> {
+    let selected = app
+        .dialog()
+        .file()
+        .add_filter("PEM certificate material", extensions)
+        .set_title(title)
+        .blocking_pick_file();
+    let Some(selected) = selected else {
+        return Ok(cancelled_file_picker());
+    };
+    let path = selected
+        .into_path()
+        .map_err(|_| QueryNotError::authorization("Only local certificate files are supported."))?;
+    let metadata = std::fs::metadata(&path).map_err(|_| {
+        QueryNotError::local_storage("The selected certificate file is unavailable.", true)
+    })?;
+    if !metadata.is_file() || metadata.len() > 1024 * 1024 {
+        return Err(QueryNotError::authorization(
+            "Certificate material must be a regular file no larger than 1 MiB.",
+        ));
+    }
+    let grant_id = grant_file(state, path.clone(), purpose)?;
+    Ok(FilePickerResponse {
+        cancelled: false,
+        file_grant_id: Some(grant_id.to_string()),
+        tab_id: None,
+        display_name: Some(display_name(&path)),
+        content: None,
+    })
+}
+
+#[tauri::command]
 pub(crate) async fn diagnostics_preview(
     state: State<'_, AppRuntimeState>,
 ) -> Result<DiagnosticsPreviewView, QueryNotError> {
@@ -705,20 +806,66 @@ fn profile_from_input(
                     "A network profile cannot consume a local-file grant.",
                 ));
             }
+            let tls_mode = match input.tls_mode.as_deref() {
+                Some("disabled") => TlsMode::Disabled,
+                Some("required") => TlsMode::Required,
+                Some("verify_identity") | None => TlsMode::VerifyIdentity,
+                Some("custom_ca") => TlsMode::CustomCa,
+                _ => {
+                    return Err(QueryNotError::authorization(
+                        "Unsupported TLS mode. Verification is never downgraded implicitly.",
+                    ));
+                }
+            };
+            let existing_tls = match existing.map(|profile| &profile.target) {
+                Some(ConnectionTarget::MysqlFamily {
+                    tls_ca_path,
+                    tls_client_certificate_path,
+                    tls_client_key_path,
+                    ..
+                }) => (
+                    tls_ca_path.clone(),
+                    tls_client_certificate_path.clone(),
+                    tls_client_key_path.clone(),
+                ),
+                _ => (None, None, None),
+            };
+            let mut tls_ca_path = resolve_optional_grant(
+                state,
+                input.tls_ca_grant_id.as_deref(),
+                FilePurpose::TlsCa,
+                existing_tls.0,
+            )?;
+            let mut tls_client_certificate_path = resolve_optional_grant(
+                state,
+                input.tls_client_certificate_grant_id.as_deref(),
+                FilePurpose::TlsClientCertificate,
+                existing_tls.1,
+            )?;
+            let mut tls_client_key_path = resolve_optional_grant(
+                state,
+                input.tls_client_key_grant_id.as_deref(),
+                FilePurpose::TlsClientKey,
+                existing_tls.2,
+            )?;
+            if input.clear_tls_ca || tls_mode != TlsMode::CustomCa {
+                tls_ca_path = None;
+            }
+            if input.clear_tls_client_identity
+                || !matches!(tls_mode, TlsMode::VerifyIdentity | TlsMode::CustomCa)
+            {
+                tls_client_certificate_path = None;
+                tls_client_key_path = None;
+            }
             ConnectionTarget::MysqlFamily {
                 host: input.host.unwrap_or_default(),
                 port: input.port.unwrap_or(3306),
                 default_database: input.default_database,
                 username: input.username.unwrap_or_default(),
-                tls_mode: match input.tls_mode.as_deref() {
-                    Some("required") => TlsMode::Required,
-                    Some("verify_identity") | None => TlsMode::VerifyIdentity,
-                    _ => {
-                        return Err(QueryNotError::authorization(
-                            "Unsupported TLS mode. QueryNot does not offer a verification-disabled mode.",
-                        ));
-                    }
-                },
+                tls_mode,
+                tls_ca_path,
+                tls_client_certificate_path,
+                tls_client_key_path,
             }
         }
         _ => {
@@ -765,6 +912,9 @@ fn profile_to_view(profile: &ConnectionProfile) -> ProfileView {
             name: profile.name.clone(),
             kind: "sqlite".to_owned(),
             file_name: Some(display_name(Path::new(file_path))),
+            tls_ca_file_name: None,
+            tls_client_certificate_file_name: None,
+            tls_client_key_file_name: None,
             read_only: *read_only,
             host: None,
             port: None,
@@ -781,11 +931,23 @@ fn profile_to_view(profile: &ConnectionProfile) -> ProfileView {
             default_database,
             username,
             tls_mode,
+            tls_ca_path,
+            tls_client_certificate_path,
+            tls_client_key_path,
         } => ProfileView {
             id: profile.id.to_string(),
             name: profile.name.clone(),
             kind: "mysql_family".to_owned(),
             file_name: None,
+            tls_ca_file_name: tls_ca_path.as_deref().map(Path::new).map(display_name),
+            tls_client_certificate_file_name: tls_client_certificate_path
+                .as_deref()
+                .map(Path::new)
+                .map(display_name),
+            tls_client_key_file_name: tls_client_key_path
+                .as_deref()
+                .map(Path::new)
+                .map(display_name),
             read_only: false,
             host: Some(host.clone()),
             port: Some(*port),
@@ -793,8 +955,10 @@ fn profile_to_view(profile: &ConnectionProfile) -> ProfileView {
             username: Some(username.clone()),
             tls_mode: Some(
                 match tls_mode {
+                    TlsMode::Disabled => "disabled",
                     TlsMode::Required => "required",
                     TlsMode::VerifyIdentity => "verify_identity",
+                    TlsMode::CustomCa => "custom_ca",
                 }
                 .to_owned(),
             ),
@@ -1014,6 +1178,20 @@ fn resolve_grant(
         ));
     }
     Ok(granted.path.clone())
+}
+
+fn resolve_optional_grant(
+    state: &AppRuntimeState,
+    grant: Option<&str>,
+    purpose: FilePurpose,
+    existing: Option<String>,
+) -> Result<Option<String>, QueryNotError> {
+    grant
+        .map(|grant| {
+            resolve_grant(state, grant, purpose).map(|path| path.to_string_lossy().into_owned())
+        })
+        .transpose()
+        .map(|resolved| resolved.or(existing))
 }
 
 pub(crate) fn available_store(state: &AppRuntimeState) -> Result<&LocalStore, QueryNotError> {

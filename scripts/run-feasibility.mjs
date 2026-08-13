@@ -89,7 +89,14 @@ CREATE TABLE typed_fixture (
   decimal_value DECIMAL(30, 10) NOT NULL,
   binary_value VARBINARY(16) NOT NULL,
   text_value VARCHAR(64) NOT NULL,
-  null_value VARCHAR(64) NULL
+  null_value VARCHAR(64) NULL,
+  float_value DOUBLE NOT NULL,
+  boolean_value BIT(1) NOT NULL,
+  date_value DATE NOT NULL,
+  datetime_value DATETIME(6) NOT NULL,
+  time_value TIME(6) NOT NULL,
+  empty_text VARCHAR(1) NOT NULL,
+  large_text LONGTEXT NOT NULL
 );
 INSERT INTO typed_fixture VALUES (
   -9223372036854775000,
@@ -97,12 +104,27 @@ INSERT INTO typed_fixture VALUES (
   12345678901234567890.1234567890,
   X'00FF1080',
   'QueryNot Ω',
-  NULL
+  NULL,
+  1.25E100,
+  b'1',
+  '2024-02-29',
+  '2024-02-29 23:59:58.123456',
+  '12:34:56.654321',
+  '',
+  REPEAT('Ω', 65536)
 );
 CREATE TABLE transaction_fixture (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   value_text VARCHAR(128) NOT NULL
 );
+CREATE VIEW fixture_view AS SELECT sequence_number FROM stream_fixture;
+DELIMITER //
+CREATE PROCEDURE fixture_multi_results()
+BEGIN
+  SELECT 1 AS first_result;
+  SELECT 2 AS second_result;
+END//
+DELIMITER ;
 `;
 }
 

@@ -10,7 +10,7 @@ use tauri::Manager;
 fn application_status() -> ApplicationStatusResponse {
     ApplicationStatusResponse {
         contract_version: CONTRACT_VERSION,
-        phase: "phase_2_sqlite_vertical_slice".to_owned(),
+        phase: "phase_3_mysql_family_parity".to_owned(),
     }
 }
 
@@ -48,11 +48,15 @@ pub fn run() {
             phase1::pick_sql_file,
             phase1::pick_sqlite_file,
             phase1::pick_new_sqlite_file,
+            phase1::pick_tls_ca_file,
+            phase1::pick_tls_client_certificate_file,
+            phase1::pick_tls_client_key_file,
             phase1::diagnostics_preview,
             phase1::export_diagnostics,
             phase1::clear_operational_log,
             phase2::test_profile_connection,
             phase2::connect_profile,
+            phase2::cancel_profile_connection,
             phase2::disconnect_profile,
             phase2::open_tab_session,
             phase2::close_tab_session,

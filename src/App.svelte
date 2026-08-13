@@ -107,6 +107,11 @@
     name: '',
     kind: 'mysql_family',
     file_grant_id: null,
+    tls_ca_grant_id: null,
+    tls_client_certificate_grant_id: null,
+    tls_client_key_grant_id: null,
+    clear_tls_ca: false,
+    clear_tls_client_identity: false,
     read_only: false,
     host: '127.0.0.1',
     port: 3306,
@@ -132,6 +137,9 @@
   let profileForm = $state<ProfileForm>(defaultProfileForm());
   let editingProfileId = $state<string | null>(null);
   let selectedSqliteName = $state<string | null>(null);
+  let selectedTlsCaName = $state<string | null>(null);
+  let selectedTlsClientCertificateName = $state<string | null>(null);
+  let selectedTlsClientKeyName = $state<string | null>(null);
   let deleteProfileId = $state<string | null>(null);
   let deleteHistory = $state(false);
   let deleteDrafts = $state(false);
@@ -143,6 +151,7 @@
   let previousFocus: HTMLElement | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let connections = $state<Record<string, ConnectionInfoView>>({});
+  let connectionOperations = $state<Record<string, 'test' | 'connect'>>({});
   let sessions = $state<Record<string, SessionView>>({});
   let executions = $state<Record<string, ExecutionUi>>({});
   let results = $state<Record<string, ResultUi[]>>({});
@@ -269,7 +278,7 @@
     if (!hasNativeRuntime()) {
       applyBootstrap({
         contract_version: 1,
-        phase: 'phase_2_sqlite_vertical_slice',
+        phase: 'phase_3_mysql_family_parity',
         store_state: 'preview',
         store_message: null,
         profiles: [],
@@ -294,6 +303,7 @@
     settingsDraft = structuredClone(response.settings);
     workspace = response.workspace;
     connections = {};
+    connectionOperations = {};
     sessions = {};
     executions = {};
     results = {};
@@ -446,6 +456,9 @@
       settings.connection_timeout_seconds;
     editingProfileId = null;
     selectedSqliteName = null;
+    selectedTlsCaName = null;
+    selectedTlsClientCertificateName = null;
+    selectedTlsClientKeyName = null;
     void openModal('profile');
   }
 
@@ -508,40 +521,60 @@
 
   async function testProfile(profile: ProfileView) {
     if (!hasNativeRuntime()) return;
-    if (profile.kind !== 'sqlite') {
-      statusMessage =
-        'MySQL / MariaDB connection testing is scheduled for Phase 3.';
-      return;
-    }
     await runAction(async () => {
-      statusMessage = `Testing ${profile.name}…`;
-      const info = await invokeCommand('test_profile_connection', {
-        profile_id: profile.id
-      });
-      statusMessage = `${profile.name} test succeeded with ${info.engine} ${info.exact_version}${info.read_only ? ' in read-only mode' : ''}. The test resource was closed.`;
+      connectionOperations[profile.id] = 'test';
+      try {
+        statusMessage = `Testing ${profile.name}…`;
+        const info = await invokeCommand('test_profile_connection', {
+          profile_id: profile.id
+        });
+        statusMessage = `${profile.name} test succeeded with ${info.engine} ${info.exact_version}${info.read_only ? ' in read-only mode' : ''}. The test resource was closed.`;
+        if (info.compatibility_warning) {
+          statusMessage += ` ${info.compatibility_warning}`;
+        }
+      } finally {
+        delete connectionOperations[profile.id];
+      }
     });
   }
 
   async function connectProfile(profile: ProfileView) {
     if (!hasNativeRuntime()) return;
-    if (profile.kind !== 'sqlite') {
-      statusMessage =
-        'MySQL / MariaDB connectivity remains disabled until Phase 3 parity is complete.';
-      return;
-    }
     await runAction(async () => {
-      statusMessage = `Connecting ${profile.name}…`;
-      const info = await invokeCommand('connect_profile', {
-        profile_id: profile.id
-      });
-      connections[profile.id] = info;
-      const schema = await loadSchemaNamespaces(profile.id);
-      statusMessage = `${profile.name} connected to ${info.engine} ${info.exact_version}. Metadata uses a separate native session.`;
-      if (schema.stale) {
-        statusMessage +=
-          ' Cached metadata is shown as stale because refresh failed.';
+      connectionOperations[profile.id] = 'connect';
+      try {
+        statusMessage = `Connecting ${profile.name}…`;
+        const info = await invokeCommand('connect_profile', {
+          profile_id: profile.id
+        });
+        connections[profile.id] = info;
+        const schema = await loadSchemaNamespaces(profile.id);
+        statusMessage = `${profile.name} connected to ${info.engine} ${info.exact_version}. Metadata uses a separate native session.`;
+        if (info.compatibility_warning) {
+          statusMessage += ` ${info.compatibility_warning}`;
+        }
+        if (schema.stale) {
+          statusMessage +=
+            ' Cached metadata is shown as stale because refresh failed.';
+        }
+      } finally {
+        delete connectionOperations[profile.id];
       }
     });
+  }
+
+  async function cancelProfileConnection(profile: ProfileView) {
+    const action = connectionOperations[profile.id];
+    if (!action || !hasNativeRuntime()) return;
+    try {
+      const response = await invokeCommand('cancel_profile_connection', {
+        profile_id: profile.id,
+        action
+      });
+      statusMessage = response.message;
+    } catch (error) {
+      statusMessage = safeErrorMessage(error);
+    }
   }
 
   async function disconnectProfile(profile: ProfileView) {
@@ -562,10 +595,18 @@
   function editProfile(profile: ProfileView) {
     editingProfileId = profile.id;
     selectedSqliteName = profile.file_name;
+    selectedTlsCaName = profile.tls_ca_file_name;
+    selectedTlsClientCertificateName = profile.tls_client_certificate_file_name;
+    selectedTlsClientKeyName = profile.tls_client_key_file_name;
     profileForm = {
       name: profile.name,
       kind: profile.kind,
       file_grant_id: null,
+      tls_ca_grant_id: null,
+      tls_client_certificate_grant_id: null,
+      tls_client_key_grant_id: null,
+      clear_tls_ca: false,
+      clear_tls_client_identity: false,
       read_only: profile.read_only,
       host: profile.host,
       port: profile.port,
@@ -595,6 +636,12 @@
         name: profileForm.name,
         kind: profileForm.kind,
         file_grant_id: profileForm.file_grant_id,
+        tls_ca_grant_id: profileForm.tls_ca_grant_id,
+        tls_client_certificate_grant_id:
+          profileForm.tls_client_certificate_grant_id,
+        tls_client_key_grant_id: profileForm.tls_client_key_grant_id,
+        clear_tls_ca: profileForm.clear_tls_ca,
+        clear_tls_client_identity: profileForm.clear_tls_client_identity,
         read_only: profileForm.read_only,
         host: profileForm.host || null,
         port: profileForm.port,
@@ -653,6 +700,50 @@
       profileForm.automatic_reconnect = false;
       statusMessage = result.message;
     });
+  }
+
+  async function chooseTlsFile(
+    command:
+      | 'pick_tls_ca_file'
+      | 'pick_tls_client_certificate_file'
+      | 'pick_tls_client_key_file'
+  ) {
+    if (!hasNativeRuntime()) return;
+    await runAction(async () => {
+      const picked = await invokeCommand(command, null);
+      if (picked.cancelled) {
+        statusMessage = 'TLS file selection was cancelled.';
+        return;
+      }
+      if (command === 'pick_tls_ca_file') {
+        profileForm.tls_ca_grant_id = picked.file_grant_id;
+        profileForm.clear_tls_ca = false;
+        selectedTlsCaName = picked.display_name;
+      } else if (command === 'pick_tls_client_certificate_file') {
+        profileForm.tls_client_certificate_grant_id = picked.file_grant_id;
+        profileForm.clear_tls_client_identity = false;
+        selectedTlsClientCertificateName = picked.display_name;
+      } else {
+        profileForm.tls_client_key_grant_id = picked.file_grant_id;
+        profileForm.clear_tls_client_identity = false;
+        selectedTlsClientKeyName = picked.display_name;
+      }
+      statusMessage = 'TLS file was granted to the native profile boundary.';
+    });
+  }
+
+  function clearTlsCa() {
+    profileForm.tls_ca_grant_id = null;
+    profileForm.clear_tls_ca = true;
+    selectedTlsCaName = null;
+  }
+
+  function clearTlsClientIdentity() {
+    profileForm.tls_client_certificate_grant_id = null;
+    profileForm.tls_client_key_grant_id = null;
+    profileForm.clear_tls_client_identity = true;
+    selectedTlsClientCertificateName = null;
+    selectedTlsClientKeyName = null;
   }
 
   async function duplicateProfile(profile: ProfileView) {
@@ -737,7 +828,7 @@
         });
         tab.context_label = connections[profileId].context;
         statusMessage =
-          'Opened a query tab with its own dedicated native SQLite session.';
+          'Opened a query tab with its own dedicated native database session.';
       } else {
         statusMessage = profileId
           ? 'Opened a profile-bound offline draft. Connect the profile to create a dedicated session.'
@@ -791,17 +882,22 @@
   async function connectActiveTab() {
     if (!activeTab?.profile_id || !activeProfile || !hasNativeRuntime()) {
       statusMessage =
-        'Bind this draft to a saved SQLite profile before connecting it.';
+        'Bind this draft to a saved profile before connecting it.';
       return;
     }
     await runAction(async () => {
       let connection = connections[activeProfile.id];
       if (!connection) {
-        connection = await invokeCommand('connect_profile', {
-          profile_id: activeProfile.id
-        });
-        connections[activeProfile.id] = connection;
-        await loadSchemaNamespaces(activeProfile.id);
+        connectionOperations[activeProfile.id] = 'connect';
+        try {
+          connection = await invokeCommand('connect_profile', {
+            profile_id: activeProfile.id
+          });
+          connections[activeProfile.id] = connection;
+          await loadSchemaNamespaces(activeProfile.id);
+        } finally {
+          delete connectionOperations[activeProfile.id];
+        }
       }
       sessions[activeTab.id] = await invokeCommand('open_tab_session', {
         profile_id: activeProfile.id,
@@ -835,7 +931,7 @@
         activeProfile.id,
         namespace
       );
-      statusMessage = `${response.stale ? 'Showing stale cached metadata for' : 'Loaded'} ${response.objects.length} SQLite tables and views from ${namespace}.`;
+      statusMessage = `${response.stale ? 'Showing stale cached metadata for' : 'Loaded'} ${response.objects.length} database objects from ${namespace}.`;
     });
   }
 
@@ -857,7 +953,7 @@
       }
       statusMessage = response.stale
         ? 'The metadata session could not refresh; retained cache is visibly stale.'
-        : 'Refreshed SQLite metadata without changing unrelated expansion state.';
+        : 'Refreshed database metadata without changing unrelated expansion state.';
     });
   }
 
@@ -892,9 +988,12 @@
   }
 
   async function copyQualifiedName(object: SchemaObjectView) {
-    const qualified = `"${object.namespace.replaceAll('"', '""')}"."${object.name.replaceAll('"', '""')}"`;
+    const quote = activeConnection?.dialect === 'mysql' ? '`' : '"';
+    const escapedNamespace = object.namespace.replaceAll(quote, quote + quote);
+    const escapedName = object.name.replaceAll(quote, quote + quote);
+    const qualified = `${quote}${escapedNamespace}${quote}.${quote}${escapedName}${quote}`;
     await navigator.clipboard?.writeText(qualified);
-    statusMessage = `Copied the qualified SQLite name for ${object.name}.`;
+    statusMessage = `Copied the qualified ${activeConnection?.engine ?? 'database'} name for ${object.name}.`;
   }
 
   function utf8Offset(text: string, codeUnitOffset: number): number {
@@ -1116,15 +1215,15 @@
         event.statement_start !== null && event.statement_end !== null
           ? ` at bytes ${event.statement_start}–${event.statement_end}`
           : '';
-      statusMessage = `${event.error ?? 'SQLite execution failed safely.'}${range}${event.retryable ? ' Retry is available after resolving the cause.' : ''}`;
+      statusMessage = `${event.error ?? 'Database execution failed safely.'}${range}${event.retryable ? ' Retry is available after resolving the cause.' : ''}`;
     } else if (event.event_type === 'cancelled') {
       execution.state = event.cancel_confirmed ? 'cancelled' : 'cancelling';
       if (event.transaction && sessions[event.tab_id]) {
         sessions[event.tab_id].transaction = event.transaction;
       }
       statusMessage = event.cancel_confirmed
-        ? 'SQLite confirmed cancellation; the dedicated session remains available.'
-        : 'Cancellation is still pending.';
+        ? 'The database confirmed cancellation; the dedicated session remains available.'
+        : 'Cancellation was requested but server confirmation is still pending.';
     } else if (event.event_type === 'started') {
       execution.state = 'running';
     }
@@ -1209,7 +1308,7 @@
       });
       statusMessage = automatic
         ? 'Auto-commit mode is active.'
-        : 'Manual mode is active; no transaction is claimed until SQLite begins one.';
+        : 'Manual mode is active; transaction state remains adapter-authoritative.';
     });
   }
 
@@ -1281,7 +1380,7 @@
       delete results[tabId];
       await saveWorkspaceNow();
       statusMessage =
-        'Tab and its native SQLite resources were closed explicitly.';
+        'Tab and its native database resources were closed explicitly.';
       await closeModal();
     });
   }
@@ -1293,7 +1392,7 @@
       execution_id: execution.id
     });
     execution.state = 'cancelling';
-    statusMessage = `${response.message} The tab remains open until SQLite confirms a terminal state.`;
+    statusMessage = `${response.message} The tab remains open until the database adapter reports a terminal state.`;
     await closeModal();
   }
 
@@ -1488,7 +1587,7 @@
     <div class="brand">
       <p class="eyebrow">Not Projects</p>
       <h1>QueryNot</h1>
-      <span class="phase-badge">SQLite query vertical slice</span>
+      <span class="phase-badge">Common database adapter</span>
     </div>
     <div class="topbar-actions">
       <span class="offline-badge">
@@ -1506,6 +1605,19 @@
     <div class="recovery-banner" role="alert">
       <strong>Local store: {storeState.replace('_', ' ')}</strong>
       <span>{storeMessage}</span>
+    </div>
+  {/if}
+
+  {#if activeConnection?.compatibility_warning}
+    <div class="recovery-banner" role="alert">
+      <strong>
+        {activeConnection.legacy
+          ? 'Legacy server connection'
+          : activeConnection.compatibility_status === 'query_only'
+            ? 'Query-only compatibility mode'
+            : 'Connection warning'}
+      </strong>
+      <span>{activeConnection.compatibility_warning}</span>
     </div>
   {/if}
 
@@ -1558,24 +1670,34 @@
                 ></span>
               </button>
               <div class="profile-actions">
-                {#if profile.kind === 'sqlite'}
+                {#if connectionOperations[profile.id]}
+                  <span role="status">
+                    {connectionOperations[profile.id] === 'test'
+                      ? 'Testing…'
+                      : 'Connecting…'}
+                  </span>
+                  <button
+                    type="button"
+                    onclick={() => void cancelProfileConnection(profile)}
+                    >Cancel</button
+                  >
+                {:else}
                   <button
                     type="button"
                     onclick={() => void testProfile(profile)}>Test</button
                   >
-                  {#if connections[profile.id]}
-                    <button
-                      type="button"
-                      onclick={() => void disconnectProfile(profile)}
-                      >Disconnect</button
-                    >
-                  {:else}
-                    <button
-                      type="button"
-                      onclick={() => void connectProfile(profile)}
-                      >Connect</button
-                    >
-                  {/if}
+                {/if}
+                {#if connections[profile.id]}
+                  <button
+                    type="button"
+                    onclick={() => void disconnectProfile(profile)}
+                    >Disconnect</button
+                  >
+                {:else if !connectionOperations[profile.id]}
+                  <button
+                    type="button"
+                    onclick={() => void connectProfile(profile)}>Connect</button
+                  >
                 {/if}
                 <button type="button" onclick={() => editProfile(profile)}
                   >Edit</button
@@ -1660,7 +1782,7 @@
             <div
               class="schema-tree"
               role="tree"
-              aria-label="SQLite schema objects"
+              aria-label="Database schema objects"
             >
               {#each schemaNamespaces[activeProfile.id] ?? [] as namespace (namespace.name)}
                 <div
@@ -1705,7 +1827,11 @@
                             onclick={() => void inspectSchemaObject(object)}
                           >
                             <span aria-hidden="true"
-                              >{object.kind === 'table' ? '▦' : '◇'}</span
+                              >{object.kind === 'table'
+                                ? '▦'
+                                : object.kind === 'routine'
+                                  ? 'ƒ'
+                                  : '◇'}</span
                             >
                             <span title={object.name}>{object.name}</span>
                           </button>
@@ -1755,7 +1881,9 @@
               </ul>
               <p>
                 {selectedSchemaObject.indexes.length} indexes · {selectedSchemaObject
-                  .foreign_keys.length} foreign keys · routines unsupported by SQLite
+                  .foreign_keys.length} foreign keys · {selectedSchemaObject.routines_supported
+                  ? 'routines supported'
+                  : 'routines unavailable'}
               </p>
             </details>
           {/if}
@@ -1829,7 +1957,7 @@
             </div>
             <span class="safety-label"
               >{activeSession
-                ? 'SQLite · explicit execution only'
+                ? `${activeConnection?.engine ?? 'Database'} · explicit execution only`
                 : 'Offline · connect to execute'}</span
             >
           </div>
@@ -1929,6 +2057,7 @@
               <SqlEditor
                 value={activeTab?.sql ?? ''}
                 wordWrap={displayedSettings.editor_word_wrap}
+                dialect={activeConnection?.dialect ?? 'sqlite'}
                 {completionSchema}
                 disabled={Boolean(
                   activeExecution &&
@@ -2139,13 +2268,89 @@
               <label class="field field-full">
                 <span>TLS mode</span>
                 <select bind:value={profileForm.tls_mode}>
-                  <option value="verify_identity"
-                    >Verify certificate and server identity</option
+                  <option value="disabled"
+                    >Unencrypted — trusted local development only</option
                   >
-                  <option value="required">Require encrypted transport</option>
+                  <option value="required"
+                    >Require encryption without identity verification</option
+                  >
+                  <option value="verify_identity"
+                    >System trust — verify certificate and identity</option
+                  >
+                  <option value="custom_ca"
+                    >Custom CA — verify certificate and identity</option
+                  >
                 </select>
-                <small>Certificate verification cannot be disabled.</small>
+                <small>
+                  Verified modes fail closed. QueryNot never silently downgrades
+                  transport or identity verification.
+                </small>
               </label>
+              {#if profileForm.tls_mode === 'disabled'}
+                <div class="inline-warning field-full" role="alert">
+                  The database password, SQL, and returned data will cross the
+                  network without TLS. Use only on an explicitly trusted local
+                  development endpoint.
+                </div>
+              {:else if profileForm.tls_mode === 'required'}
+                <div class="inline-warning field-full" role="alert">
+                  Transport is encrypted, but the server certificate and host
+                  identity are not verified.
+                </div>
+              {/if}
+              {#if profileForm.tls_mode === 'custom_ca'}
+                <div class="file-summary field-full">
+                  <span>Trusted CA certificate</span>
+                  <strong>{selectedTlsCaName ?? 'No CA selected'}</strong>
+                  <small>
+                    The native boundary retains the path as sensitive local-file
+                    metadata; diagnostics omit it.
+                  </small>
+                  <div class="profile-actions">
+                    <button
+                      type="button"
+                      onclick={() => void chooseTlsFile('pick_tls_ca_file')}
+                      >Choose CA</button
+                    >
+                    {#if selectedTlsCaName}
+                      <button type="button" onclick={clearTlsCa}>Remove</button>
+                    {/if}
+                  </div>
+                </div>
+              {/if}
+              {#if profileForm.tls_mode === 'verify_identity' || profileForm.tls_mode === 'custom_ca'}
+                <div class="file-summary field-full">
+                  <span>Client certificate authentication (optional)</span>
+                  <strong>
+                    {selectedTlsClientCertificateName ?? 'No certificate'} · {selectedTlsClientKeyName ??
+                      'no private key'}
+                  </strong>
+                  <small>
+                    Certificate and unencrypted PEM private-key contents remain
+                    native and are never copied into profile JSON or
+                    diagnostics.
+                  </small>
+                  <div class="profile-actions">
+                    <button
+                      type="button"
+                      onclick={() =>
+                        void chooseTlsFile('pick_tls_client_certificate_file')}
+                      >Choose certificate</button
+                    >
+                    <button
+                      type="button"
+                      onclick={() =>
+                        void chooseTlsFile('pick_tls_client_key_file')}
+                      >Choose private key</button
+                    >
+                    {#if selectedTlsClientCertificateName || selectedTlsClientKeyName}
+                      <button type="button" onclick={clearTlsClientIdentity}
+                        >Remove client identity</button
+                      >
+                    {/if}
+                  </div>
+                </div>
+              {/if}
               <label class="field field-full">
                 <span>Password (optional)</span>
                 <input

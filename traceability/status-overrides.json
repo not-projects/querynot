@@ -21,10 +21,10 @@
       "manual_procedure_ids": ["PENDING-P5-SECRET-LIFETIME-REVIEW"]
     },
     "CON-8": {
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-OWNERSHIP", "P1-AUTO-RELOAD-CLEANUP"],
-      "manual_procedure_ids": ["PENDING-P3-MULTI-CONNECTION-JOURNEY"]
+      "automated_test_ids": ["P1-AUTO-OWNERSHIP", "P1-AUTO-RELOAD-CLEANUP", "P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-CONNECTION-LIFECYCLE"],
+      "manual_procedure_ids": ["PENDING-P5-MULTI-CONNECTION-JOURNEY"]
     },
     "CON-9": {
       "status": "implemented",
@@ -45,10 +45,10 @@
       "manual_procedure_ids": ["PENDING-P5-OS-VAULT-FAILURE-MATRIX"]
     },
     "CON-12": {
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-STATE-MACHINES", "P1-AUTO-SETTINGS-RESET"],
-      "manual_procedure_ids": ["PENDING-P2-P3-CONNECTION-LIFECYCLE"]
+      "automated_test_ids": ["P1-AUTO-STATE-MACHINES", "P1-AUTO-SETTINGS-RESET", "P3-AUTO-CONNECTION-LIFECYCLE"],
+      "manual_procedure_ids": ["PENDING-P5-CONNECTION-LIFECYCLE-UX"]
     },
     "CON-15": {
       "status": "implemented",
@@ -57,16 +57,16 @@
       "manual_procedure_ids": ["PENDING-P5-PROFILE-DELETION-MATRIX"]
     },
     "WKS-1": {
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-OWNERSHIP"],
-      "manual_procedure_ids": ["PENDING-P2-P3-BOUND-TAB-JOURNEY"]
+      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-OWNERSHIP", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-BOUND-TAB-JOURNEY"]
     },
     "WKS-2": {
-      "status": "in_progress",
+      "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-FIRST-RUN-A11Y", "P1-AUTO-OFFLINE-RESTORE"],
-      "manual_procedure_ids": ["PENDING-P3-CONNECTED-CONTEXT-VISIBILITY"]
+      "automated_test_ids": ["P1-AUTO-FIRST-RUN-A11Y", "P1-AUTO-OFFLINE-RESTORE", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-CONNECTED-CONTEXT-VISIBILITY"]
     },
     "WKS-4": {
       "status": "implemented",
@@ -103,15 +103,40 @@
       "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-SQLITE-METADATA"],
       "manual_procedure_ids": ["PENDING-P5-SQLITE-FILE-DIALOG-MATRIX"]
     },
+    "CON-3": {
+      "status": "implemented",
+      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-AUTH-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-NETWORK-PROFILE-PLATFORM-MATRIX"]
+    },
+    "CON-4": {
+      "status": "implemented",
+      "automated_test_ids": ["P3-AUTO-TLS-MATRIX", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-SYSTEM-TRUST-PLATFORM-MATRIX"]
+    },
+    "CON-7": {
+      "status": "implemented",
+      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-IDENTITY-UX-REVIEW"]
+    },
     "CON-13": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
-      "manual_procedure_ids": ["PENDING-P3-COMPATIBILITY-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-COMPATIBILITY-UX-REVIEW"]
+    },
+    "CON-14": {
+      "status": "implemented",
+      "automated_test_ids": ["P3-AUTO-AUTH-MATRIX", "P3-AUTO-TLS-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-AUTH-PLATFORM-MATRIX"]
+    },
+    "CON-16": {
+      "status": "implemented",
+      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-LEGACY-INDICATOR-REVIEW"]
     },
     "WKS-7": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-CANCELLATION"],
-      "manual_procedure_ids": ["PENDING-P3-CONCURRENT-ADAPTER-JOURNEY"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-CANCELLATION", "P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-CANCELLATION-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-CONCURRENT-ADAPTER-JOURNEY"]
     },
     "WKS-8": {
       "status": "in_progress",
@@ -119,14 +144,14 @@
       "manual_procedure_ids": ["PENDING-P3-CONTEXT-CHANGE-MATRIX"]
     },
     "WKS-12": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-RELOAD-CLEANUP"],
-      "manual_procedure_ids": ["PENDING-P3-METADATA-SESSION-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-RELOAD-CLEANUP", "P3-AUTO-METADATA-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-METADATA-SESSION-MATRIX"]
     },
     "SCH-1": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
-      "manual_procedure_ids": ["PENDING-P3-SCHEMA-OBJECT-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-METADATA-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-SCHEMA-OBJECT-UX-MATRIX"]
     },
     "SCH-2": {
       "status": "in_progress",
@@ -134,9 +159,9 @@
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-STATE-ACCESSIBILITY"]
     },
     "SCH-3": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
-      "manual_procedure_ids": ["PENDING-P3-SCHEMA-REFRESH-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-METADATA-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-SCHEMA-REFRESH-UX"]
     },
     "SCH-4": {
       "status": "implemented",
@@ -144,9 +169,9 @@
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-KEYBOARD-REVIEW"]
     },
     "SCH-5": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA"],
-      "manual_procedure_ids": ["PENDING-P3-SCHEMA-CAPABILITY-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-METADATA-MATRIX", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-SCHEMA-CAPABILITY-UX"]
     },
     "SCH-6": {
       "status": "in_progress",
@@ -164,9 +189,9 @@
       "manual_procedure_ids": ["PENDING-P5-HOSTILE-METADATA-REVIEW"]
     },
     "EDT-1": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION"],
-      "manual_procedure_ids": ["PENDING-P3-DIALECT-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P4-COMPLETION-DIAGNOSTIC-PARITY"]
     },
     "EDT-2": {
       "status": "implemented",
@@ -190,13 +215,13 @@
     },
     "EDT-6": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SELECTION"],
-      "manual_procedure_ids": ["PENDING-P3-SELECTION-DIALECT-MATRIX"]
+      "automated_test_ids": ["P2-AUTO-SELECTION", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-SELECTION-UX-MATRIX"]
     },
     "EDT-7": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-SQLITE-JOURNEY"],
-      "manual_procedure_ids": ["PENDING-P3-MULTI-STATEMENT-MATRIX"]
+      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-SQLITE-JOURNEY", "P3-AUTO-RESULT-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-MULTI-STATEMENT-UX"]
     },
     "EDT-8": {
       "status": "in_progress",
@@ -204,9 +229,9 @@
       "manual_procedure_ids": ["PENDING-P4-SHORTCUT-DOCUMENTATION", "PENDING-P5-SHORTCUT-MATRIX"]
     },
     "EDT-9": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-DESTRUCTIVE-SAFETY"],
-      "manual_procedure_ids": ["PENDING-P3-PARSER-DIALECT-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-DESTRUCTIVE-SAFETY", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P4-PARSER-FUZZ-CORPUS"]
     },
     "EDT-10": {
       "status": "in_progress",
@@ -224,14 +249,14 @@
       "manual_procedure_ids": ["PENDING-P5-EXECUTION-LIFECYCLE-REVIEW"]
     },
     "EXE-3": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-CANCELLATION", "P2-AUTO-RELOAD-CLEANUP"],
-      "manual_procedure_ids": ["PENDING-P3-CANCELLATION-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-CANCELLATION", "P2-AUTO-RELOAD-CLEANUP", "P3-AUTO-CANCELLATION-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-CANCELLATION-UX-MATRIX"]
     },
     "EXE-4": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
-      "manual_procedure_ids": ["PENDING-P3-TRANSACTION-MATRIX"]
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-TRANSACTION-CLOSE-UX"]
     },
     "EXE-5": {
       "status": "in_progress",
@@ -244,9 +269,9 @@
       "manual_procedure_ids": ["PENDING-P5-DESTRUCTIVE-DIALOG-REVIEW"]
     },
     "EXE-7": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-CANCELLATION"],
-      "manual_procedure_ids": ["PENDING-P3-ERROR-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-CANCELLATION", "P3-AUTO-ADAPTER-CONFORMANCE"],
+      "manual_procedure_ids": ["PENDING-P5-ERROR-UX-MATRIX"]
     },
     "EXE-8": {
       "status": "implemented",
@@ -255,13 +280,13 @@
     },
     "EXE-9": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
-      "manual_procedure_ids": ["PENDING-P3-SESSION-CONTINUITY-MATRIX"]
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX", "P3-AUTO-CANCELLATION-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-SESSION-CONTINUITY-MATRIX"]
     },
     "EXE-10": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
-      "manual_procedure_ids": ["PENDING-P3-TRANSACTION-RECONCILIATION-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-TRANSACTION-STATE-UX"]
     },
     "EXE-11": {
       "status": "in_progress",
@@ -270,8 +295,8 @@
     },
     "EXE-12": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-CANCELLATION"],
-      "manual_procedure_ids": ["PENDING-P3-PROTOCOL-TIMEOUT-REVIEW"]
+      "automated_test_ids": ["P2-AUTO-CANCELLATION", "P3-AUTO-CONNECTION-LIFECYCLE"],
+      "manual_procedure_ids": ["PENDING-P5-PROTOCOL-TIMEOUT-REVIEW"]
     },
     "EXE-13": {
       "status": "implemented",
@@ -280,13 +305,13 @@
     },
     "EXE-14": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION"],
-      "manual_procedure_ids": ["PENDING-P3-MANUAL-TRANSACTION-MATRIX"]
+      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-MANUAL-TRANSACTION-UX"]
     },
     "RES-1": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-EVENT-INTEGRITY"],
-      "manual_procedure_ids": ["PENDING-P3-STREAMING-MATRIX"]
+      "automated_test_ids": ["P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-EVENT-INTEGRITY", "P3-AUTO-RESULT-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-STREAMING-UX-MATRIX"]
     },
     "RES-2": {
       "status": "implemented",
@@ -294,14 +319,14 @@
       "manual_procedure_ids": ["PENDING-P5-WEBVIEW-FPS-MATRIX"]
     },
     "RES-3": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EVENT-INTEGRITY"],
-      "manual_procedure_ids": ["PENDING-P3-MULTIPLE-RESULT-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EVENT-INTEGRITY", "P3-AUTO-RESULT-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-MULTIPLE-RESULT-UX"]
     },
     "RES-4": {
-      "status": "in_progress",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EXPORT-JSON"],
-      "manual_procedure_ids": ["PENDING-P3-TYPE-FIDELITY-MATRIX"]
+      "status": "implemented",
+      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EXPORT-JSON", "P3-AUTO-RESULT-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-TYPE-DISPLAY-COPY-REVIEW"]
     },
     "RES-5": {
       "status": "implemented",
@@ -330,8 +355,8 @@
     },
     "RES-10": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-EVENT-INTEGRITY", "P2-AUTO-STREAM-BACKPRESSURE"],
-      "manual_procedure_ids": ["PENDING-P3-EVENT-INTEGRITY-MATRIX"]
+      "automated_test_ids": ["P2-AUTO-EVENT-INTEGRITY", "P2-AUTO-STREAM-BACKPRESSURE", "P3-AUTO-RESULT-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-EVENT-INTEGRITY-MATRIX"]
     },
     "RES-11": {
       "status": "implemented",
@@ -357,6 +382,21 @@
       "status": "in_progress",
       "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION"],
       "manual_procedure_ids": ["PENDING-P4-EDITOR-ACCEPTANCE"]
+    },
+    "AC-02": {
+      "status": "implemented",
+      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "manual_procedure_ids": ["PENDING-P5-MARIADB-IDENTITY-UX"]
+    },
+    "AC-03": {
+      "status": "implemented",
+      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-TLS-MATRIX", "P3-AUTO-AUTH-MATRIX"],
+      "manual_procedure_ids": ["PENDING-P5-LEGACY-INDICATOR-REVIEW"]
+    },
+    "AC-04": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-OWNERSHIP", "P2-AUTO-SESSION-ISOLATION", "P3-AUTO-ADAPTER-CONFORMANCE"],
+      "manual_procedure_ids": ["PENDING-P5-CONCURRENT-CONNECTION-TAB-JOURNEY"]
     },
     "AC-06": {
       "status": "in_progress",

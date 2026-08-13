@@ -139,12 +139,11 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(document.body.textContent).toContain('Statement 1');
   });
 
-  it('uses CodeMirror with SQLite parsing, completion, diagnostics, and fixed execution shortcuts', () => {
+  it('uses CodeMirror with adapter-selected parsing, completion, diagnostics, and fixed execution shortcuts', () => {
     const editor = read('src/lib/components/SqlEditor.svelte');
     expect(editor).toContain('basicSetup');
-    expect(editor).toContain(
-      'sql({ dialect: SQLite, schema: completionSchema })'
-    );
+    expect(editor).toContain('import { MySQL, SQLite, sql }');
+    expect(editor).toContain("dialect === 'mysql' ? MySQL : SQLite");
     expect(editor).toContain('syntaxTree(editor.state)');
     expect(editor).toContain("key: 'Mod-Enter'");
     expect(editor).toContain("key: 'Mod-Shift-Enter'");

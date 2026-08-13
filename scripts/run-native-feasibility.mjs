@@ -16,10 +16,20 @@ import { basename, join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const temporaryRoot = process.platform === 'linux' ? '/tmp' : tmpdir();
-const cacheArgument = process.argv[2] === '--cache' ? process.argv[3] : null;
-if (process.argv.length > (cacheArgument ? 4 : 2)) {
+const argumentsList = process.argv.slice(2);
+const phase3 = argumentsList.includes('--phase3');
+const cacheIndex = argumentsList.indexOf('--cache');
+const cacheArgument = cacheIndex >= 0 ? argumentsList[cacheIndex + 1] : null;
+const recognizedArguments = new Set([
+  '--phase3',
+  ...(cacheIndex >= 0 ? ['--cache', cacheArgument] : [])
+]);
+if (
+  (cacheIndex >= 0 && !cacheArgument) ||
+  argumentsList.some((argument) => !recognizedArguments.has(argument))
+) {
   throw new Error(
-    'usage: node scripts/run-native-feasibility.mjs [--cache /absolute/path]'
+    'usage: node scripts/run-native-feasibility.mjs [--phase3] [--cache /absolute/path]'
   );
 }
 const cache = resolve(
@@ -54,7 +64,7 @@ function requiredInput(id, kind) {
   return input;
 }
 const archives = Object.fromEntries(
-  ['mysql57', 'mysql84', 'mariadb114'].map((id) => {
+  ['mysql57', 'mysql80', 'mysql84', 'mariadb1011', 'mariadb114'].map((id) => {
     const input = requiredInput(id, 'database_archive');
     const tarArguments =
       input.format === 'tar.gz'
@@ -141,6 +151,7 @@ function initSql(authenticationSql) {
   return `${authenticationSql}
 CREATE DATABASE querynot_fixture CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 GRANT ALL PRIVILEGES ON querynot_fixture.* TO 'querynot'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON querynot_fixture.* TO 'querynot_client'@'127.0.0.1';
 USE querynot_fixture;
 CREATE TABLE __querynot_fixture_marker (marker_token VARCHAR(128) NOT NULL);
 INSERT INTO __querynot_fixture_marker VALUES ('${markerToken}');
@@ -153,7 +164,14 @@ CREATE TABLE typed_fixture (
   decimal_value DECIMAL(30, 10) NOT NULL,
   binary_value VARBINARY(16) NOT NULL,
   text_value VARCHAR(64) NOT NULL,
-  null_value VARCHAR(64) NULL
+  null_value VARCHAR(64) NULL,
+  float_value DOUBLE NOT NULL,
+  boolean_value BIT(1) NOT NULL,
+  date_value DATE NOT NULL,
+  datetime_value DATETIME(6) NOT NULL,
+  time_value TIME(6) NOT NULL,
+  empty_text VARCHAR(1) NOT NULL,
+  large_text LONGTEXT NOT NULL
 );
 INSERT INTO typed_fixture VALUES (
   -9223372036854775000,
@@ -161,12 +179,27 @@ INSERT INTO typed_fixture VALUES (
   12345678901234567890.1234567890,
   X'00FF1080',
   'QueryNot Ω',
-  NULL
+  NULL,
+  1.25E100,
+  b'1',
+  '2024-02-29',
+  '2024-02-29 23:59:58.123456',
+  '12:34:56.654321',
+  '',
+  REPEAT('Ω', 65536)
 );
 CREATE TABLE transaction_fixture (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   value_text VARCHAR(128) NOT NULL
 );
+CREATE VIEW fixture_view AS SELECT sequence_number FROM stream_fixture;
+DELIMITER //
+CREATE PROCEDURE fixture_multi_results()
+BEGIN
+  SELECT 1 AS first_result;
+  SELECT 2 AS second_result;
+END//
+DELIMITER ;
 FLUSH PRIVILEGES;
 `;
 }
@@ -180,7 +213,14 @@ function generateCertificates() {
   const serverRequest = resolve(tlsDirectory, 'server.csr');
   const serverCertificate = resolve(tlsDirectory, 'server.pem');
   const extensions = resolve(tlsDirectory, 'extensions.cnf');
+  const clientExtensions = resolve(tlsDirectory, 'client-extensions.cnf');
+  const clientKey = resolve(tlsDirectory, 'client-key.pem');
+  const clientRequest = resolve(tlsDirectory, 'client.csr');
+  const clientCertificate = resolve(tlsDirectory, 'client.pem');
   writeFileSync(extensions, 'subjectAltName=IP:127.0.0.1,DNS:localhost\n', {
+    mode: 0o600
+  });
+  writeFileSync(clientExtensions, 'extendedKeyUsage=clientAuth\n', {
     mode: 0o600
   });
   command('openssl', ['genrsa', '-traditional', '-out', caKey, '2048']);
@@ -228,9 +268,46 @@ function generateCertificates() {
     '-out',
     serverCertificate
   ]);
+  command('openssl', ['genrsa', '-traditional', '-out', clientKey, '2048']);
+  command('openssl', [
+    'req',
+    '-new',
+    '-sha256',
+    '-key',
+    clientKey,
+    '-subj',
+    '/CN=QueryNot Disposable Fixture Client',
+    '-out',
+    clientRequest
+  ]);
+  command('openssl', [
+    'x509',
+    '-req',
+    '-sha256',
+    '-days',
+    '2',
+    '-in',
+    clientRequest,
+    '-CA',
+    caCertificate,
+    '-CAkey',
+    caKey,
+    '-CAcreateserial',
+    '-extfile',
+    clientExtensions,
+    '-out',
+    clientCertificate
+  ]);
   chmodSync(caKey, 0o600);
   chmodSync(serverKey, 0o600);
-  return { caCertificate, serverCertificate, serverKey };
+  chmodSync(clientKey, 0o600);
+  return {
+    caCertificate,
+    serverCertificate,
+    serverKey,
+    clientCertificate,
+    clientKey
+  };
 }
 
 async function waitUntilReady(server) {
@@ -315,17 +392,10 @@ function seed(server, sql) {
   );
 }
 
-function target(
-  id,
-  product,
-  version,
-  authenticationPlugin,
-  port,
-  caCertificate
-) {
+function target(id, product, version, authenticationPlugin, port, tls) {
   const query = new URLSearchParams({
     'ssl-mode': 'verify_identity',
-    'ssl-ca': caCertificate
+    'ssl-ca': tls.caCertificate
   });
   return {
     id,
@@ -335,7 +405,10 @@ function target(
     expected_authentication_plugin: authenticationPlugin,
     connection_url: `mysql://querynot:${encodeURIComponent(password)}@127.0.0.1:${port}/querynot_fixture?${query}`,
     require_tls_version: 'TLSv1.2',
-    require_verified_tls: true
+    require_verified_tls: true,
+    client_certificate_username: 'querynot_client',
+    client_certificate_path: tls.clientCertificate,
+    client_key_path: tls.clientKey
   };
 }
 
@@ -405,7 +478,15 @@ try {
       .join(':')
   };
   const tls = generateCertificates();
-  const [mysql57Port, mysql84Port, mariadb114Port] = await Promise.all([
+  const [
+    mysql57Port,
+    mysql80Port,
+    mysql84Port,
+    mariadb1011Port,
+    mariadb114Port
+  ] = await Promise.all([
+    freePort(),
+    freePort(),
     freePort(),
     freePort(),
     freePort()
@@ -435,7 +516,37 @@ try {
   seed(
     mysql57,
     initSql(
-      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '${password}' REQUIRE SSL;`
+      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '${password}' REQUIRE SSL;
+CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '${password}' REQUIRE X509;`
+    )
+  );
+
+  const mysql80 = await startServer({
+    id: 'mysql80',
+    basedir: installs.mysql80,
+    binary: resolve(installs.mysql80, 'bin', 'mysqld'),
+    client: resolve(installs.mysql80, 'bin', 'mysql'),
+    admin: resolve(installs.mysql80, 'bin', 'mysqladmin'),
+    environment: mysqlEnvironment,
+    port: mysql80Port,
+    tls,
+    initialize: (dataDirectory) =>
+      command(
+        resolve(installs.mysql80, 'bin', 'mysqld'),
+        [
+          '--no-defaults',
+          '--initialize-insecure',
+          `--basedir=${installs.mysql80}`,
+          `--datadir=${dataDirectory}`
+        ],
+        { env: mysqlEnvironment }
+      )
+  });
+  seed(
+    mysql80,
+    initSql(
+      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${password}' REQUIRE SSL;
+CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${password}' REQUIRE X509;`
     )
   );
 
@@ -463,7 +574,38 @@ try {
   seed(
     mysql84,
     initSql(
-      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${password}' REQUIRE SSL;`
+      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${password}' REQUIRE SSL;
+CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${password}' REQUIRE X509;`
+    )
+  );
+
+  const mariadb1011 = await startServer({
+    id: 'mariadb1011',
+    basedir: installs.mariadb1011,
+    binary: resolve(installs.mariadb1011, 'bin', 'mariadbd'),
+    client: resolve(installs.mariadb1011, 'bin', 'mariadb'),
+    admin: resolve(installs.mariadb1011, 'bin', 'mariadb-admin'),
+    environment: process.env,
+    port: mariadb1011Port,
+    tls,
+    initialize: (dataDirectory) =>
+      command(
+        resolve(installs.mariadb1011, 'scripts', 'mariadb-install-db'),
+        [
+          '--no-defaults',
+          `--basedir=${installs.mariadb1011}`,
+          `--datadir=${dataDirectory}`,
+          '--auth-root-authentication-method=normal',
+          '--skip-test-db'
+        ],
+        { env: process.env }
+      )
+  });
+  seed(
+    mariadb1011,
+    initSql(
+      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED VIA mysql_native_password USING PASSWORD('${password}') REQUIRE SSL;
+CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password USING PASSWORD('${password}') REQUIRE X509;`
     )
   );
 
@@ -492,7 +634,8 @@ try {
   seed(
     mariadb114,
     initSql(
-      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED VIA mysql_native_password USING PASSWORD('${password}') REQUIRE SSL;`
+      `CREATE USER 'querynot'@'127.0.0.1' IDENTIFIED VIA mysql_native_password USING PASSWORD('${password}') REQUIRE SSL;
+CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password USING PASSWORD('${password}') REQUIRE X509;`
     )
   );
 
@@ -506,7 +649,15 @@ try {
         '5.7.44',
         'mysql_native_password',
         mysql57Port,
-        tls.caCertificate
+        tls
+      ),
+      target(
+        'mysql-8.0.46',
+        'mysql',
+        '8.0.46',
+        'caching_sha2_password',
+        mysql80Port,
+        tls
       ),
       target(
         'mysql-8.4.10',
@@ -514,7 +665,15 @@ try {
         '8.4.10',
         'caching_sha2_password',
         mysql84Port,
-        tls.caCertificate
+        tls
+      ),
+      target(
+        'mariadb-10.11.18',
+        'mariadb',
+        '10.11.18',
+        'mysql_native_password',
+        mariadb1011Port,
+        tls
       ),
       target(
         'mariadb-11.4.12',
@@ -522,7 +681,7 @@ try {
         '11.4.12',
         'mysql_native_password',
         mariadb114Port,
-        tls.caCertificate
+        tls
       )
     ]
   };
@@ -553,7 +712,7 @@ try {
     tested_source:
       command('git', ['status', '--porcelain'], { capture: true }) === ''
         ? command('git', ['rev-parse', 'HEAD'], { capture: true })
-        : 'working tree; exact committed rerun is required before the Phase 0 exit gate closes',
+        : `working tree; exact committed rerun is required before the Phase ${phase3 ? '3' : '0'} exit gate closes`,
     environment: {
       os: process.platform,
       architecture: process.arch,
@@ -562,7 +721,9 @@ try {
       rustc: command('rustc', ['--version'], { capture: true })
     },
     fixture: 'querynot-disposable-fixture-v1',
-    command: 'npm run test:feasibility:native',
+    command: phase3
+      ? 'npm run test:conformance:phase3'
+      : 'npm run test:feasibility:native',
     archive_checksums: Object.values(archives).map(
       ({ file, algorithm, digest: value, vendor_digest }) => ({
         file,
@@ -574,10 +735,17 @@ try {
     sqlite_test: 'cargo test -p querynot-core --test sqlite_feasibility',
     network_results: harnessReport.results
   };
-  const evidenceDirectory = resolve(root, 'evidence', 'phase-0');
+  const evidenceDirectory = resolve(
+    root,
+    'evidence',
+    phase3 ? 'phase-3' : 'phase-0'
+  );
   mkdirSync(evidenceDirectory, { recursive: true });
   writeFileSync(
-    resolve(evidenceDirectory, 'feasibility-report.json'),
+    resolve(
+      evidenceDirectory,
+      phase3 ? 'adapter-conformance-report.json' : 'feasibility-report.json'
+    ),
     `${JSON.stringify(evidence, null, 2)}\n`
   );
   process.stdout.write(`${JSON.stringify(evidence, null, 2)}\n`);

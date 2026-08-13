@@ -28,6 +28,9 @@ pub struct FixtureTarget {
     pub connection_url: SecretString,
     pub require_tls_version: Option<String>,
     pub require_verified_tls: bool,
+    pub client_certificate_username: Option<String>,
+    pub client_certificate_path: Option<String>,
+    pub client_key_path: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

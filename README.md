@@ -9,7 +9,7 @@ QueryNot is a planned local-first desktop SQL client focused on a fast, calm, an
 
 ## Project Status
 
-QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold, the locally validated Phase 1 secure foundation, and the implemented Phase 2 SQLite vertical slice. The desktop workbench can explicitly open or create SQLite profiles, browse progressive metadata, connect dedicated query-tab sessions, edit and run SQLite SQL, manage transactions and cancellation, stream virtualized results under native caps, and copy or export received rows. This is development behavior, not a release-tested support claim: MySQL/MariaDB parity, productivity and safe table editing, target-platform evidence, packaging, dogfood, and beta gates remain incomplete.
+QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold, the locally validated Phase 1 secure foundation, the Phase 2 SQLite vertical slice, and implemented Phase 3 MySQL-family parity. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query-tab sessions, transactions, cancellation, acknowledged streaming, multiple results, and lossless values. This is development behavior, not a release-tested support claim: productivity and safe table editing, target-platform evidence, packaging, dogfood, and beta gates remain incomplete.
 
 The planned application stack is:
 
@@ -57,6 +57,7 @@ npm run test:dependencies
 npm run build
 cargo test --workspace
 npm run benchmark:phase2
+npm run test:conformance:phase3
 npm run tauri -- build
 ```
 
@@ -64,13 +65,15 @@ npm run tauri -- build
 
 `npm run verify:phase2` reruns the complete Phase 2 local gate from a clean committed tree, including the real read-only SQLite vertical journey, fault tests, 10,000-row virtualization test, 30-sample release benchmark, and production desktop build. It retains commit-addressed validation and benchmark reports, but does not substitute for Phase 5 native WebView frame-rate, memory, accessibility, packaging, or manual safety procedures.
 
+`npm run test:conformance:phase3` verifies all five checksum-pinned MySQL/MariaDB archive fixtures through QueryNot's common adapter, including authentication, TLS/client identity, metadata, values, results, transactions, and cancellation. `npm run verify:phase3` runs this matrix plus the full local regression and desktop-build gate from a clean commit and retains commit-addressed reports.
+
 `npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
 
 Linux hosts without Docker can run `npm run fixtures:fetch:native` once, then `npm run test:feasibility:native`. The fallback verifies pinned archive checksums, installs nothing, uses identity-verified TLS 1.2 on random loopback ports, and deletes the disposable servers and secrets after the run.
 
 Rust dependency policy uses `cargo-deny 0.20.2`; CI installs that exact locked tool version before running `cargo deny check advisories licenses bans sources`.
 
-These commands validate the current local implementation; they do not imply that cross-platform exit evidence, Phase 3–6 behavior, or the release compatibility matrix is complete.
+These commands validate the current local implementation; they do not imply that cross-platform exit evidence, Phase 4–6 behavior, or the release compatibility matrix is complete.
 
 ## License
 

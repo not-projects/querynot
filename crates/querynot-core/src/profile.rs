@@ -9,11 +9,13 @@ pub const MAX_CONNECTION_TIMEOUT_SECONDS: u16 = 120;
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TlsMode {
+    Disabled,
     Required,
     VerifyIdentity,
+    CustomCa,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ConnectionTarget {
     Sqlite {
@@ -26,7 +28,48 @@ pub enum ConnectionTarget {
         default_database: Option<String>,
         username: String,
         tls_mode: TlsMode,
+        tls_ca_path: Option<String>,
+        tls_client_certificate_path: Option<String>,
+        tls_client_key_path: Option<String>,
     },
+}
+
+impl std::fmt::Debug for ConnectionTarget {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Sqlite { read_only, .. } => formatter
+                .debug_struct("Sqlite")
+                .field("file_path", &"[REDACTED]")
+                .field("read_only", read_only)
+                .finish(),
+            Self::MysqlFamily {
+                host,
+                port,
+                default_database,
+                username,
+                tls_mode,
+                tls_ca_path,
+                tls_client_certificate_path,
+                tls_client_key_path,
+            } => formatter
+                .debug_struct("MysqlFamily")
+                .field("host", host)
+                .field("port", port)
+                .field("default_database", default_database)
+                .field("username", username)
+                .field("tls_mode", tls_mode)
+                .field("tls_ca_path", &tls_ca_path.as_ref().map(|_| "[REDACTED]"))
+                .field(
+                    "tls_client_certificate_path",
+                    &tls_client_certificate_path.as_ref().map(|_| "[REDACTED]"),
+                )
+                .field(
+                    "tls_client_key_path",
+                    &tls_client_key_path.as_ref().map(|_| "[REDACTED]"),
+                )
+                .finish(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -55,6 +98,12 @@ pub enum ProfileValidationError {
     InvalidDatabase,
     #[error("network port must be non-zero")]
     InvalidPort,
+    #[error("custom-CA verification requires a native file-chooser CA grant")]
+    MissingTlsCa,
+    #[error("client authentication requires both a certificate and private-key file grant")]
+    IncompleteClientIdentity,
+    #[error("client certificate authentication requires verified TLS")]
+    ClientIdentityWithoutVerifiedTls,
     #[error("connection timeout must be between 5 and 120 seconds")]
     InvalidTimeout,
     #[error("automatic reconnect requires a saved credential")]
@@ -112,6 +161,10 @@ impl ConnectionProfile {
                 port,
                 default_database,
                 username,
+                tls_mode,
+                tls_ca_path,
+                tls_client_certificate_path,
+                tls_client_key_path,
                 ..
             } => {
                 if host.trim().is_empty() || host.chars().count() > MAX_ENDPOINT_CHARS {
@@ -128,6 +181,25 @@ impl ConnectionProfile {
                     .is_some_and(|database| database.chars().count() > MAX_ENDPOINT_CHARS)
                 {
                     return Err(ProfileValidationError::InvalidDatabase);
+                }
+                if *tls_mode == TlsMode::CustomCa
+                    && tls_ca_path.as_ref().is_none_or(String::is_empty)
+                {
+                    return Err(ProfileValidationError::MissingTlsCa);
+                }
+                let has_certificate = tls_client_certificate_path
+                    .as_ref()
+                    .is_some_and(|path| !path.is_empty());
+                let has_key = tls_client_key_path
+                    .as_ref()
+                    .is_some_and(|path| !path.is_empty());
+                if has_certificate != has_key {
+                    return Err(ProfileValidationError::IncompleteClientIdentity);
+                }
+                if has_certificate
+                    && !matches!(tls_mode, TlsMode::VerifyIdentity | TlsMode::CustomCa)
+                {
+                    return Err(ProfileValidationError::ClientIdentityWithoutVerifiedTls);
                 }
             }
         }
@@ -173,6 +245,9 @@ mod tests {
                 default_database: Some("fixture".to_owned()),
                 username: "querynot".to_owned(),
                 tls_mode: TlsMode::VerifyIdentity,
+                tls_ca_path: None,
+                tls_client_certificate_path: None,
+                tls_client_key_path: None,
             },
             15,
             100,

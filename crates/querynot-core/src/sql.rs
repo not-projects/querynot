@@ -62,11 +62,43 @@ enum LexState {
     BlockComment,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SqlDialect {
+    Sqlite,
+    MySql,
+}
+
 pub fn plan_execution(
     document: &str,
     selection: Option<(usize, usize)>,
     cursor: usize,
     run_all: bool,
+    profile_id: &str,
+    session_id: &str,
+    context: &str,
+) -> Result<ExecutionPlan, SqlPlanError> {
+    plan_execution_for_dialect(
+        document,
+        selection,
+        cursor,
+        run_all,
+        SqlDialect::Sqlite,
+        profile_id,
+        session_id,
+        context,
+    )
+}
+
+// All eight inputs are immutable parts of the execution-target fingerprint;
+// grouping them into a mutable options bag would make accidental omission or
+// reuse across profile/session/context boundaries easier.
+#[allow(clippy::too_many_arguments)]
+pub fn plan_execution_for_dialect(
+    document: &str,
+    selection: Option<(usize, usize)>,
+    cursor: usize,
+    run_all: bool,
+    dialect: SqlDialect,
     profile_id: &str,
     session_id: &str,
     context: &str,
@@ -78,7 +110,7 @@ pub fn plan_execution(
         return Err(SqlPlanError::InvalidRange);
     }
 
-    let all = split_statements(document)?;
+    let all = split_statements_for_dialect(document, dialect)?;
     let statements = if let Some((start, end)) = selection.filter(|(start, end)| start != end) {
         if start > end
             || end > document.len()
@@ -91,7 +123,7 @@ pub fn plan_execution(
             return Err(SqlPlanError::Empty);
         };
         let selected = &document[trimmed_start..trimmed_end];
-        split_statements(selected)?
+        split_statements_for_dialect(selected, dialect)?
             .into_iter()
             .enumerate()
             .map(|(index, statement)| SqlStatement {
@@ -125,6 +157,162 @@ pub fn plan_execution(
         safety_flags,
         fingerprint,
     })
+}
+
+pub fn split_statements_for_dialect(
+    document: &str,
+    dialect: SqlDialect,
+) -> Result<Vec<SqlStatement>, SqlPlanError> {
+    match dialect {
+        SqlDialect::Sqlite => split_statements(document),
+        SqlDialect::MySql => split_mysql_statements(document),
+    }
+}
+
+fn split_mysql_statements(document: &str) -> Result<Vec<SqlStatement>, SqlPlanError> {
+    if document.len() > MAX_SQL_BYTES {
+        return Err(SqlPlanError::TooLarge);
+    }
+    let bytes = document.as_bytes();
+    let mut delimiter = ";".to_owned();
+    let mut state = LexState::Code;
+    let mut index = 0;
+    let mut start = 0;
+    let mut line_start = 0;
+    let mut statements = Vec::new();
+    while index < bytes.len() {
+        if index == line_start && state == LexState::Code {
+            let line_end = document[index..]
+                .find('\n')
+                .map_or(document.len(), |relative| index + relative + 1);
+            if document[start..index].trim().is_empty()
+                && let Some(value) = mysql_delimiter_directive(&document[index..line_end])
+            {
+                delimiter = value;
+                start = line_end;
+                line_start = line_end;
+                index = line_end;
+                continue;
+            }
+        }
+
+        let current = bytes[index];
+        let next = bytes.get(index + 1).copied();
+        match state {
+            LexState::Code => {
+                if document[index..].starts_with(&delimiter) {
+                    let sql_end = if delimiter == ";" {
+                        index + delimiter.len()
+                    } else {
+                        index
+                    };
+                    if let Some((trimmed_start, trimmed_end)) = trim_range(document, start, sql_end)
+                    {
+                        statements.push(SqlStatement {
+                            index: statements.len() as u32,
+                            start: trimmed_start,
+                            end: trimmed_end,
+                            sql: document[trimmed_start..trimmed_end].to_owned(),
+                        });
+                    }
+                    index += delimiter.len();
+                    start = index;
+                    continue;
+                }
+                match (current, next) {
+                    (b'\'', _) => state = LexState::SingleQuote,
+                    (b'"', _) => state = LexState::DoubleQuote,
+                    (b'`', _) => state = LexState::Backtick,
+                    (b'-', Some(b'-')) | (b'/', Some(b'*')) => {
+                        state = if current == b'-' {
+                            LexState::LineComment
+                        } else {
+                            LexState::BlockComment
+                        };
+                        index += 1;
+                    }
+                    (b'#', _) => state = LexState::LineComment,
+                    _ => {}
+                }
+            }
+            LexState::SingleQuote => {
+                if current == b'\\' {
+                    index += usize::from(next.is_some());
+                } else if current == b'\'' {
+                    if next == Some(b'\'') {
+                        index += 1;
+                    } else {
+                        state = LexState::Code;
+                    }
+                }
+            }
+            LexState::DoubleQuote => {
+                if current == b'\\' {
+                    index += usize::from(next.is_some());
+                } else if current == b'"' {
+                    if next == Some(b'"') {
+                        index += 1;
+                    } else {
+                        state = LexState::Code;
+                    }
+                }
+            }
+            LexState::Backtick => {
+                if current == b'`' {
+                    if next == Some(b'`') {
+                        index += 1;
+                    } else {
+                        state = LexState::Code;
+                    }
+                }
+            }
+            LexState::LineComment => {
+                if current == b'\n' || current == b'\r' {
+                    state = LexState::Code;
+                }
+            }
+            LexState::BlockComment => {
+                if current == b'*' && next == Some(b'/') {
+                    state = LexState::Code;
+                    index += 1;
+                }
+            }
+            LexState::Bracket => unreachable!("MySQL does not enter bracket identifier state"),
+        }
+        if current == b'\n' {
+            line_start = index + 1;
+        }
+        index += 1;
+    }
+    if !matches!(state, LexState::Code | LexState::LineComment) {
+        return Err(SqlPlanError::Ambiguous);
+    }
+    if let Some((trimmed_start, trimmed_end)) = trim_range(document, start, document.len()) {
+        statements.push(SqlStatement {
+            index: statements.len() as u32,
+            start: trimmed_start,
+            end: trimmed_end,
+            sql: document[trimmed_start..trimmed_end].to_owned(),
+        });
+    }
+    Ok(statements)
+}
+
+fn mysql_delimiter_directive(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    let (keyword, value) = trimmed.split_once(char::is_whitespace)?;
+    if !keyword.eq_ignore_ascii_case("DELIMITER") {
+        return None;
+    }
+    let value = value.trim();
+    if value.is_empty()
+        || value.len() > 16
+        || value.chars().any(char::is_whitespace)
+        || value.contains(['\'', '"', '`', '\\'])
+    {
+        return None;
+    }
+    Some(value.to_owned())
 }
 
 pub fn split_statements(document: &str) -> Result<Vec<SqlStatement>, SqlPlanError> {
@@ -237,12 +425,17 @@ pub fn leading_statement_keyword(sql: &str) -> Option<String> {
 
 #[must_use]
 pub fn execution_is_provably_read_only(plan: &ExecutionPlan) -> bool {
-    plan.statements.iter().all(|statement| {
-        matches!(
-            leading_statement_keyword(&statement.sql).as_deref(),
-            Some("SELECT" | "VALUES" | "EXPLAIN")
-        )
-    })
+    plan.statements
+        .iter()
+        .all(|statement| statement_is_provably_read_only(&statement.sql))
+}
+
+#[must_use]
+pub fn statement_is_provably_read_only(sql: &str) -> bool {
+    matches!(
+        leading_statement_keyword(sql).as_deref(),
+        Some("SELECT" | "VALUES" | "EXPLAIN")
+    )
 }
 
 fn trim_range(document: &str, start: usize, end: usize) -> Option<(usize, usize)> {
@@ -581,6 +774,32 @@ mod tests {
         assert_eq!(plan.statements.len(), 2);
         assert_eq!(plan.statements[0].start, start);
         assert_eq!(plan.statements[1].sql, "SELECT 2;");
+    }
+
+    #[test]
+    fn mysql_delimiter_keeps_routine_bodies_as_one_statement() {
+        let sql = "DELIMITER $$\nCREATE PROCEDURE p()\nBEGIN\n  SELECT 'a; b';\n  SELECT 2;\nEND$$\nDELIMITER ;\nSELECT 3;";
+        let statements = split_statements_for_dialect(sql, SqlDialect::MySql).unwrap();
+
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].sql.starts_with("CREATE PROCEDURE"));
+        assert!(statements[0].sql.ends_with("END"));
+        assert_eq!(statements[1].sql, "SELECT 3;");
+        assert!(
+            !statements
+                .iter()
+                .any(|statement| statement.sql.contains("DELIMITER"))
+        );
+    }
+
+    #[test]
+    fn mysql_hash_comments_and_backslash_escapes_do_not_split_early() {
+        let sql = "# before\nSELECT 'it\\'s;still one'; SELECT `semi;colon` FROM t;";
+        let statements = split_statements_for_dialect(sql, SqlDialect::MySql).unwrap();
+
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].sql.contains("still one"));
+        assert!(statements[1].sql.contains("`semi;colon`"));
     }
 
     #[test]

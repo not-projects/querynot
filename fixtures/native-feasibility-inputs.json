@@ -15,6 +15,18 @@
       }
     },
     {
+      "id": "mysql80",
+      "kind": "database_archive",
+      "format": "tar.xz",
+      "file": "mysql-8.0.46-linux-glibc2.17-x86_64-minimal.tar.xz",
+      "url": "https://cdn.mysql.com/Downloads/MySQL-8.0/mysql-8.0.46-linux-glibc2.17-x86_64-minimal.tar.xz",
+      "sha256": "e2777d490fcaadc5a4be06db89b6935c78909bd9c3382af859ab284af0c950b0",
+      "vendor_digest": {
+        "algorithm": "md5",
+        "value": "d8ec6c48d02e88759eef61c51a6da07d"
+      }
+    },
+    {
       "id": "mysql84",
       "kind": "database_archive",
       "format": "tar.xz",
@@ -24,6 +36,18 @@
       "vendor_digest": {
         "algorithm": "md5",
         "value": "a4ab34055b5294845b472e511b23b54f"
+      }
+    },
+    {
+      "id": "mariadb1011",
+      "kind": "database_archive",
+      "format": "tar.gz",
+      "file": "mariadb-10.11.18-linux-systemd-x86_64.tar.gz",
+      "url": "https://linux.mathematik.tu-darmstadt.de/pub/linux/mirrors/misc/MariaDB/mariadb-10.11.18/bintar-linux-systemd-x86_64/mariadb-10.11.18-linux-systemd-x86_64.tar.gz",
+      "sha256": "6766e45500266d8fba2253fcf99da5aad0338cba4bf1f13a0ee03da5407b3d71",
+      "vendor_digest": {
+        "algorithm": "sha256",
+        "value": "6766e45500266d8fba2253fcf99da5aad0338cba4bf1f13a0ee03da5407b3d71"
       }
     },
     {

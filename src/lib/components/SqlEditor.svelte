@@ -1,7 +1,7 @@
 <script lang="ts">
   import { basicSetup } from 'codemirror';
   import { syntaxTree } from '@codemirror/language';
-  import { SQLite, sql } from '@codemirror/lang-sql';
+  import { MySQL, SQLite, sql } from '@codemirror/lang-sql';
   import { linter, type Diagnostic } from '@codemirror/lint';
   import { Compartment, EditorState } from '@codemirror/state';
   import { EditorView, keymap } from '@codemirror/view';
@@ -23,6 +23,7 @@
     value: string;
     wordWrap: boolean;
     completionSchema: Record<string, readonly string[]>;
+    dialect: string;
     disabled?: boolean;
     onchange: (value: string) => void;
     onrun: (request: EditorRunRequest) => void;
@@ -35,6 +36,7 @@
     value,
     wordWrap,
     completionSchema,
+    dialect,
     disabled = false,
     onchange,
     onrun,
@@ -71,7 +73,7 @@
             to: Math.max(node.to, node.from + 1),
             severity: 'warning',
             message:
-              'SQLite parser could not classify this range. Execution may require an explicit selection.'
+              'The selected SQL dialect could not classify this range. Execution may require an explicit selection.'
           });
         }
       }
@@ -85,7 +87,10 @@
       extensions: [
         basicSetup,
         languageCompartment.of(
-          sql({ dialect: SQLite, schema: completionSchema })
+          sql({
+            dialect: dialect === 'mysql' ? MySQL : SQLite,
+            schema: completionSchema
+          })
         ),
         wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
         editableCompartment.of(EditorView.editable.of(!disabled)),
@@ -185,7 +190,10 @@
   $effect(() => {
     view?.dispatch({
       effects: languageCompartment.reconfigure(
-        sql({ dialect: SQLite, schema: completionSchema })
+        sql({
+          dialect: dialect === 'mysql' ? MySQL : SQLite,
+          schema: completionSchema
+        })
       )
     });
   });
@@ -201,7 +209,7 @@
 
 <div
   class="sql-editor-host"
-  aria-label="SQLite SQL editor"
+  aria-label={`${dialect === 'mysql' ? 'MySQL-family' : 'SQLite'} SQL editor`}
   aria-keyshortcuts="Control+Enter Meta+Enter Control+Shift+Enter Meta+Shift+Enter Control+Period Meta+Period"
   {@attach mountEditor}
 ></div>

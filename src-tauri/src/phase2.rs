@@ -2,30 +2,39 @@ use crate::phase1::{AppRuntimeState, available_store, lock, parse_id};
 use base64::Engine;
 use querynot_core::export::{ExportFormat, ExportOptions, NoExportFault, write_received_rows};
 use querynot_core::generated::contracts::*;
-use querynot_core::profile::{ConnectionProfile, ConnectionTarget};
 use querynot_core::result::{MAX_RETAINED_ROWS, ResultRegistry, RetainedResult};
-use querynot_core::sql::{SafetyReason, execution_is_provably_read_only, plan_execution};
+use querynot_core::sql::{
+    SafetyReason, SqlDialect, execution_is_provably_read_only, plan_execution_for_dialect,
+};
 use querynot_core::sqlite::{
     ExecutionControl, SchemaObjectDetail, SchemaObjectKind, SqliteConnectionInfo,
-    SqliteExecutionEvent, SqliteSession, SqliteTransactionState, TransactionCertainty,
-    test_sqlite_connection,
+    SqliteExecutionEvent, SqliteTransactionState, TransactionCertainty,
 };
+use querynot_core::{AdapterSession, CompatibilityStatus};
 use querynot_core::{
     ErrorCategory, ExecutionId, NativeSessionId, ProfileId, QueryNotError, ResultSetId, TabId,
     TaggedValue,
 };
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum ConnectionAttemptKind {
+    Test,
+    Connect,
+}
+
+type ConnectionAttemptKey = (ProfileId, ConnectionAttemptKind);
+type ConnectionAttemptRegistry = HashMap<ConnectionAttemptKey, watch::Sender<bool>>;
 
 #[derive(Clone)]
 struct ConnectedProfile {
     profile_name: String,
-    metadata: SqliteSession,
+    metadata: AdapterSession,
     info: SqliteConnectionInfo,
 }
 
@@ -33,7 +42,7 @@ struct ConnectedProfile {
 struct TabSessionResource {
     profile_id: ProfileId,
     tab_id: TabId,
-    session: SqliteSession,
+    session: AdapterSession,
 }
 
 #[derive(Clone)]
@@ -41,7 +50,7 @@ struct ExecutionResource {
     profile_id: ProfileId,
     tab_id: TabId,
     session_id: NativeSessionId,
-    session: SqliteSession,
+    session: AdapterSession,
     controls: mpsc::Sender<ExecutionControl>,
 }
 
@@ -69,6 +78,7 @@ pub(crate) struct Phase2Runtime {
     results: Arc<Mutex<ResultRegistry>>,
     result_owners: Arc<Mutex<HashMap<ResultSetId, ResultOwner>>>,
     pending_approvals: Arc<Mutex<HashMap<String, PendingApproval>>>,
+    connection_attempts: Arc<Mutex<ConnectionAttemptRegistry>>,
     lifecycle_epoch: Arc<Mutex<u64>>,
 }
 
@@ -108,6 +118,47 @@ impl Phase2Runtime {
         if let Ok(mut approvals) = self.pending_approvals.lock() {
             approvals.clear();
         }
+        if let Ok(mut attempts) = self.connection_attempts.lock() {
+            for cancel in attempts.values() {
+                let _ = cancel.send(true);
+            }
+            attempts.clear();
+        }
+    }
+
+    fn begin_connection_attempt(
+        &self,
+        profile_id: ProfileId,
+        kind: ConnectionAttemptKind,
+    ) -> Result<watch::Receiver<bool>, QueryNotError> {
+        let mut attempts = lock(&self.connection_attempts)?;
+        if attempts.contains_key(&(profile_id, kind)) {
+            return Err(QueryNotError::database(
+                ErrorCategory::Connectivity,
+                "This connection action is already in progress.",
+                false,
+            ));
+        }
+        let (cancel, receiver) = watch::channel(false);
+        attempts.insert((profile_id, kind), cancel);
+        Ok(receiver)
+    }
+
+    fn finish_connection_attempt(&self, profile_id: ProfileId, kind: ConnectionAttemptKind) {
+        if let Ok(mut attempts) = self.connection_attempts.lock() {
+            attempts.remove(&(profile_id, kind));
+        }
+    }
+
+    fn cancel_connection_attempt(
+        &self,
+        profile_id: ProfileId,
+        kind: ConnectionAttemptKind,
+    ) -> Result<bool, QueryNotError> {
+        let attempts = lock(&self.connection_attempts)?;
+        Ok(attempts
+            .get(&(profile_id, kind))
+            .is_some_and(|cancel| cancel.send(true).is_ok()))
     }
 
     fn issue_approval(
@@ -158,19 +209,25 @@ pub(crate) async fn test_profile_connection(
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
     lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
     let profile = available_store(&state)?.profile(profile_id).await?;
-    let (path, read_only) = sqlite_target(&profile)?;
-    let info = tokio::time::timeout(
-        Duration::from_secs(profile.connection_timeout_seconds.into()),
-        test_sqlite_connection(&path, read_only),
-    )
-    .await
-    .map_err(|_| {
-        QueryNotError::database(
-            ErrorCategory::Timeout,
-            "SQLite connection testing reached the configured timeout.",
-            true,
-        )
-    })??;
+    let secret = state.database_secret(&profile).await?;
+    let mut cancel = state
+        .phase2
+        .begin_connection_attempt(profile_id, ConnectionAttemptKind::Test)?;
+    let result = tokio::select! {
+        biased;
+        changed = cancel.changed() => match changed {
+            Ok(()) if *cancel.borrow() => Err(cancelled_connection_error()),
+            _ => Err(cancelled_connection_error()),
+        },
+        result = tokio::time::timeout(
+            Duration::from_secs(profile.connection_timeout_seconds.into()),
+            AdapterSession::test_connection(&profile, &secret),
+        ) => result.map_err(|_| connection_timeout_error(true)).and_then(|value| value),
+    };
+    state
+        .phase2
+        .finish_connection_attempt(profile_id, ConnectionAttemptKind::Test);
+    let info = result?;
     Ok(connection_view(profile.id, &profile.name, &info))
 }
 
@@ -189,20 +246,30 @@ pub(crate) async fn connect_profile(
         ));
     }
     let profile = available_store(&state)?.profile(profile_id).await?;
-    let (path, read_only) = sqlite_target(&profile)?;
-    let session = tokio::time::timeout(
-        Duration::from_secs(profile.connection_timeout_seconds.into()),
-        SqliteSession::open(&path, read_only),
-    )
-    .await
-    .map_err(|_| {
-        QueryNotError::database(
-            ErrorCategory::Timeout,
-            "SQLite connection setup reached the configured timeout.",
-            true,
-        )
-    })??;
-    let info = session.connection_info().await?;
+    let secret = state.database_secret(&profile).await?;
+    let mut cancel = state
+        .phase2
+        .begin_connection_attempt(profile_id, ConnectionAttemptKind::Connect)?;
+    let connecting = async {
+        let session = AdapterSession::open(&profile, &secret).await?;
+        let info = session.connection_info(&profile).await?;
+        Ok::<_, QueryNotError>((session, info))
+    };
+    let result = tokio::select! {
+        biased;
+        changed = cancel.changed() => match changed {
+            Ok(()) if *cancel.borrow() => Err(cancelled_connection_error()),
+            _ => Err(cancelled_connection_error()),
+        },
+        result = tokio::time::timeout(
+            Duration::from_secs(profile.connection_timeout_seconds.into()),
+            connecting,
+        ) => result.map_err(|_| connection_timeout_error(false)).and_then(|value| value),
+    };
+    state
+        .phase2
+        .finish_connection_attempt(profile_id, ConnectionAttemptKind::Connect);
+    let (session, info) = result?;
     lock(&state.phase2.connected)?.insert(
         profile_id,
         ConnectedProfile {
@@ -212,6 +279,57 @@ pub(crate) async fn connect_profile(
         },
     );
     Ok(connection_view(profile_id, &profile.name, &info))
+}
+
+#[tauri::command]
+pub(crate) fn cancel_profile_connection(
+    state: State<'_, AppRuntimeState>,
+    request: CancelConnectionRequest,
+) -> Result<FileActionResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    let kind = match request.action.as_str() {
+        "test" => ConnectionAttemptKind::Test,
+        "connect" => ConnectionAttemptKind::Connect,
+        _ => {
+            return Err(QueryNotError::database(
+                ErrorCategory::UnsupportedCapability,
+                "The requested connection action cannot be cancelled.",
+                false,
+            ));
+        }
+    };
+    let cancelled = state.phase2.cancel_connection_attempt(profile_id, kind)?;
+    Ok(FileActionResponse {
+        completed: cancelled,
+        cancelled,
+        message: if cancelled {
+            "Cancellation was requested; partially opened native resources are being closed."
+        } else {
+            "No matching connection action is still running."
+        }
+        .to_owned(),
+    })
+}
+
+fn cancelled_connection_error() -> QueryNotError {
+    QueryNotError::database(
+        ErrorCategory::Cancelled,
+        "The connection action was cancelled and partial native resources were closed.",
+        false,
+    )
+}
+
+fn connection_timeout_error(testing: bool) -> QueryNotError {
+    QueryNotError::database(
+        ErrorCategory::Timeout,
+        if testing {
+            "Database connection testing reached the configured timeout; partial native resources were closed."
+        } else {
+            "Database connection setup reached the configured timeout; partial native resources were closed."
+        },
+        true,
+    )
 }
 
 #[tauri::command]
@@ -236,7 +354,7 @@ pub(crate) async fn disconnect_profile(
         completed: removed,
         cancelled: false,
         message: if removed {
-            "The SQLite metadata session was disconnected. Offline tabs and drafts were preserved."
+            "The metadata session was disconnected. Offline tabs and drafts were preserved."
         } else {
             "This profile was already disconnected. Offline tabs and drafts were preserved."
         }
@@ -255,7 +373,7 @@ pub(crate) async fn open_tab_session(
     if !lock(&state.phase2.connected)?.contains_key(&profile_id) {
         return Err(QueryNotError::database(
             ErrorCategory::Connectivity,
-            "Connect the SQLite profile before opening this tab session.",
+            "Connect the profile before opening this tab session.",
             true,
         ));
     }
@@ -275,8 +393,8 @@ pub(crate) async fn open_tab_session(
         ));
     }
     let profile = available_store(&state)?.profile(profile_id).await?;
-    let (path, read_only) = sqlite_target(&profile)?;
-    let session = SqliteSession::open(&path, read_only).await?;
+    let secret = state.database_secret(&profile).await?;
+    let session = AdapterSession::open(&profile, &secret).await?;
     let session_id = NativeSessionId::new();
     lock(&state.ownership)?.register_session(state.window_id, profile_id, tab_id, session_id)?;
     lock(&state.phase2.sessions)?.insert(
@@ -522,16 +640,34 @@ pub(crate) async fn start_execution(
             ));
         }
     };
-    let plan = plan_execution(
+    let connected = connected_profile(&state, profile_id)?;
+    let dialect = match connected.info.dialect.as_str() {
+        "sqlite" => SqlDialect::Sqlite,
+        "mysql" => SqlDialect::MySql,
+        _ => {
+            return Err(QueryNotError::internal(
+                "The adapter reported an unknown SQL dialect.",
+            ));
+        }
+    };
+    let plan = plan_execution_for_dialect(
         &request.sql,
         selection,
         request.cursor as usize,
         request.run_all,
+        dialect,
         &request.profile_id,
         &request.session_id,
-        "main",
+        &connected.info.context,
     )
     .map_err(|error| QueryNotError::database(ErrorCategory::Syntax, error.to_string(), false))?;
+    if resource.session.read_only() && !execution_is_provably_read_only(&plan) {
+        return Err(QueryNotError::database(
+            ErrorCategory::UnsupportedCapability,
+            "Possible writes are disabled for this read-only or out-of-matrix connection.",
+            false,
+        ));
+    }
     if resource.session.transaction_state().await.certainty == TransactionCertainty::Unknown
         && !execution_is_provably_read_only(&plan)
     {
@@ -647,7 +783,7 @@ pub(crate) async fn start_execution(
         execution_id: Some(execution_id.to_string()),
         fingerprint: None,
         safety_flags,
-        message: "Execution started on this tab's dedicated native SQLite session.".to_owned(),
+        message: "Execution started on this tab's dedicated native database session.".to_owned(),
     })
 }
 
@@ -1313,20 +1449,6 @@ fn value_view(
     }
 }
 
-fn sqlite_target(profile: &ConnectionProfile) -> Result<(PathBuf, bool), QueryNotError> {
-    match &profile.target {
-        ConnectionTarget::Sqlite {
-            file_path,
-            read_only,
-        } => Ok((PathBuf::from(file_path), *read_only)),
-        ConnectionTarget::MysqlFamily { .. } => Err(QueryNotError::database(
-            ErrorCategory::UnsupportedCapability,
-            "MySQL-family execution is scheduled for Phase 3; this Phase 2 command accepts SQLite profiles only.",
-            false,
-        )),
-    }
-}
-
 fn connected_profile(
     state: &State<'_, AppRuntimeState>,
     profile_id: ProfileId,
@@ -1337,7 +1459,7 @@ fn connected_profile(
         .ok_or_else(|| {
             QueryNotError::database(
                 ErrorCategory::Connectivity,
-                "The SQLite metadata session is disconnected or stale.",
+                "The metadata session is disconnected or stale.",
                 true,
             )
         })
@@ -1414,9 +1536,16 @@ fn connection_view(
         profile_name: profile_name.to_owned(),
         engine: info.identity.product.clone(),
         exact_version: info.identity.exact_version.clone(),
-        dialect: "sqlite".to_owned(),
+        dialect: info.dialect.clone(),
         context: info.context.clone(),
         read_only: info.read_only,
+        compatibility_status: match info.compatibility_status {
+            CompatibilityStatus::Supported => "supported",
+            CompatibilityStatus::QueryOnly => "query_only",
+        }
+        .to_owned(),
+        compatibility_warning: info.compatibility_warning.clone(),
+        legacy: info.identity.legacy,
         capabilities: AdapterCapabilitiesView {
             metadata: info.capabilities.metadata,
             streaming: info.capabilities.streaming,
@@ -1462,6 +1591,7 @@ fn schema_object_view(object: querynot_core::sqlite::SchemaObject) -> SchemaObje
         kind: match object.kind {
             SchemaObjectKind::Table => "table",
             SchemaObjectKind::View => "view",
+            SchemaObjectKind::Routine => "routine",
         }
         .to_owned(),
     }
@@ -1515,14 +1645,14 @@ fn schema_cache_key(
     kind: &str,
     parts: &[&str],
 ) -> Result<String, QueryNotError> {
-    let mut key = format!("sqlite:{}:{kind}", info.identity.exact_version);
+    let mut key = format!("{}:{}:{kind}", info.dialect, info.identity.exact_version);
     for part in parts {
         key.push(':');
         key.push_str(&base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(part.as_bytes()));
     }
     if key.len() > 1_024 {
         return Err(QueryNotError::authorization(
-            "SQLite metadata identifiers exceed the cache safety boundary.",
+            "Database metadata identifiers exceed the cache safety boundary.",
         ));
     }
     Ok(key)
@@ -1662,5 +1792,37 @@ mod tests {
         runtime.cleanup();
         assert!(runtime.results.lock().unwrap().get(result_set_id).is_err());
         assert!(runtime.result_owners.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn connection_attempts_are_single_owner_cancellable_and_cleanup_safe() {
+        let runtime = Phase2Runtime::default();
+        let profile_id = ProfileId::new();
+        let receiver = runtime
+            .begin_connection_attempt(profile_id, ConnectionAttemptKind::Connect)
+            .unwrap();
+        assert!(
+            runtime
+                .begin_connection_attempt(profile_id, ConnectionAttemptKind::Connect)
+                .is_err()
+        );
+        assert!(
+            runtime
+                .cancel_connection_attempt(profile_id, ConnectionAttemptKind::Connect)
+                .unwrap()
+        );
+        assert!(*receiver.borrow());
+        runtime.finish_connection_attempt(profile_id, ConnectionAttemptKind::Connect);
+        assert!(
+            !runtime
+                .cancel_connection_attempt(profile_id, ConnectionAttemptKind::Connect)
+                .unwrap()
+        );
+
+        let cleanup_receiver = runtime
+            .begin_connection_attempt(profile_id, ConnectionAttemptKind::Test)
+            .unwrap();
+        runtime.cleanup();
+        assert!(*cleanup_receiver.borrow());
     }
 }

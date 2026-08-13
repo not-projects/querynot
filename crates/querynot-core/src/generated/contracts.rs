@@ -25,6 +25,11 @@ pub struct ProfileInput {
     pub name: String,
     pub kind: String,
     pub file_grant_id: Option<String>,
+    pub tls_ca_grant_id: Option<String>,
+    pub tls_client_certificate_grant_id: Option<String>,
+    pub tls_client_key_grant_id: Option<String>,
+    pub clear_tls_ca: bool,
+    pub clear_tls_client_identity: bool,
     pub read_only: bool,
     pub host: Option<String>,
     pub port: Option<u16>,
@@ -44,6 +49,12 @@ pub struct UpdateProfileRequest {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ProfileIdRequest {
     pub profile_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct CancelConnectionRequest {
+    pub profile_id: String,
+    pub action: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -80,6 +91,9 @@ pub struct ProfileView {
     pub name: String,
     pub kind: String,
     pub file_name: Option<String>,
+    pub tls_ca_file_name: Option<String>,
+    pub tls_client_certificate_file_name: Option<String>,
+    pub tls_client_key_file_name: Option<String>,
     pub read_only: bool,
     pub host: Option<String>,
     pub port: Option<u16>,
@@ -210,6 +224,9 @@ pub struct ConnectionInfoView {
     pub dialect: String,
     pub context: String,
     pub read_only: bool,
+    pub compatibility_status: String,
+    pub compatibility_warning: Option<String>,
+    pub legacy: bool,
     pub capabilities: AdapterCapabilitiesView,
 }
 

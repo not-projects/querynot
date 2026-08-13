@@ -1,4 +1,6 @@
-use crate::adapter::{AdapterCapabilities, DatabaseFamily, ServerIdentity};
+use crate::adapter::{
+    AdapterCapabilities, AdapterConnectionInfo, CompatibilityStatus, DatabaseFamily, ServerIdentity,
+};
 use crate::result::{
     MAX_BATCH_BYTES, MAX_BATCH_ROWS, MAX_RETAINED_BYTES, MAX_RETAINED_ROWS, PAUSED_CURSOR_LIFETIME,
     ResultBatch, ResultColumn, ResultTerminal, ResultTerminalState, tagged_value_size,
@@ -26,19 +28,14 @@ use tokio::sync::{Mutex, mpsc};
 const MAX_METADATA_NAME_BYTES: usize = 64 * 1024;
 const MAX_SCHEMA_OBJECTS: usize = 10_000;
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct SqliteConnectionInfo {
-    pub identity: ServerIdentity,
-    pub capabilities: AdapterCapabilities,
-    pub read_only: bool,
-    pub context: String,
-}
+pub type SqliteConnectionInfo = AdapterConnectionInfo;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SchemaObjectKind {
     Table,
     View,
+    Routine,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -925,6 +922,9 @@ async fn connection_info(
         },
         read_only,
         context: "main".to_owned(),
+        dialect: "sqlite".to_owned(),
+        compatibility_status: CompatibilityStatus::Supported,
+        compatibility_warning: None,
     })
 }
 

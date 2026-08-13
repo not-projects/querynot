@@ -34,7 +34,7 @@ Then inspect the actual repository state and current branch before proposing cha
 
 ## Current State
 
-The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, and Phase 2 SQLite vertical slice. The implemented native surface includes explicit SQLite file profiles, isolated metadata and tab sessions, progressive schema metadata/cache, statement planning and destructive approval, transactions, cancellation, bounded acknowledged result streaming, cursor expiry, typed values, and atomic received-row export. The Svelte workbench uses CodeMirror and a virtualized result grid. Cross-platform Phase 1/2 evidence, MySQL-family parity, Phase 4 productivity/editing, Phase 5 release validation, and Phase 6 follow-up remain incomplete; no compatibility row is a release support claim.
+The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, Phase 2 SQLite vertical slice, and implemented Phase 3 MySQL-family parity. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB development matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, and atomic received-row export. The Svelte workbench uses CodeMirror and a virtualized result grid. Cross-platform evidence, Phase 4 productivity/editing, Phase 5 release validation, and Phase 6 follow-up remain incomplete; no compatibility row is a release support claim.
 
 ## Verified Commands
 
@@ -53,6 +53,8 @@ The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, a
 - `npm run verify:phase1` — clean-tree, commit-addressed Phase 1 local validation and evidence generation; real OS-vault and manual target-platform procedures remain separate gates.
 - `npm run benchmark:phase2` — 30-sample release-build SQLite ordinary-result first-batch benchmark after one discarded setup run.
 - `npm run verify:phase2` — clean-tree, commit-addressed Phase 2 local validation, benchmark, desktop build, and evidence generation; native target-platform performance and manual review remain separate gates.
+- `npm run test:conformance:phase3` — checksum-pinned, marker-verified five-server common-adapter conformance including TLS/client identity, authentication, metadata, results, transactions, and cancellation.
+- `npm run verify:phase3` — clean-tree, commit-addressed Phase 3 conformance plus complete local regression, dependency, and desktop-build evidence generation; target-platform release procedures remain separate gates.
 - `npm run test:feasibility` — exact disposable network-database feasibility run; requires Docker and retains a redacted report.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — checksum-pinned Linux fallback that installs nothing, uses random loopback ports and verified TLS, and retains the same redacted report.
 

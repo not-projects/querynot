@@ -20,6 +20,11 @@ export interface ProfileInput {
   name: string;
   kind: string;
   file_grant_id: string | null;
+  tls_ca_grant_id: string | null;
+  tls_client_certificate_grant_id: string | null;
+  tls_client_key_grant_id: string | null;
+  clear_tls_ca: boolean;
+  clear_tls_client_identity: boolean;
   read_only: boolean;
   host: string | null;
   port: number | null;
@@ -37,6 +42,11 @@ export interface UpdateProfileRequest {
 
 export interface ProfileIdRequest {
   profile_id: string;
+}
+
+export interface CancelConnectionRequest {
+  profile_id: string;
+  action: string;
 }
 
 export interface DeleteProfileRequest {
@@ -68,6 +78,9 @@ export interface ProfileView {
   name: string;
   kind: string;
   file_name: string | null;
+  tls_ca_file_name: string | null;
+  tls_client_certificate_file_name: string | null;
+  tls_client_key_file_name: string | null;
   read_only: boolean;
   host: string | null;
   port: number | null;
@@ -184,6 +197,9 @@ export interface ConnectionInfoView {
   dialect: string;
   context: string;
   read_only: boolean;
+  compatibility_status: string;
+  compatibility_warning: string | null;
+  legacy: boolean;
   capabilities: AdapterCapabilitiesView;
 }
 
@@ -435,11 +451,21 @@ export interface QueryNotCommands {
   pick_sql_file: { request: null; response: FilePickerResponse };
   pick_sqlite_file: { request: null; response: FilePickerResponse };
   pick_new_sqlite_file: { request: null; response: FilePickerResponse };
+  pick_tls_ca_file: { request: null; response: FilePickerResponse };
+  pick_tls_client_certificate_file: {
+    request: null;
+    response: FilePickerResponse;
+  };
+  pick_tls_client_key_file: { request: null; response: FilePickerResponse };
   test_profile_connection: {
     request: ProfileIdRequest;
     response: ConnectionInfoView;
   };
   connect_profile: { request: ProfileIdRequest; response: ConnectionInfoView };
+  cancel_profile_connection: {
+    request: CancelConnectionRequest;
+    response: FileActionResponse;
+  };
   disconnect_profile: {
     request: ProfileIdRequest;
     response: FileActionResponse;

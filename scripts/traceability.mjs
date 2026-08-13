@@ -175,6 +175,35 @@ function applyOverrides(records, overrideFile) {
 
 function attachGeneratedEvidence(records) {
   for (const record of records) {
+    if (record.automated_test_ids.some((id) => id.startsWith('P3-'))) {
+      if (
+        !record.evidence_links.includes(
+          'evidence/phase-3/validation-report.json'
+        )
+      ) {
+        record.evidence_links.push('evidence/phase-3/validation-report.json');
+      }
+    }
+    if (
+      record.automated_test_ids.some((id) =>
+        [
+          'P3-AUTO-ADAPTER-CONFORMANCE',
+          'P3-AUTO-TLS-MATRIX',
+          'P3-AUTO-AUTH-MATRIX',
+          'P3-AUTO-METADATA-MATRIX',
+          'P3-AUTO-RESULT-MATRIX',
+          'P3-AUTO-TRANSACTION-MATRIX',
+          'P3-AUTO-CANCELLATION-MATRIX'
+        ].includes(id)
+      ) &&
+      !record.evidence_links.includes(
+        'evidence/phase-3/adapter-conformance-report.json'
+      )
+    ) {
+      record.evidence_links.push(
+        'evidence/phase-3/adapter-conformance-report.json'
+      );
+    }
     if (record.automated_test_ids.some((id) => id.startsWith('P2-'))) {
       if (
         !record.evidence_links.includes(

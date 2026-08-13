@@ -65,6 +65,18 @@
       "request": null,
       "response": "FilePickerResponse"
     },
+    "pick_tls_ca_file": {
+      "request": null,
+      "response": "FilePickerResponse"
+    },
+    "pick_tls_client_certificate_file": {
+      "request": null,
+      "response": "FilePickerResponse"
+    },
+    "pick_tls_client_key_file": {
+      "request": null,
+      "response": "FilePickerResponse"
+    },
     "test_profile_connection": {
       "request": "ProfileIdRequest",
       "response": "ConnectionInfoView"
@@ -72,6 +84,10 @@
     "connect_profile": {
       "request": "ProfileIdRequest",
       "response": "ConnectionInfoView"
+    },
+    "cancel_profile_connection": {
+      "request": "CancelConnectionRequest",
+      "response": "FileActionResponse"
     },
     "disconnect_profile": {
       "request": "ProfileIdRequest",
@@ -171,6 +187,11 @@
       "name": "string",
       "kind": "string",
       "file_grant_id": "string?",
+      "tls_ca_grant_id": "string?",
+      "tls_client_certificate_grant_id": "string?",
+      "tls_client_key_grant_id": "string?",
+      "clear_tls_ca": "bool",
+      "clear_tls_client_identity": "bool",
       "read_only": "bool",
       "host": "string?",
       "port": "u16?",
@@ -186,6 +207,10 @@
     },
     "ProfileIdRequest": {
       "profile_id": "string"
+    },
+    "CancelConnectionRequest": {
+      "profile_id": "string",
+      "action": "string"
     },
     "DeleteProfileRequest": {
       "profile_id": "string",
@@ -212,6 +237,9 @@
       "name": "string",
       "kind": "string",
       "file_name": "string?",
+      "tls_ca_file_name": "string?",
+      "tls_client_certificate_file_name": "string?",
+      "tls_client_key_file_name": "string?",
       "read_only": "bool",
       "host": "string?",
       "port": "u16?",
@@ -314,6 +342,9 @@
       "dialect": "string",
       "context": "string",
       "read_only": "bool",
+      "compatibility_status": "string",
+      "compatibility_warning": "string?",
+      "legacy": "bool",
       "capabilities": "AdapterCapabilitiesView"
     },
     "ProfileTabRequest": {

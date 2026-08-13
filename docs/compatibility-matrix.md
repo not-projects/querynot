@@ -1,6 +1,6 @@
 # Compatibility and conformance matrix
 
-Status: Phase 2 development matrix; not a support claim
+Status: Phase 3 locally conformant development matrix; not a support claim
 Selection date: 2026-08-13
 
 No row becomes supported until Phase 5 retains native packaging, installation, end-to-end, accessibility, and applicable adapter conformance evidence for the exact patch/runtime combination.
@@ -23,10 +23,12 @@ No row becomes supported until Phase 5 retains native packaging, installation, e
 | Matrix ID | Exact selected patch | Authentication | TLS | Lifecycle | Current evidence |
 | --- | --- | --- | --- | --- | --- |
 | `sqlite-bundled` | 3.51.3 through SQLx/libsqlite3-sys in the Phase 2 local build | File permissions | Not applicable | Current bundled library | Phase 2 real-file metadata, read-only execution, transactions, cancellation, streaming, fidelity, and export journey pass locally; target-platform release conformance pending |
-| `mysql-5.7.44` | 5.7.44 | `mysql_native_password` | Verified TLS 1.2 required for protected connections | Legacy/EOL; persistent warning required | Disposable feasibility target |
-| `mysql-8.0.46` | 8.0.46 | `caching_sha2_password` over protected transport | System trust/custom CA/client certificate matrix pending | Legacy line at selection date | Phase 3 conformance pending |
-| `mysql-8.4.10` | 8.4.10 LTS | `caching_sha2_password` over protected transport | Phase 0 generated-CA identity verification at TLS 1.2 passes; system trust/custom CA/client certificate matrix pending | Maintained LTS | Disposable feasibility target passes |
-| `mariadb-10.11.18` | 10.11.18 LTS | Validated native password mechanism | Direct TCP and verified TLS matrix pending | Maintained LTS | Phase 3 conformance pending |
-| `mariadb-11.4.12` | 11.4.12 LTS | `mysql_native_password` over protected transport | Phase 0 generated-CA identity verification at TLS 1.2 passes; system trust/custom CA/client certificate matrix pending | Maintained LTS | Disposable feasibility target passes |
+| `mysql-5.7.44` | 5.7.44 | `mysql_native_password` | Custom-CA identity verification and client certificate at TLS 1.2 pass; system trust rejects the private fixture CA | Legacy/EOL; persistent warning required | Phase 3 local adapter conformance passes |
+| `mysql-8.0.46` | 8.0.46 | `caching_sha2_password` over protected transport | Custom-CA identity verification and client certificate at TLS 1.2 pass; system trust rejects the private fixture CA | Legacy line at selection date | Phase 3 local adapter conformance passes |
+| `mysql-8.4.10` | 8.4.10 LTS | `caching_sha2_password` over protected transport | Custom-CA identity verification and client certificate at TLS 1.2 pass; system trust rejects the private fixture CA | Maintained LTS | Phase 3 local adapter conformance passes |
+| `mariadb-10.11.18` | 10.11.18 LTS | `mysql_native_password` over protected transport | Custom-CA identity verification and client certificate at TLS 1.2 pass; system trust rejects the private fixture CA | Maintained LTS | Phase 3 local adapter conformance passes |
+| `mariadb-11.4.12` | 11.4.12 LTS | `mysql_native_password` over protected transport | Custom-CA identity verification and client certificate at TLS 1.2 pass; system trust rejects the private fixture CA | Maintained LTS | Phase 3 local adapter conformance passes |
 
 MySQL 8.0 reached the lifecycle date identified by the vendor before this selection date; it is treated like a legacy compatibility line in UI/release notes even though the approved PRD separately calls out the mandatory 5.7 indicator. No safety control is weakened for either line.
+
+The retained Phase 3 report additionally covers common metadata, dialect parsing, lossless/edge value transport, zero-row and duplicate-column results, acknowledged streaming, multiple result sets, manual transactions, implicit DDL commits, confirmed cancellation, and post-cancel continuity. Positive system-trust validation against a publicly trusted target and native target-platform trust-store behavior remain Phase 5 procedures; fixture automation intentionally never contacts a non-fixture database.
