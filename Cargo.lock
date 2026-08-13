@@ -3102,10 +3102,13 @@ name = "querynot"
 version = "0.0.0"
 dependencies = [
  "querynot-core",
+ "secrecy",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
+ "tokio",
 ]
 
 [[package]]

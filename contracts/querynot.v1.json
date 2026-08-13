@@ -4,6 +4,74 @@
     "application_status": {
       "request": null,
       "response": "ApplicationStatusResponse"
+    },
+    "bootstrap_workspace": {
+      "request": null,
+      "response": "BootstrapWorkspaceResponse"
+    },
+    "create_profile": {
+      "request": "ProfileInput",
+      "response": "ProfileView"
+    },
+    "update_profile": {
+      "request": "UpdateProfileRequest",
+      "response": "ProfileView"
+    },
+    "duplicate_profile": {
+      "request": "ProfileIdRequest",
+      "response": "ProfileView"
+    },
+    "delete_profile": {
+      "request": "DeleteProfileRequest",
+      "response": "DeleteProfileResponse"
+    },
+    "save_profile_secret": {
+      "request": "SaveProfileSecretRequest",
+      "response": "SecretActionResponse"
+    },
+    "remove_profile_secret": {
+      "request": "ProfileIdRequest",
+      "response": "SecretActionResponse"
+    },
+    "save_settings": {
+      "request": "SettingsView",
+      "response": "SettingsView"
+    },
+    "reset_settings": {
+      "request": "ConfirmedActionRequest",
+      "response": "SettingsView"
+    },
+    "save_workspace": {
+      "request": "WorkspaceView",
+      "response": "WorkspaceSaveResponse"
+    },
+    "create_offline_tab": {
+      "request": "NewOfflineTabRequest",
+      "response": "WorkspaceTabView"
+    },
+    "close_offline_tab": {
+      "request": "TabIdRequest",
+      "response": "WorkspaceSaveResponse"
+    },
+    "pick_sql_file": {
+      "request": null,
+      "response": "FilePickerResponse"
+    },
+    "pick_sqlite_file": {
+      "request": null,
+      "response": "FilePickerResponse"
+    },
+    "diagnostics_preview": {
+      "request": null,
+      "response": "DiagnosticsPreviewView"
+    },
+    "export_diagnostics": {
+      "request": "DiagnosticsPreviewView",
+      "response": "FileActionResponse"
+    },
+    "clear_operational_log": {
+      "request": "ConfirmedActionRequest",
+      "response": "FileActionResponse"
     }
   },
   "events": {},
@@ -11,6 +79,146 @@
     "ApplicationStatusResponse": {
       "contract_version": "u16",
       "phase": "string"
+    },
+    "BootstrapWorkspaceResponse": {
+      "contract_version": "u16",
+      "phase": "string",
+      "store_state": "string",
+      "store_message": "string?",
+      "profiles": "ProfileView[]",
+      "settings": "SettingsView",
+      "workspace": "WorkspaceView"
+    },
+    "ProfileInput": {
+      "name": "string",
+      "kind": "string",
+      "file_grant_id": "string?",
+      "read_only": "bool",
+      "host": "string?",
+      "port": "u16?",
+      "default_database": "string?",
+      "username": "string?",
+      "tls_mode": "string?",
+      "connection_timeout_seconds": "u16",
+      "automatic_reconnect": "bool"
+    },
+    "UpdateProfileRequest": {
+      "profile_id": "string",
+      "profile": "ProfileInput"
+    },
+    "ProfileIdRequest": {
+      "profile_id": "string"
+    },
+    "DeleteProfileRequest": {
+      "profile_id": "string",
+      "delete_history": "bool",
+      "delete_drafts": "bool",
+      "confirmed": "bool"
+    },
+    "DeleteProfileResponse": {
+      "status": "string",
+      "message": "string"
+    },
+    "SaveProfileSecretRequest": {
+      "profile_id": "string",
+      "secret": "string",
+      "session_only": "bool"
+    },
+    "SecretActionResponse": {
+      "saved": "bool",
+      "session_only": "bool",
+      "message": "string"
+    },
+    "ProfileView": {
+      "id": "string",
+      "name": "string",
+      "kind": "string",
+      "file_name": "string?",
+      "read_only": "bool",
+      "host": "string?",
+      "port": "u16?",
+      "default_database": "string?",
+      "username": "string?",
+      "tls_mode": "string?",
+      "has_saved_secret": "bool",
+      "connection_timeout_seconds": "u16",
+      "automatic_reconnect": "bool"
+    },
+    "SettingsView": {
+      "theme": "string",
+      "ui_scale_percent": "u16",
+      "editor_word_wrap": "bool",
+      "formatter_uppercase_keywords": "bool",
+      "formatter_indent_spaces": "u8",
+      "connection_timeout_seconds": "u16",
+      "result_tranche_rows": "u32",
+      "table_page_rows": "u32",
+      "history_enabled": "bool",
+      "history_retention_days": "u16",
+      "session_restoration_enabled": "bool",
+      "automatic_reconnect_default": "bool",
+      "operational_log_enabled": "bool",
+      "operational_log_max_bytes": "u64",
+      "operational_log_retention_days": "u16"
+    },
+    "PanelSizesView": {
+      "explorer_percent": "f64",
+      "results_percent": "f64"
+    },
+    "WorkspaceTabView": {
+      "id": "string",
+      "title": "string",
+      "profile_id": "string?",
+      "profile_label": "string?",
+      "context_label": "string?",
+      "sql": "string",
+      "dirty": "bool",
+      "position": "u16",
+      "source_file_grant_id": "string?",
+      "reconnectable": "bool"
+    },
+    "WorkspaceView": {
+      "tabs": "WorkspaceTabView[]",
+      "active_tab_id": "string?",
+      "panel_sizes": "PanelSizesView"
+    },
+    "WorkspaceSaveResponse": {
+      "saved": "bool",
+      "message": "string"
+    },
+    "NewOfflineTabRequest": {
+      "profile_id": "string?"
+    },
+    "TabIdRequest": {
+      "tab_id": "string"
+    },
+    "FilePickerResponse": {
+      "cancelled": "bool",
+      "file_grant_id": "string?",
+      "tab_id": "string?",
+      "display_name": "string?",
+      "content": "string?"
+    },
+    "DiagnosticEventView": {
+      "timestamp_ms": "i64",
+      "area": "string",
+      "code": "string",
+      "error_category": "string?"
+    },
+    "DiagnosticsPreviewView": {
+      "application_version": "string",
+      "contract_version": "u16",
+      "operating_system": "string",
+      "runtime_architecture": "string",
+      "events": "DiagnosticEventView[]"
+    },
+    "FileActionResponse": {
+      "completed": "bool",
+      "cancelled": "bool",
+      "message": "string"
+    },
+    "ConfirmedActionRequest": {
+      "confirmed": "bool"
     }
   }
 }

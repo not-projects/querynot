@@ -6,6 +6,202 @@ export interface ApplicationStatusResponse {
   phase: string;
 }
 
+export interface BootstrapWorkspaceResponse {
+  contract_version: number;
+  phase: string;
+  store_state: string;
+  store_message: string | null;
+  profiles: ProfileView[];
+  settings: SettingsView;
+  workspace: WorkspaceView;
+}
+
+export interface ProfileInput {
+  name: string;
+  kind: string;
+  file_grant_id: string | null;
+  read_only: boolean;
+  host: string | null;
+  port: number | null;
+  default_database: string | null;
+  username: string | null;
+  tls_mode: string | null;
+  connection_timeout_seconds: number;
+  automatic_reconnect: boolean;
+}
+
+export interface UpdateProfileRequest {
+  profile_id: string;
+  profile: ProfileInput;
+}
+
+export interface ProfileIdRequest {
+  profile_id: string;
+}
+
+export interface DeleteProfileRequest {
+  profile_id: string;
+  delete_history: boolean;
+  delete_drafts: boolean;
+  confirmed: boolean;
+}
+
+export interface DeleteProfileResponse {
+  status: string;
+  message: string;
+}
+
+export interface SaveProfileSecretRequest {
+  profile_id: string;
+  secret: string;
+  session_only: boolean;
+}
+
+export interface SecretActionResponse {
+  saved: boolean;
+  session_only: boolean;
+  message: string;
+}
+
+export interface ProfileView {
+  id: string;
+  name: string;
+  kind: string;
+  file_name: string | null;
+  read_only: boolean;
+  host: string | null;
+  port: number | null;
+  default_database: string | null;
+  username: string | null;
+  tls_mode: string | null;
+  has_saved_secret: boolean;
+  connection_timeout_seconds: number;
+  automatic_reconnect: boolean;
+}
+
+export interface SettingsView {
+  theme: string;
+  ui_scale_percent: number;
+  editor_word_wrap: boolean;
+  formatter_uppercase_keywords: boolean;
+  formatter_indent_spaces: number;
+  connection_timeout_seconds: number;
+  result_tranche_rows: number;
+  table_page_rows: number;
+  history_enabled: boolean;
+  history_retention_days: number;
+  session_restoration_enabled: boolean;
+  automatic_reconnect_default: boolean;
+  operational_log_enabled: boolean;
+  operational_log_max_bytes: number;
+  operational_log_retention_days: number;
+}
+
+export interface PanelSizesView {
+  explorer_percent: number;
+  results_percent: number;
+}
+
+export interface WorkspaceTabView {
+  id: string;
+  title: string;
+  profile_id: string | null;
+  profile_label: string | null;
+  context_label: string | null;
+  sql: string;
+  dirty: boolean;
+  position: number;
+  source_file_grant_id: string | null;
+  reconnectable: boolean;
+}
+
+export interface WorkspaceView {
+  tabs: WorkspaceTabView[];
+  active_tab_id: string | null;
+  panel_sizes: PanelSizesView;
+}
+
+export interface WorkspaceSaveResponse {
+  saved: boolean;
+  message: string;
+}
+
+export interface NewOfflineTabRequest {
+  profile_id: string | null;
+}
+
+export interface TabIdRequest {
+  tab_id: string;
+}
+
+export interface FilePickerResponse {
+  cancelled: boolean;
+  file_grant_id: string | null;
+  tab_id: string | null;
+  display_name: string | null;
+  content: string | null;
+}
+
+export interface DiagnosticEventView {
+  timestamp_ms: number;
+  area: string;
+  code: string;
+  error_category: string | null;
+}
+
+export interface DiagnosticsPreviewView {
+  application_version: string;
+  contract_version: number;
+  operating_system: string;
+  runtime_architecture: string;
+  events: DiagnosticEventView[];
+}
+
+export interface FileActionResponse {
+  completed: boolean;
+  cancelled: boolean;
+  message: string;
+}
+
+export interface ConfirmedActionRequest {
+  confirmed: boolean;
+}
+
 export interface QueryNotCommands {
   application_status: { request: null; response: ApplicationStatusResponse };
+  bootstrap_workspace: { request: null; response: BootstrapWorkspaceResponse };
+  create_profile: { request: ProfileInput; response: ProfileView };
+  update_profile: { request: UpdateProfileRequest; response: ProfileView };
+  duplicate_profile: { request: ProfileIdRequest; response: ProfileView };
+  delete_profile: {
+    request: DeleteProfileRequest;
+    response: DeleteProfileResponse;
+  };
+  save_profile_secret: {
+    request: SaveProfileSecretRequest;
+    response: SecretActionResponse;
+  };
+  remove_profile_secret: {
+    request: ProfileIdRequest;
+    response: SecretActionResponse;
+  };
+  save_settings: { request: SettingsView; response: SettingsView };
+  reset_settings: { request: ConfirmedActionRequest; response: SettingsView };
+  save_workspace: { request: WorkspaceView; response: WorkspaceSaveResponse };
+  create_offline_tab: {
+    request: NewOfflineTabRequest;
+    response: WorkspaceTabView;
+  };
+  close_offline_tab: { request: TabIdRequest; response: WorkspaceSaveResponse };
+  pick_sql_file: { request: null; response: FilePickerResponse };
+  pick_sqlite_file: { request: null; response: FilePickerResponse };
+  diagnostics_preview: { request: null; response: DiagnosticsPreviewView };
+  export_diagnostics: {
+    request: DiagnosticsPreviewView;
+    response: FileActionResponse;
+  };
+  clear_operational_log: {
+    request: ConfirmedActionRequest;
+    response: FileActionResponse;
+  };
 }

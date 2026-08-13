@@ -1,5 +1,116 @@
 {
   "schema_version": 1,
   "source_prd_commit": "ea9cfd482408dff10b2d5af409ba7992b47a8403",
-  "records": {}
+  "records": {
+    "CON-1": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-PROFILE-DELETION", "P1-AUTO-FILE-PROVENANCE"],
+      "manual_procedure_ids": ["PENDING-P2-P3-CONNECTION-JOURNEY"]
+    },
+    "CON-5": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-SECRET-EXCLUSION", "P1-AUTO-VAULT-REFUSAL"],
+      "manual_procedure_ids": ["PENDING-P5-OS-VAULT-MATRIX"]
+    },
+    "CON-6": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-SECRET-EXCLUSION", "P1-AUTO-REDACTED-LOG"],
+      "manual_procedure_ids": ["PENDING-P5-SECRET-LIFETIME-REVIEW"]
+    },
+    "CON-8": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-OWNERSHIP", "P1-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P3-MULTI-CONNECTION-JOURNEY"]
+    },
+    "CON-9": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-NO-TELEMETRY", "P1-AUTO-FIRST-RUN-A11Y"],
+      "manual_procedure_ids": ["PENDING-P5-MANUAL-NO-DISCOVERY-REVIEW"]
+    },
+    "CON-10": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-REDACTED-LOG", "P1-AUTO-SECRET-EXCLUSION"],
+      "manual_procedure_ids": ["PENDING-P5-DIAGNOSTICS-REVIEW"]
+    },
+    "CON-11": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-VAULT-REFUSAL", "P1-AUTO-SECRET-EXCLUSION"],
+      "manual_procedure_ids": ["PENDING-P5-OS-VAULT-FAILURE-MATRIX"]
+    },
+    "CON-12": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-STATE-MACHINES", "P1-AUTO-SETTINGS-RESET"],
+      "manual_procedure_ids": ["PENDING-P2-P3-CONNECTION-LIFECYCLE"]
+    },
+    "CON-15": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-PROFILE-DELETION", "P1-AUTO-OWNERSHIP"],
+      "manual_procedure_ids": ["PENDING-P5-PROFILE-DELETION-MATRIX"]
+    },
+    "WKS-1": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-OWNERSHIP"],
+      "manual_procedure_ids": ["PENDING-P2-P3-BOUND-TAB-JOURNEY"]
+    },
+    "WKS-2": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-FIRST-RUN-A11Y", "P1-AUTO-OFFLINE-RESTORE"],
+      "manual_procedure_ids": ["PENDING-P3-CONNECTED-CONTEXT-VISIBILITY"]
+    },
+    "WKS-4": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-RELOAD-CLEANUP"],
+      "manual_procedure_ids": ["PENDING-P5-CRASH-RESTORE-MATRIX"]
+    },
+    "WKS-6": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE"],
+      "manual_procedure_ids": ["PENDING-P2-P3-DISCONNECT-RECONNECT"]
+    },
+    "WKS-9": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-STATE-MACHINES"],
+      "manual_procedure_ids": ["PENDING-P5-CRASH-RECOVERY-REVIEW"]
+    },
+    "WKS-11": {
+      "status": "in_progress",
+      "automated_test_ids": ["P1-AUTO-RELOAD-CLEANUP", "P1-AUTO-FIRST-RUN-A11Y"],
+      "manual_procedure_ids": ["PENDING-P4-FILE-ROUTING", "PENDING-P5-WINDOW-CLOSE-MATRIX"]
+    },
+    "WKS-13": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-FIRST-RUN-A11Y", "P1-AUTO-NO-TELEMETRY"],
+      "manual_procedure_ids": ["PENDING-P5-EMPTY-STATE-MATRIX"]
+    },
+    "SET-1": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-SETTINGS-RESET", "P1-AUTO-SETTINGS-A11Y"],
+      "manual_procedure_ids": ["PENDING-P5-SETTINGS-MATRIX"]
+    },
+    "SET-2": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-THEME-CONTRAST", "P1-AUTO-SETTINGS-A11Y"],
+      "manual_procedure_ids": ["PENDING-P5-THEME-ACCESSIBILITY-MATRIX"]
+    },
+    "SET-3": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-REDACTED-LOG", "P1-AUTO-FILE-PROVENANCE"],
+      "manual_procedure_ids": ["PENDING-P5-DIAGNOSTICS-EXPORT-MATRIX"]
+    },
+    "SET-4": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-NO-TELEMETRY"],
+      "manual_procedure_ids": ["PENDING-P5-ARTIFACT-NETWORK-REVIEW"]
+    },
+    "SET-5": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-REDACTED-LOG", "P1-AUTO-SECRET-EXCLUSION"],
+      "manual_procedure_ids": ["PENDING-P5-LOGGING-MATRIX"]
+    },
+    "SET-6": {
+      "status": "implemented",
+      "automated_test_ids": ["P1-AUTO-SETTINGS-RESET", "P1-AUTO-SETTINGS-A11Y"],
+      "manual_procedure_ids": ["PENDING-P5-SETTINGS-RESET-MATRIX"]
+    }
+  }
 }

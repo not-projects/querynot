@@ -1,7 +1,7 @@
 # ADR 0003: Commands, events, identifiers, and state machines
 
 Date: 2026-08-13
-Status: Accepted for Phase 0
+Status: Accepted; Phase 1 foundation implemented locally
 
 ## Public contract
 
@@ -24,6 +24,10 @@ The Phase 1 implementation must cover:
 - local-store healthy/degraded/migration-failed state; and
 - export planned/writing/completed/failed/cancelled state.
 
+Phase 1 implements all eight tables in `querynot-core::state`. Each table returns typed state and explicit effects, and unit tests cover permitted and rejected transitions. Connection, execution, result, mutation, and export tables are foundations only until their later vertical slices own real resources.
+
 ## Event integrity
 
 Every future long-running event includes contract version, owner identifier, job/execution identifier, sequence, bounded payload size, and exactly one terminal state. The native registry rejects cross-owner access; the frontend projection rejects duplicate, late, unknown, oversized, or out-of-order events. Reload and close trigger native ownership cleanup even when no listener remains.
+
+Phase 1 implements the owner graph in `querynot-core::ownership`. Profiles, offline tabs, native sessions, and executions form a window/profile/tab/session chain; terminal jobs reject late access. The Tauri bootstrap cleans the prior frontend generation and re-registers only restored native-issued identifiers, while destroyed windows clear session secrets and file grants. Later phases must attach real job/session cleanup effects to the existing cleanup plan.

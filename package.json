@@ -19,6 +19,7 @@
     "test:feasibility:native": "node scripts/run-native-feasibility.mjs",
     "fixtures:fetch:native": "node scripts/fetch-native-feasibility.mjs",
     "verify:phase0": "node scripts/verify-phase0.mjs",
+    "verify:phase1": "node scripts/verify-phase1.mjs",
     "format": "prettier --write \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "format:check": "prettier --check \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "tauri": "tauri"

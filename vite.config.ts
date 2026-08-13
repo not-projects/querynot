@@ -4,6 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   clearScreen: false,
   plugins: [svelte()],
+  resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
   server: {
     host: '127.0.0.1',
     port: 1420,

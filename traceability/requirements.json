@@ -26,10 +26,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-1"
+        "P1-AUTO-PROFILE-DELETION",
+        "P1-AUTO-FILE-PROVENANCE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-1"
+        "PENDING-P2-P3-CONNECTION-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -39,7 +40,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -130,10 +131,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-5"
+        "P1-AUTO-SECRET-EXCLUSION",
+        "P1-AUTO-VAULT-REFUSAL"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-5"
+        "PENDING-P5-OS-VAULT-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -143,7 +145,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -156,10 +158,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-6"
+        "P1-AUTO-SECRET-EXCLUSION",
+        "P1-AUTO-REDACTED-LOG"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-6"
+        "PENDING-P5-SECRET-LIFETIME-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -169,7 +172,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -208,10 +211,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-8"
+        "P1-AUTO-OWNERSHIP",
+        "P1-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-8"
+        "PENDING-P3-MULTI-CONNECTION-JOURNEY"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -221,7 +225,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -234,10 +238,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-9"
+        "P1-AUTO-NO-TELEMETRY",
+        "P1-AUTO-FIRST-RUN-A11Y"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-9"
+        "PENDING-P5-MANUAL-NO-DISCOVERY-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -247,7 +252,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -260,10 +265,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-10"
+        "P1-AUTO-REDACTED-LOG",
+        "P1-AUTO-SECRET-EXCLUSION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-10"
+        "PENDING-P5-DIAGNOSTICS-REVIEW"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -273,7 +279,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -286,10 +292,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-11"
+        "P1-AUTO-VAULT-REFUSAL",
+        "P1-AUTO-SECRET-EXCLUSION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-11"
+        "PENDING-P5-OS-VAULT-FAILURE-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -299,7 +306,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -312,10 +319,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-12"
+        "P1-AUTO-STATE-MACHINES",
+        "P1-AUTO-SETTINGS-RESET"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-12"
+        "PENDING-P2-P3-CONNECTION-LIFECYCLE"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -325,7 +333,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -390,10 +398,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-CON-15"
+        "P1-AUTO-PROFILE-DELETION",
+        "P1-AUTO-OWNERSHIP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-CON-15"
+        "PENDING-P5-PROFILE-DELETION-MATRIX"
       ],
       "supported_matrix_entries": [
         "sqlite",
@@ -403,7 +412,7 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -442,10 +451,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-1"
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P1-AUTO-OWNERSHIP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-1"
+        "PENDING-P2-P3-BOUND-TAB-JOURNEY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -453,7 +463,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -466,10 +476,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-2"
+        "P1-AUTO-FIRST-RUN-A11Y",
+        "P1-AUTO-OFFLINE-RESTORE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-2"
+        "PENDING-P3-CONNECTED-CONTEXT-VISIBILITY"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -477,7 +488,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -514,10 +525,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-4"
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P1-AUTO-RELOAD-CLEANUP"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-4"
+        "PENDING-P5-CRASH-RESTORE-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -525,7 +537,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -562,10 +574,10 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-6"
+        "P1-AUTO-OFFLINE-RESTORE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-6"
+        "PENDING-P2-P3-DISCONNECT-RECONNECT"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -573,7 +585,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -634,10 +646,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-9"
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P1-AUTO-STATE-MACHINES"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-9"
+        "PENDING-P5-CRASH-RECOVERY-REVIEW"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -645,7 +658,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -682,10 +695,12 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-11"
+        "P1-AUTO-RELOAD-CLEANUP",
+        "P1-AUTO-FIRST-RUN-A11Y"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-11"
+        "PENDING-P4-FILE-ROUTING",
+        "PENDING-P5-WINDOW-CLOSE-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -693,7 +708,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "evidence_links": []
     },
     {
@@ -730,10 +745,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-WKS-13"
+        "P1-AUTO-FIRST-RUN-A11Y",
+        "P1-AUTO-NO-TELEMETRY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-WKS-13"
+        "PENDING-P5-EMPTY-STATE-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -741,7 +757,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -2456,10 +2472,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SET-1"
+        "P1-AUTO-SETTINGS-RESET",
+        "P1-AUTO-SETTINGS-A11Y"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SET-1"
+        "PENDING-P5-SETTINGS-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2467,7 +2484,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -2480,10 +2497,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SET-2"
+        "P1-AUTO-THEME-CONTRAST",
+        "P1-AUTO-SETTINGS-A11Y"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SET-2"
+        "PENDING-P5-THEME-ACCESSIBILITY-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2491,7 +2509,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -2504,10 +2522,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SET-3"
+        "P1-AUTO-REDACTED-LOG",
+        "P1-AUTO-FILE-PROVENANCE"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SET-3"
+        "PENDING-P5-DIAGNOSTICS-EXPORT-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2515,7 +2534,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -2528,10 +2547,10 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SET-4"
+        "P1-AUTO-NO-TELEMETRY"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SET-4"
+        "PENDING-P5-ARTIFACT-NETWORK-REVIEW"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2539,7 +2558,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -2552,10 +2571,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SET-5"
+        "P1-AUTO-REDACTED-LOG",
+        "P1-AUTO-SECRET-EXCLUSION"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SET-5"
+        "PENDING-P5-LOGGING-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2563,7 +2583,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {
@@ -2576,10 +2596,11 @@
         "PHASE-1"
       ],
       "automated_test_ids": [
-        "PLANNED-AUTO-SET-6"
+        "P1-AUTO-SETTINGS-RESET",
+        "P1-AUTO-SETTINGS-A11Y"
       ],
       "manual_procedure_ids": [
-        "PLANNED-MAN-SET-6"
+        "PENDING-P5-SETTINGS-RESET-MATRIX"
       ],
       "supported_matrix_entries": [
         "windows-x86_64",
@@ -2587,7 +2608,7 @@
         "macos-x86_64",
         "linux-x86_64"
       ],
-      "status": "planned",
+      "status": "implemented",
       "evidence_links": []
     },
     {

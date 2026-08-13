@@ -34,7 +34,7 @@ Then inspect the actual repository state and current branch before proposing cha
 
 ## Current State
 
-The repository contains the Phase 0 Rust/Tauri/Svelte/TypeScript scaffold, generated command-contract checks, a 121-row release traceability matrix, CI, and fail-closed disposable SQLite/MySQL/MariaDB feasibility harnesses. It is not yet a usable SQL client, and no compatibility row is a release support claim.
+The repository contains the Phase 0 scaffold and a Phase 1 secure local foundation: generated native contracts, non-secret profiles, keyring/session-secret abstractions, an application-owned SQLite store, settings, redacted diagnostics/logging, native file grants, eight explicit state machines, ownership checks, and an offline draft-restoring Svelte workbench. It intentionally has no database connect or SQL-execution command yet. Cross-platform Phase 1 vault/accessibility evidence and every later release phase remain incomplete; no compatibility row is a release support claim.
 
 ## Verified Commands
 
@@ -50,6 +50,7 @@ The repository contains the Phase 0 Rust/Tauri/Svelte/TypeScript scaffold, gener
 - `cargo test --workspace` — Rust unit and SQLite feasibility tests.
 - `cargo deny check advisories licenses bans sources` — Rust advisory, license, wildcard, and source policy using `cargo-deny 0.20.2`.
 - `npm run tauri -- build` — production desktop binary build; Phase 0 has bundling disabled.
+- `npm run verify:phase1` — clean-tree, commit-addressed Phase 1 local validation and evidence generation; real OS-vault and manual target-platform procedures remain separate gates.
 - `npm run test:feasibility` — exact disposable network-database feasibility run; requires Docker and retains a redacted report.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — checksum-pinned Linux fallback that installs nothing, uses random loopback ports and verified TLS, and retains the same redacted report.
 

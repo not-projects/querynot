@@ -9,7 +9,7 @@ QueryNot is a planned local-first desktop SQL client focused on a fast, calm, an
 
 ## Project Status
 
-QueryNot is in pre-alpha development. The repository contains the Phase 0 Rust/Tauri/Svelte/TypeScript scaffold, release traceability, and disposable adapter-feasibility harness. It does not yet contain a usable database workflow or a release-tested support matrix.
+QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold and the locally validated Phase 1 secure foundation: profile metadata, OS-vault/session-only credential boundaries, application-owned SQLite storage, settings and redacted diagnostics, native file grants, explicit state machines, and offline draft restoration. It intentionally has no connection or SQL-execution command yet, so it is not a usable database workflow and has no release-tested support claim.
 
 The planned application stack is:
 
@@ -59,13 +59,15 @@ cargo test --workspace
 npm run tauri -- build
 ```
 
+`npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for the pending Windows/macOS/Linux OS-vault and manual accessibility procedures.
+
 `npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
 
 Linux hosts without Docker can run `npm run fixtures:fetch:native` once, then `npm run test:feasibility:native`. The fallback verifies pinned archive checksums, installs nothing, uses identity-verified TLS 1.2 on random loopback ports, and deletes the disposable servers and secrets after the run.
 
 Rust dependency policy uses `cargo-deny 0.20.2`; CI installs that exact locked tool version before running `cargo deny check advisories licenses bans sources`.
 
-These commands validate the current foundation; they do not imply that the Phase 1–6 product behavior or release compatibility matrix is complete.
+These commands validate the current local foundation; they do not imply that the Phase 1 cross-platform exit evidence, Phase 2–6 behavior, or release compatibility matrix is complete.
 
 ## License
 

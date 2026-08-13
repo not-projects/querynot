@@ -3,8 +3,190 @@ use serde::{Deserialize, Serialize};
 
 pub const CONTRACT_VERSION: u16 = 1;
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ApplicationStatusResponse {
     pub contract_version: u16,
     pub phase: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct BootstrapWorkspaceResponse {
+    pub contract_version: u16,
+    pub phase: String,
+    pub store_state: String,
+    pub store_message: Option<String>,
+    pub profiles: Vec<ProfileView>,
+    pub settings: SettingsView,
+    pub workspace: WorkspaceView,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProfileInput {
+    pub name: String,
+    pub kind: String,
+    pub file_grant_id: Option<String>,
+    pub read_only: bool,
+    pub host: Option<String>,
+    pub port: Option<u16>,
+    pub default_database: Option<String>,
+    pub username: Option<String>,
+    pub tls_mode: Option<String>,
+    pub connection_timeout_seconds: u16,
+    pub automatic_reconnect: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct UpdateProfileRequest {
+    pub profile_id: String,
+    pub profile: ProfileInput,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProfileIdRequest {
+    pub profile_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct DeleteProfileRequest {
+    pub profile_id: String,
+    pub delete_history: bool,
+    pub delete_drafts: bool,
+    pub confirmed: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct DeleteProfileResponse {
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SaveProfileSecretRequest {
+    pub profile_id: String,
+    pub secret: String,
+    pub session_only: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SecretActionResponse {
+    pub saved: bool,
+    pub session_only: bool,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProfileView {
+    pub id: String,
+    pub name: String,
+    pub kind: String,
+    pub file_name: Option<String>,
+    pub read_only: bool,
+    pub host: Option<String>,
+    pub port: Option<u16>,
+    pub default_database: Option<String>,
+    pub username: Option<String>,
+    pub tls_mode: Option<String>,
+    pub has_saved_secret: bool,
+    pub connection_timeout_seconds: u16,
+    pub automatic_reconnect: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SettingsView {
+    pub theme: String,
+    pub ui_scale_percent: u16,
+    pub editor_word_wrap: bool,
+    pub formatter_uppercase_keywords: bool,
+    pub formatter_indent_spaces: u8,
+    pub connection_timeout_seconds: u16,
+    pub result_tranche_rows: u32,
+    pub table_page_rows: u32,
+    pub history_enabled: bool,
+    pub history_retention_days: u16,
+    pub session_restoration_enabled: bool,
+    pub automatic_reconnect_default: bool,
+    pub operational_log_enabled: bool,
+    pub operational_log_max_bytes: u64,
+    pub operational_log_retention_days: u16,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PanelSizesView {
+    pub explorer_percent: f64,
+    pub results_percent: f64,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct WorkspaceTabView {
+    pub id: String,
+    pub title: String,
+    pub profile_id: Option<String>,
+    pub profile_label: Option<String>,
+    pub context_label: Option<String>,
+    pub sql: String,
+    pub dirty: bool,
+    pub position: u16,
+    pub source_file_grant_id: Option<String>,
+    pub reconnectable: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct WorkspaceView {
+    pub tabs: Vec<WorkspaceTabView>,
+    pub active_tab_id: Option<String>,
+    pub panel_sizes: PanelSizesView,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct WorkspaceSaveResponse {
+    pub saved: bool,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct NewOfflineTabRequest {
+    pub profile_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TabIdRequest {
+    pub tab_id: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct FilePickerResponse {
+    pub cancelled: bool,
+    pub file_grant_id: Option<String>,
+    pub tab_id: Option<String>,
+    pub display_name: Option<String>,
+    pub content: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct DiagnosticEventView {
+    pub timestamp_ms: i64,
+    pub area: String,
+    pub code: String,
+    pub error_category: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct DiagnosticsPreviewView {
+    pub application_version: String,
+    pub contract_version: u16,
+    pub operating_system: String,
+    pub runtime_architecture: String,
+    pub events: Vec<DiagnosticEventView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct FileActionResponse {
+    pub completed: bool,
+    pub cancelled: bool,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ConfirmedActionRequest {
+    pub confirmed: bool,
 }
