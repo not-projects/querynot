@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "tested_source": "967f7f605e3981110915786178b0b76dea3f688b",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "node": "v22.22.1",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)"
+  },
+  "fixture": "querynot-disposable-fixture-v1",
+  "command": "npm run test:conformance:phase4",
+  "archive_checksums": [
+    {
+      "file": "mysql-5.7.44-linux-glibc2.12-x86_64.tar.gz",
+      "algorithm": "sha256",
+      "digest": "798ff0a14cdc1ab259f8a3b6a7f683403e9bbaa85957d82e5370f82b27ba6805",
+      "vendor_digest": {
+        "algorithm": "md5",
+        "value": "d7c8436bbf456e9a4398011a0c52bc40"
+      }
+    },
+    {
+      "file": "mysql-8.0.46-linux-glibc2.17-x86_64-minimal.tar.xz",
+      "algorithm": "sha256",
+      "digest": "e2777d490fcaadc5a4be06db89b6935c78909bd9c3382af859ab284af0c950b0",
+      "vendor_digest": {
+        "algorithm": "md5",
+        "value": "d8ec6c48d02e88759eef61c51a6da07d"
+      }
+    },
+    {
+      "file": "mysql-8.4.10-linux-glibc2.28-x86_64-minimal.tar.xz",
+      "algorithm": "sha256",
+      "digest": "88ac9cc85bed076c4c8c6e816c3369a6febfbb5db13e6e174f1d8971161e0b77",
+      "vendor_digest": {
+        "algorithm": "md5",
+        "value": "a4ab34055b5294845b472e511b23b54f"
+      }
+    },
+    {
+      "file": "mariadb-10.11.18-linux-systemd-x86_64.tar.gz",
+      "algorithm": "sha256",
+      "digest": "6766e45500266d8fba2253fcf99da5aad0338cba4bf1f13a0ee03da5407b3d71",
+      "vendor_digest": {
+        "algorithm": "sha256",
+        "value": "6766e45500266d8fba2253fcf99da5aad0338cba4bf1f13a0ee03da5407b3d71"
+      }
+    },
+    {
+      "file": "mariadb-11.4.12-linux-systemd-x86_64.tar.gz",
+      "algorithm": "sha256",
+      "digest": "afb81282f977c599ecbb0390588b0005b304b4e87d64615a2649ecd2bd1dc16f",
+      "vendor_digest": {
+        "algorithm": "sha256",
+        "value": "afb81282f977c599ecbb0390588b0005b304b4e87d64615a2649ecd2bd1dc16f"
+      }
+    }
+  ],
+  "sqlite_test": "cargo test -p querynot-core --test sqlite_feasibility",
+  "network_results": [
+    {
+      "id": "mysql-5.7.44",
+      "exact_version": "5.7.44",
+      "detected_product": "mysql",
+      "authentication_plugin": "mysql_native_password",
+      "marker_verified": true,
+      "streaming_rows": 1024,
+      "typed_values": true,
+      "cancellation_cleanup": true,
+      "transaction_rollback": true,
+      "tls_version": "TLSv1.2",
+      "tls_identity_verified": true,
+      "adapter": {
+        "exact_identity": true,
+        "supported_capability_profile": true,
+        "metadata_tables_views_routines": true,
+        "streaming_rows": 1024,
+        "typed_values": true,
+        "zero_row_column_metadata": true,
+        "duplicate_column_names": true,
+        "multiple_result_sets": 2,
+        "transaction_reconciliation": true,
+        "implicit_ddl_commit_reconciled": true,
+        "cancellation_confirmed": true,
+        "session_usable_after_cancel": true,
+        "system_trust_rejected_private_ca": true,
+        "client_certificate_required_and_verified": true,
+        "table_editing": {
+          "deterministic_keyset_paging": true,
+          "bound_structured_filters": true,
+          "typed_validation": true,
+          "insert_update_delete": true,
+          "generated_value_refresh": true,
+          "optimistic_conflict_atomic_rollback": true
+        }
+      }
+    },
+    {
+      "id": "mysql-8.0.46",
+      "exact_version": "8.0.46",
+      "detected_product": "mysql",
+      "authentication_plugin": "caching_sha2_password",
+      "marker_verified": true,
+      "streaming_rows": 1024,
+      "typed_values": true,
+      "cancellation_cleanup": true,
+      "transaction_rollback": true,
+      "tls_version": "TLSv1.2",
+      "tls_identity_verified": true,
+      "adapter": {
+        "exact_identity": true,
+        "supported_capability_profile": true,
+        "metadata_tables_views_routines": true,
+        "streaming_rows": 1024,
+        "typed_values": true,
+        "zero_row_column_metadata": true,
+        "duplicate_column_names": true,
+        "multiple_result_sets": 2,
+        "transaction_reconciliation": true,
+        "implicit_ddl_commit_reconciled": true,
+        "cancellation_confirmed": true,
+        "session_usable_after_cancel": true,
+        "system_trust_rejected_private_ca": true,
+        "client_certificate_required_and_verified": true,
+        "table_editing": {
+          "deterministic_keyset_paging": true,
+          "bound_structured_filters": true,
+          "typed_validation": true,
+          "insert_update_delete": true,
+          "generated_value_refresh": true,
+          "optimistic_conflict_atomic_rollback": true
+        }
+      }
+    },
+    {
+      "id": "mysql-8.4.10",
+      "exact_version": "8.4.10",
+      "detected_product": "mysql",
+      "authentication_plugin": "caching_sha2_password",
+      "marker_verified": true,
+      "streaming_rows": 1024,
+      "typed_values": true,
+      "cancellation_cleanup": true,
+      "transaction_rollback": true,
+      "tls_version": "TLSv1.2",
+      "tls_identity_verified": true,
+      "adapter": {
+        "exact_identity": true,
+        "supported_capability_profile": true,
+        "metadata_tables_views_routines": true,
+        "streaming_rows": 1024,
+        "typed_values": true,
+        "zero_row_column_metadata": true,
+        "duplicate_column_names": true,
+        "multiple_result_sets": 2,
+        "transaction_reconciliation": true,
+        "implicit_ddl_commit_reconciled": true,
+        "cancellation_confirmed": true,
+        "session_usable_after_cancel": true,
+        "system_trust_rejected_private_ca": true,
+        "client_certificate_required_and_verified": true,
+        "table_editing": {
+          "deterministic_keyset_paging": true,
+          "bound_structured_filters": true,
+          "typed_validation": true,
+          "insert_update_delete": true,
+          "generated_value_refresh": true,
+          "optimistic_conflict_atomic_rollback": true
+        }
+      }
+    },
+    {
+      "id": "mariadb-10.11.18",
+      "exact_version": "10.11.18-MariaDB",
+      "detected_product": "mariadb",
+      "authentication_plugin": "mysql_native_password",
+      "marker_verified": true,
+      "streaming_rows": 1024,
+      "typed_values": true,
+      "cancellation_cleanup": true,
+      "transaction_rollback": true,
+      "tls_version": "TLSv1.2",
+      "tls_identity_verified": true,
+      "adapter": {
+        "exact_identity": true,
+        "supported_capability_profile": true,
+        "metadata_tables_views_routines": true,
+        "streaming_rows": 1024,
+        "typed_values": true,
+        "zero_row_column_metadata": true,
+        "duplicate_column_names": true,
+        "multiple_result_sets": 2,
+        "transaction_reconciliation": true,
+        "implicit_ddl_commit_reconciled": true,
+        "cancellation_confirmed": true,
+        "session_usable_after_cancel": true,
+        "system_trust_rejected_private_ca": true,
+        "client_certificate_required_and_verified": true,
+        "table_editing": {
+          "deterministic_keyset_paging": true,
+          "bound_structured_filters": true,
+          "typed_validation": true,
+          "insert_update_delete": true,
+          "generated_value_refresh": true,
+          "optimistic_conflict_atomic_rollback": true
+        }
+      }
+    },
+    {
+      "id": "mariadb-11.4.12",
+      "exact_version": "11.4.12-MariaDB",
+      "detected_product": "mariadb",
+      "authentication_plugin": "mysql_native_password",
+      "marker_verified": true,
+      "streaming_rows": 1024,
+      "typed_values": true,
+      "cancellation_cleanup": true,
+      "transaction_rollback": true,
+      "tls_version": "TLSv1.2",
+      "tls_identity_verified": true,
+      "adapter": {
+        "exact_identity": true,
+        "supported_capability_profile": true,
+        "metadata_tables_views_routines": true,
+        "streaming_rows": 1024,
+        "typed_values": true,
+        "zero_row_column_metadata": true,
+        "duplicate_column_names": true,
+        "multiple_result_sets": 2,
+        "transaction_reconciliation": true,
+        "implicit_ddl_commit_reconciled": true,
+        "cancellation_confirmed": true,
+        "session_usable_after_cancel": true,
+        "system_trust_rejected_private_ca": true,
+        "client_certificate_required_and_verified": true,
+        "table_editing": {
+          "deterministic_keyset_paging": true,
+          "bound_structured_filters": true,
+          "typed_validation": true,
+          "insert_update_delete": true,
+          "generated_value_refresh": true,
+          "optimistic_conflict_atomic_rollback": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "phase": 4,
+  "source_commit": "967f7f605e3981110915786178b0b76dea3f688b",
+  "status": "pass_local",
+  "started_at": "2026-08-13T22:55:16.310Z",
+  "completed_at": "2026-08-13T22:59:45.756Z",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "node": "v22.22.1",
+    "npm": "10.9.4",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)"
+  },
+  "checks": [
+    {
+      "id": "P4-NPM-CI",
+      "command": "npm ci",
+      "status": "pass",
+      "duration_ms": 4930
+    },
+    {
+      "id": "P4-CONTRACTS",
+      "command": "npm run test:contracts",
+      "status": "pass",
+      "duration_ms": 503
+    },
+    {
+      "id": "P4-TRACEABILITY",
+      "command": "npm run test:traceability",
+      "status": "pass",
+      "duration_ms": 577
+    },
+    {
+      "id": "P4-NPM-POLICY",
+      "command": "npm run test:dependencies",
+      "status": "pass",
+      "duration_ms": 513
+    },
+    {
+      "id": "P4-NPM-AUDIT",
+      "command": "npm audit --audit-level=high --json",
+      "status": "pass",
+      "duration_ms": 3396
+    },
+    {
+      "id": "P4-SVELTE-CHECK",
+      "command": "npm run check",
+      "status": "pass",
+      "duration_ms": 3467
+    },
+    {
+      "id": "P4-FRONTEND-TEST",
+      "command": "npm run test",
+      "status": "pass",
+      "duration_ms": 3026
+    },
+    {
+      "id": "P4-FRONTEND-BUILD",
+      "command": "npm run build",
+      "status": "pass",
+      "duration_ms": 4283
+    },
+    {
+      "id": "P4-FORMAT",
+      "command": "npm run format:check",
+      "status": "pass",
+      "duration_ms": 2089
+    },
+    {
+      "id": "P4-RUSTFMT",
+      "command": "cargo fmt --all -- --check",
+      "status": "pass",
+      "duration_ms": 187
+    },
+    {
+      "id": "P4-CARGO-CHECK",
+      "command": "cargo check --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 2127
+    },
+    {
+      "id": "P4-CARGO-TEST",
+      "command": "cargo test --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 462
+    },
+    {
+      "id": "P4-CLIPPY",
+      "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
+      "status": "pass",
+      "duration_ms": 307
+    },
+    {
+      "id": "P4-CARGO-DENY",
+      "command": "cargo deny --offline check advisories licenses bans sources",
+      "status": "pass",
+      "duration_ms": 847
+    },
+    {
+      "id": "P4-TABLE-CONFORMANCE",
+      "command": "npm run test:conformance:phase4",
+      "status": "pass",
+      "duration_ms": 115729
+    },
+    {
+      "id": "P4-TAURI-BUILD",
+      "command": "npm run tauri -- build --no-bundle",
+      "status": "pass",
+      "duration_ms": 126961
+    }
+  ],
+  "executable_test_ids": {
+    "P4-AUTO-PRODUCTIVITY-CONTRACTS": "src/phase4-contracts.test.ts > Phase 4 productivity and safe-editing boundaries",
+    "P4-AUTO-TABLE-PLANNER": "querynot_core::table::tests > identity, parameterization, optimistic predicates, and state transitions",
+    "P4-AUTO-TABLE-SQLITE": "querynot_core::sqlite::tests::table_mutations_refresh_generated_values_and_roll_back_every_operation_on_conflict",
+    "P4-AUTO-TABLE-MATRIX": "querynot-fixture-harness::check_table_editing across all five exact network fixtures",
+    "P4-AUTO-TABLE-METADATA-COMPATIBILITY": "querynot-fixture-harness::check_table_editing > key and index metadata counters across all five exact network fixtures",
+    "P4-AUTO-HISTORY": "querynot_core::store::tests::history_search_delete_retention_and_clear_are_immediate",
+    "P4-AUTO-WORKSPACE-FILES": "src/phase4-contracts.test.ts > external-change and ephemeral-staging boundaries",
+    "P4-AUTO-CREDENTIAL-BUNDLE": "querynot_core::vault::tests::vault_bundle_round_trips_both_secrets_and_reads_legacy_passwords",
+    "P4-AUTO-CONTEXT-LOSS": "src/phase4-contracts.test.ts > dedicated context and no-replay loss boundaries",
+    "P4-AUTO-EDITOR-COMPLETION": "src/phase2-contracts.test.ts and src/phase4-contracts.test.ts > CodeMirror schema completion, diagnostics, and shortcuts",
+    "P4-AUTO-NO-IMPLICIT-EXECUTION": "src/phase4-contracts.test.ts > offline history/file/schema action boundaries"
+  },
+  "phase_gate": {
+    "functional_requirements_local_automation": "pass",
+    "table_editing_sqlite_and_exact_network_matrix": "pass_local",
+    "history_drafts_and_external_file_safety": "pass_local",
+    "editor_schema_context_and_no_implicit_execution": "pass_local",
+    "dependency_license_and_vulnerability_review": "pass",
+    "acceptance_criteria_01_through_11_and_16_through_19": "pass_local_where_automatable",
+    "target_platform_interaction_and_accessibility": "pending Phase 5 Windows/macOS/Linux procedures"
+  },
+  "release_blockers_remaining": [
+    "Phase 5 native target-platform accessibility, performance, packaging, diagnostics, and manual safety procedures remain incomplete.",
+    "The fixed five-day dogfood period and five-person opt-in beta cannot be inferred from automation and remain unperformed.",
+    "Phase 6 follow-up and final release-evidence closure remain incomplete."
+  ],
+  "table_conformance_report": "evidence/phase-4/table-conformance-report.json",
+  "dependency_review": "evidence/phase-4/dependency-review.json",
+  "failure": null
+}
