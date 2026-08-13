@@ -16,7 +16,7 @@ tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 base64.workspace = true
-querynot-core = { path = "../crates/querynot-core", version = "0.0.0" }
+querynot-core = { path = "../crates/querynot-core", version = "0.1.0" }
 secrecy.workspace = true
 serde.workspace = true
 sqlformat.workspace = true

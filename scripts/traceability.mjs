@@ -173,6 +173,38 @@ function applyOverrides(records, overrideFile) {
   }
 }
 
+function phaseFiveProcedure(id) {
+  const label = id.replace(/^PENDING-P[345]-/, '');
+  if (/PERFORMANCE|FPS|MEMORY/.test(label)) return `P5-MAN-PERF:${label}`;
+  if (
+    /ACCESSIBILITY|A11Y|KEYBOARD|THEME|INTERACTION|UX|FOCUS|GRID|WIDTH|SCALE|SHORTCUT/.test(
+      label
+    )
+  ) {
+    return `P5-MAN-A11Y:${label}`;
+  }
+  if (
+    /VAULT|TLS|SECRET|DIAGNOSTIC|LOGGING|DESTRUCTIVE|TRANSACTION|EXPORT|FILE|FIXTURE|DISCOVERY|NATIVE-BOUNDARY|ARTIFACT-NETWORK|PARSER-FUZZ|PERMISSION|STORAGE-FAILURE|DISK-FULL/.test(
+      label
+    )
+  ) {
+    return `P5-MAN-SAFETY:${label}`;
+  }
+  return `P5-MAN-OS-CORE:${label}`;
+}
+
+function resolvePhaseFiveProcedures(records) {
+  for (const record of records) {
+    record.manual_procedure_ids = [
+      ...new Set(
+        record.manual_procedure_ids.map((id) =>
+          /^PENDING-P[345]-/.test(id) ? phaseFiveProcedure(id) : id
+        )
+      )
+    ];
+  }
+}
+
 function attachGeneratedEvidence(records) {
   for (const record of records) {
     if (record.automated_test_ids.some((id) => id.startsWith('P4-'))) {
@@ -243,6 +275,41 @@ function attachGeneratedEvidence(records) {
     ) {
       record.evidence_links.push('evidence/phase-2/benchmark-report.json');
     }
+    if (record.status === 'verified') {
+      const phaseFiveEvidence = new Set();
+      if (record.automated_test_ids.some((id) => id.startsWith('P5-'))) {
+        phaseFiveEvidence.add('evidence/phase-5/local-validation-report.json');
+      }
+      if (record.automated_test_ids.includes('P5-AUTO-ADAPTER-CONFORMANCE')) {
+        phaseFiveEvidence.add(
+          'evidence/phase-5/adapter-conformance-report.json'
+        );
+      }
+      for (const id of record.manual_procedure_ids) {
+        if (id.startsWith('P5-MAN-OS-CORE'))
+          phaseFiveEvidence.add(
+            'evidence/phase-5/operating-system-results.json'
+          );
+        if (id.startsWith('P5-MAN-A11Y'))
+          phaseFiveEvidence.add('evidence/phase-5/accessibility-results.json');
+        if (id.startsWith('P5-MAN-PERF'))
+          phaseFiveEvidence.add('evidence/phase-5/performance-results.json');
+        if (id.startsWith('P5-MAN-SAFETY'))
+          phaseFiveEvidence.add('evidence/phase-5/manual-safety-review.json');
+        if (id.startsWith('P5-MAN-SECURITY'))
+          phaseFiveEvidence.add('evidence/phase-5/security-review.json');
+        if (id.startsWith('P5-MAN-DOGFOOD'))
+          phaseFiveEvidence.add('evidence/phase-5/dogfood-record.json');
+        if (id.startsWith('P5-MAN-BETA'))
+          phaseFiveEvidence.add('evidence/phase-5/beta-record.json');
+        if (id.startsWith('P5-MAN-EVIDENCE'))
+          phaseFiveEvidence.add('evidence/phase-5/packaging-results.json');
+      }
+      for (const path of phaseFiveEvidence) {
+        if (!record.evidence_links.includes(path))
+          record.evidence_links.push(path);
+      }
+    }
   }
 }
 
@@ -275,6 +342,16 @@ function validate(records) {
     ) {
       throw new Error(`${record.id} has no mapped verification`);
     }
+    if (
+      record.status !== 'planned' &&
+      [...record.automated_test_ids, ...record.manual_procedure_ids].some(
+        (id) => /^(PLANNED|PENDING)-/.test(id)
+      )
+    ) {
+      throw new Error(
+        `${record.id} has a planned or pending verification ID after implementation began`
+      );
+    }
     if (record.status === 'verified' && record.evidence_links.length === 0) {
       throw new Error(`${record.id} is verified without retained evidence`);
     }
@@ -293,6 +370,7 @@ function buildMatrix() {
 
   const records = [...parseRequirements(prd), ...parseAcceptanceCriteria(prd)];
   applyOverrides(records, overrides);
+  resolvePhaseFiveProcedures(records);
   attachGeneratedEvidence(records);
   validate(records);
 

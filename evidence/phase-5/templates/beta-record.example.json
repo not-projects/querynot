@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "source_commit": null,
+  "status": "not_run",
+  "participants": [
+    {
+      "id": "anonymous-participant-id",
+      "opt_in": false,
+      "attempted": false,
+      "completed_core_journey": false,
+      "maintainer_intervention": false,
+      "unresolved_data_safety_issue": false,
+      "unresolved_workspace_loss": false,
+      "evidence_link": null
+    }
+  ]
+}

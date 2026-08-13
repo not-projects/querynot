@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "source_commit": null,
+  "status": "not_run",
+  "owner": null,
+  "fallback_client_used": false,
+  "metrics": {
+    "profile_to_editable_tab_ms": [],
+    "table_to_known_row_copy_ms": []
+  },
+  "failures": [],
+  "days": [
+    {
+      "date": "YYYY-MM-DD",
+      "unrecoverable_workspace_loss": false,
+      "tasks": [
+        { "id": "DOG-1", "status": "not_run", "fallback_used": false, "modes": ["profile_created_or_edited_and_tested"], "evidence_link": null },
+        { "id": "DOG-2", "status": "not_run", "fallback_used": false, "evidence_link": null },
+        { "id": "DOG-3", "status": "not_run", "fallback_used": false, "evidence_link": null },
+        { "id": "DOG-4", "status": "not_run", "fallback_used": false, "modes": ["selection", "cursor_statement", "run_all"], "evidence_link": null },
+        { "id": "DOG-5", "status": "not_run", "fallback_used": false, "evidence_link": null },
+        { "id": "DOG-6", "status": "not_run", "fallback_used": false, "modes": ["copy", "filter_or_sort", "load_more", "export_csv", "export_json"], "evidence_link": null },
+        { "id": "DOG-7", "status": "not_run", "fallback_used": false, "modes": ["successful_apply", "rollback_or_conflict"], "evidence_link": null },
+        { "id": "DOG-8", "status": "not_run", "fallback_used": false, "evidence_link": null },
+        { "id": "DOG-9", "status": "not_run", "fallback_used": false, "evidence_link": null }
+      ]
+    }
+  ]
+}

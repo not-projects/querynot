@@ -34,7 +34,7 @@ Then inspect the actual repository state and current branch before proposing cha
 
 ## Current State
 
-The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, and implemented Phase 4 productivity and safe data editing. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB development matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids. Cross-platform evidence, Phase 5 release validation, and Phase 6 follow-up remain incomplete; no compatibility row is a release support claim.
+The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, implemented Phase 4 productivity and safe data editing, and the Phase 5 release-candidate validation framework. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB development matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids. Unsigned package configuration, checksum/artifact inspection, a fail-closed release-evidence auditor, and exact manual procedures exist; cross-platform execution, human evidence, Phase 5 exit, and Phase 6 remain incomplete. No compatibility row is a release support claim.
 
 ## Verified Commands
 
@@ -49,7 +49,7 @@ The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, P
 - `cargo check --workspace --all-targets` — native compile gate.
 - `cargo test --workspace` — Rust unit and SQLite feasibility tests.
 - `cargo deny check advisories licenses bans sources` — Rust advisory, license, wildcard, and source policy using `cargo-deny 0.20.2`.
-- `npm run tauri -- build` — production desktop binary build; Phase 0 has bundling disabled.
+- `npm run tauri -- build --no-bundle` — production desktop binary build without packaging.
 - `npm run verify:phase1` — clean-tree, commit-addressed Phase 1 local validation and evidence generation; real OS-vault and manual target-platform procedures remain separate gates.
 - `npm run benchmark:phase2` — 30-sample release-build SQLite ordinary-result first-batch benchmark after one discarded setup run.
 - `npm run verify:phase2` — clean-tree, commit-addressed Phase 2 local validation, benchmark, desktop build, and evidence generation; native target-platform performance and manual review remain separate gates.
@@ -57,6 +57,10 @@ The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, P
 - `npm run verify:phase3` — clean-tree, commit-addressed Phase 3 conformance plus complete local regression, dependency, and desktop-build evidence generation; target-platform release procedures remain separate gates.
 - `npm run test:conformance:phase4` — the same exact five-server fixture matrix plus deterministic paging, bound structured filters, typed staged mutations, generated-value refresh, optimistic conflicts, and atomic rollback.
 - `npm run verify:phase4` — clean-tree, commit-addressed Phase 4 conformance plus complete local regression, dependency review, and desktop-build evidence generation; target-platform release procedures remain separate gates.
+- `npm run package:linux` — production x86-64 Debian and AppImage candidate build through the checksum-pinned release-tool cache; requires AppImage mount/tooling access and does not prove installation compatibility.
+- `npm run release:inspect -- --binary <path> --directory <path> --expect <formats> --report <path>` — inspect one platform's nonempty packages, binary material, CSP/capability boundary, version, commit, and updater state.
+- `npm run release:checksums -- --directory <path> --output <path> --manifest <path>` — generate commit/version-addressed SHA-256 text and JSON records for the exact candidate packages.
+- `npm run test:release-evidence` — final fail-closed audit; expected to fail until every Phase 5 native/human record, all 121 verified traceability rows, and the ready release manifest exist.
 - `npm run test:feasibility` — exact disposable network-database feasibility run; requires Docker and retains a redacted report.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — checksum-pinned Linux fallback that installs nothing, uses random loopback ports and verified TLS, and retains the same redacted report.
 

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_commit": null,
+  "status": "not_run",
+  "reviewer": null,
+  "reviewed_at": null,
+  "known_critical": null,
+  "known_high": null,
+  "areas": {
+    "credential_handling": "not_run",
+    "tls": "not_run",
+    "sql_targeting": "not_run",
+    "transactions": "not_run",
+    "row_editing": "not_run",
+    "exports": "not_run",
+    "local_file_access": "not_run",
+    "secret_redaction": "not_run"
+  },
+  "findings": [],
+  "evidence_links": []
+}

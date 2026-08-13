@@ -9,7 +9,7 @@ QueryNot is a planned local-first desktop SQL client focused on a fast, calm, an
 
 ## Project Status
 
-QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, and the locally implemented Phase 4 productivity and safe-data-editing slice. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. This is development behavior, not a release-tested support claim: target-platform evidence, accessibility, packaging, security review, dogfood, beta, and final release gates remain incomplete.
+QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, the locally implemented Phase 4 productivity and safe-data-editing slice, and a Phase 5 release-candidate validation framework. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Unsigned package configuration, checksum and artifact inspection, fail-closed evidence auditing, and executable native/manual procedures now exist. This remains development behavior, not a release-tested support claim: the exact cross-platform packages and journeys, accessibility, native performance, named safety/security review, dogfood, beta, and final release gates remain incomplete.
 
 The planned application stack is:
 
@@ -59,7 +59,9 @@ cargo test --workspace
 npm run benchmark:phase2
 npm run test:conformance:phase3
 npm run test:conformance:phase4
-npm run tauri -- build
+npm run tauri -- build --no-bundle
+npm run package:linux
+npm run test:release-evidence
 ```
 
 `npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for the pending Windows/macOS/Linux OS-vault and manual accessibility procedures.
@@ -69,6 +71,8 @@ npm run tauri -- build
 `npm run test:conformance:phase3` verifies all five checksum-pinned MySQL/MariaDB archive fixtures through QueryNot's common adapter, including authentication, TLS/client identity, metadata, values, results, transactions, and cancellation. `npm run verify:phase3` runs this matrix plus the full local regression and desktop-build gate from a clean commit and retains commit-addressed reports.
 
 `npm run test:conformance:phase4` extends the same exact five-server matrix with deterministic table paging, bound structured filters, typed staged inserts/updates/deletes, generated-value refresh, optimistic conflicts, and atomic rollback. `npm run verify:phase4` runs the full Phase 4 regression, dependency review, conformance, and desktop-build gate from a clean commit and retains commit-addressed validation, table-conformance, and dependency reports.
+
+Phase 5 prepares unsigned NSIS, architecture-specific DMG, AppImage, and Debian packages without updater artifacts. `npm run package:linux` has produced and inspected the two Linux candidate formats locally. Windows and macOS package jobs are configured for manual CI dispatch but are not evidence until they run and their native journeys pass. `npm run test:release-evidence` intentionally fails while any required native, human, traceability, or release-manifest record is absent. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md); do not infer a support claim from a successful build.
 
 `npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
 

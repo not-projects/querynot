@@ -30,7 +30,8 @@
     "Phase 2 has commit-addressed local Linux SQLite journey, fault, hostile-value, result-contract, release-build benchmark, and desktop-build evidence; native target-platform WebView FPS/memory, accessibility, dialogs/clipboard, and manual safety review remain pending.",
     "Phase 3 has commit-addressed local Linux five-server MySQL/MariaDB conformance, complete SQLite regression, dependency gates, and an optimized desktop build; native target-platform trust stores, interaction evidence, accessibility, and packaging remain pending Phase 5 procedures.",
     "Phase 4 has commit-addressed local productivity, persistence, SQL-file, table planner/fault, five-server table conformance, dependency, and optimized desktop-build evidence; native target-platform interaction, accessibility, performance, diagnostics, and manual safety review remain pending Phase 5 procedures.",
-    "Phase 5 dogfood, beta, cross-platform release-candidate evidence, and Phase 6 publication remain incomplete."
+    "Phase 5 has package configuration, local Linux package preflight, checksum/artifact inspection, fail-closed auditing, and executable evidence procedures in progress; these are not retained release evidence until rerun against a clean candidate commit.",
+    "Phase 5 dogfood, beta, cross-platform release-candidate evidence, named manual reviews, and Phase 6 publication remain incomplete."
   ],
   "approved_exceptions": []
 }

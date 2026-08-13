@@ -19,7 +19,8 @@ const temporaryRoot = process.platform === 'linux' ? '/tmp' : tmpdir();
 const argumentsList = process.argv.slice(2);
 const phase3 = argumentsList.includes('--phase3');
 const phase4 = argumentsList.includes('--phase4');
-if (phase3 && phase4) {
+const phase5 = argumentsList.includes('--phase5');
+if ([phase3, phase4, phase5].filter(Boolean).length > 1) {
   throw new Error('choose only one retained conformance phase');
 }
 const cacheIndex = argumentsList.indexOf('--cache');
@@ -27,6 +28,7 @@ const cacheArgument = cacheIndex >= 0 ? argumentsList[cacheIndex + 1] : null;
 const recognizedArguments = new Set([
   '--phase3',
   '--phase4',
+  '--phase5',
   ...(cacheIndex >= 0 ? ['--cache', cacheArgument] : [])
 ]);
 if (
@@ -34,7 +36,7 @@ if (
   argumentsList.some((argument) => !recognizedArguments.has(argument))
 ) {
   throw new Error(
-    'usage: node scripts/run-native-feasibility.mjs [--phase3|--phase4] [--cache /absolute/path]'
+    'usage: node scripts/run-native-feasibility.mjs [--phase3|--phase4|--phase5] [--cache /absolute/path]'
   );
 }
 const cache = resolve(
@@ -724,7 +726,7 @@ CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password U
     tested_source:
       command('git', ['status', '--porcelain'], { capture: true }) === ''
         ? command('git', ['rev-parse', 'HEAD'], { capture: true })
-        : `working tree; exact committed rerun is required before the Phase ${phase4 ? '4' : phase3 ? '3' : '0'} exit gate closes`,
+        : `working tree; exact committed rerun is required before the Phase ${phase5 ? '5' : phase4 ? '4' : phase3 ? '3' : '0'} exit gate closes`,
     environment: {
       os: process.platform,
       architecture: process.arch,
@@ -733,11 +735,13 @@ CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password U
       rustc: command('rustc', ['--version'], { capture: true })
     },
     fixture: 'querynot-disposable-fixture-v1',
-    command: phase4
-      ? 'npm run test:conformance:phase4'
-      : phase3
-        ? 'npm run test:conformance:phase3'
-        : 'npm run test:feasibility:native',
+    command: phase5
+      ? 'npm run test:conformance:phase5'
+      : phase4
+        ? 'npm run test:conformance:phase4'
+        : phase3
+          ? 'npm run test:conformance:phase3'
+          : 'npm run test:feasibility:native',
     archive_checksums: Object.values(archives).map(
       ({ file, algorithm, digest: value, vendor_digest }) => ({
         file,
@@ -752,17 +756,19 @@ CREATE USER 'querynot_client'@'127.0.0.1' IDENTIFIED VIA mysql_native_password U
   const evidenceDirectory = resolve(
     root,
     'evidence',
-    phase4 ? 'phase-4' : phase3 ? 'phase-3' : 'phase-0'
+    phase5 ? 'phase-5' : phase4 ? 'phase-4' : phase3 ? 'phase-3' : 'phase-0'
   );
   mkdirSync(evidenceDirectory, { recursive: true });
   writeFileSync(
     resolve(
       evidenceDirectory,
-      phase4
-        ? 'table-conformance-report.json'
-        : phase3
-          ? 'adapter-conformance-report.json'
-          : 'feasibility-report.json'
+      phase5
+        ? 'adapter-conformance-report.json'
+        : phase4
+          ? 'table-conformance-report.json'
+          : phase3
+            ? 'adapter-conformance-report.json'
+            : 'feasibility-report.json'
     ),
     `${JSON.stringify(evidence, null, 2)}\n`
   );

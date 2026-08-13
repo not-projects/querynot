@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "source_commit": null,
+  "status": "not_run",
+  "reviewer": null,
+  "reviewed_at": null,
+  "checks": [
+    { "id": "credential_persistence", "status": "not_run", "evidence_link": null },
+    { "id": "tls_modes", "status": "not_run", "evidence_link": null },
+    { "id": "diagnostic_redaction", "status": "not_run", "evidence_link": null },
+    { "id": "history_clear", "status": "not_run", "evidence_link": null },
+    { "id": "destructive_confirmations", "status": "not_run", "evidence_link": null },
+    { "id": "transaction_close", "status": "not_run", "evidence_link": null },
+    { "id": "export_overwrite", "status": "not_run", "evidence_link": null },
+    { "id": "unsigned_installation", "status": "not_run", "evidence_link": null },
+    { "id": "fixture_isolation", "status": "not_run", "evidence_link": null }
+  ]
+}

@@ -1,7 +1,7 @@
 # Compatibility and conformance matrix
 
-Status: Phase 4 locally conformant development matrix; not a support claim
-Selection date: 2026-08-13; Phase 4 conformance rerun 2026-08-14
+Status: Phase 5 engineering candidate in progress; not a support claim
+Selection date: 2026-08-13; candidate packaging configuration 2026-08-14
 
 No row becomes supported until Phase 5 retains native packaging, installation, end-to-end, accessibility, and applicable adapter conformance evidence for the exact patch/runtime combination.
 
@@ -15,7 +15,7 @@ No row becomes supported until Phase 5 retains native packaging, installation, e
 | `macos-13-apple` | macOS 13, exact RC patch | Apple silicon | System WebKit, unsigned DMG | Planned |
 | `macos-current-intel` | Latest selected macOS at RC | Intel | System WebKit, unsigned DMG | Planned |
 | `macos-current-apple` | Latest selected macOS at RC | Apple silicon | System WebKit, unsigned DMG | Planned |
-| `ubuntu-22.04-x64` | Ubuntu 22.04 LTS, exact RC patch | x86-64 | WebKitGTK 4.1, AppImage + Debian | Scaffold compile only |
+| `ubuntu-22.04-x64` | Ubuntu 22.04 LTS, exact RC patch | x86-64 | WebKitGTK 4.1, AppImage + Debian | Candidate formats build locally; exact native row pending |
 | `ubuntu-24.04-x64` | Ubuntu 24.04 LTS, exact RC patch | x86-64 | WebKitGTK 4.1, AppImage + Debian | Planned |
 
 ## Database fixtures
@@ -32,3 +32,5 @@ No row becomes supported until Phase 5 retains native packaging, installation, e
 MySQL 8.0 reached the lifecycle date identified by the vendor before this selection date; it is treated like a legacy compatibility line in UI/release notes even though the approved PRD separately calls out the mandatory 5.7 indicator. No safety control is weakened for either line.
 
 The retained Phase 4 reports cover the full Phase 3 contract plus deterministic keyset paging, labelled read-only fallbacks in the local planner, bound hostile structured filters, typed validation, insert/update/delete, generated-value refresh, optimistic conflicts, and atomic rollback. Positive system-trust validation against a publicly trusted target and native target-platform trust-store behavior remain Phase 5 procedures; fixture automation intentionally never contacts a non-fixture database.
+
+The unpublished `0.1.0` engineering candidate configuration has produced nonempty Debian and AppImage packages locally and passed binary/package/checksum inspection. This is build evidence only: it does not identify an exact Ubuntu patch/runtime, prove install/uninstall, or promote either Ubuntu row to supported. The manually dispatched packaging matrix uses GitHub's documented `macos-15-intel` x86-64 and `macos-15` arm64 hosted-runner labels, but hosted builds likewise do not replace the macOS 13/current native journeys.

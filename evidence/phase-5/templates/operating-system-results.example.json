@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source_commit": null,
+  "status": "not_run",
+  "results": [
+    {
+      "id": "replace-with-one-exact-compatibility-matrix-id",
+      "os_version": "exact patch",
+      "runtime_version": "exact WebView runtime",
+      "architecture": "exact architecture",
+      "packages": [
+        {
+          "id": "one applicable artifact ID from packaging-results.json",
+          "name": "reviewed artifact filename",
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "source_commit": null,
+  "status": "not_run",
+  "environment": {
+    "native": false,
+    "os": null,
+    "cpu": null,
+    "memory_gib": 0,
+    "ssd": false,
+    "power_mode": null,
+    "display_scale": null,
+    "webview_runtime": null
+  },
+  "discarded_setup_runs": 1,
+  "measurements": {
+    "cold_launch_p95_ms": { "samples": 0, "value": null, "raw_evidence_link": null },
+    "local_response_p95_ms": { "samples": 0, "value": null, "raw_evidence_link": null },
+    "first_visible_batch_p95_ms": { "samples": 0, "value": null, "raw_evidence_link": null },
+    "editor_typing_fps_p95": { "samples": 0, "value": null, "raw_evidence_link": null },
+    "result_scroll_fps_p95": { "samples": 0, "value": null, "raw_evidence_link": null },
+    "idle_resident_memory_mib": { "samples": 0, "value": null, "raw_evidence_link": null },
+    "cleanup_ratio_after_10s": { "samples": 0, "value": null, "raw_evidence_link": null }
+  },
+  "large_schema_progressive": "not_run",
+  "rendered_rows_bounded": "not_run"
+}

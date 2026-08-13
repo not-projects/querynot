@@ -114,3 +114,85 @@ jobs:
         with:
           name: phase-0-feasibility
           path: evidence/phase-0/feasibility-report.json
+
+  release-candidate-packages:
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            package_script: package:linux
+            binary: target/release/querynot
+            expected_formats: deb,appimage
+            artifact_name: querynot-linux-x64
+          - runner: windows-2022
+            package_script: package:windows
+            binary: target/release/querynot.exe
+            expected_formats: nsis
+            artifact_name: querynot-windows-x64
+          - runner: macos-15-intel
+            package_script: package:macos
+            binary: target/release/querynot
+            expected_formats: dmg
+            artifact_name: querynot-macos-intel
+          - runner: macos-15
+            package_script: package:macos
+            binary: target/release/querynot
+            expected_formats: dmg
+            artifact_name: querynot-macos-apple
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Tauri system dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.1
+          cache: npm
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.94.0
+      - run: npm ci
+      - run: npm run ${{ matrix.package_script }}
+      - name: Prepare retained candidate records
+        run: node -e "require('node:fs').mkdirSync('artifacts/release-candidate',{recursive:true})"
+      - name: Inspect candidate package
+        run: npm run release:inspect -- --binary ${{ matrix.binary }} --directory target/release/bundle --expect ${{ matrix.expected_formats }} --report artifacts/release-candidate/inspection.json
+      - name: Hash candidate package
+        run: npm run release:checksums -- --directory target/release/bundle --output artifacts/release-candidate/SHA256SUMS --manifest artifacts/release-candidate/checksums.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+          path: |
+            target/release/bundle/**/*.AppImage
+            target/release/bundle/**/*.deb
+            target/release/bundle/**/*.dmg
+            target/release/bundle/**/*.exe
+            artifacts/release-candidate/**
+
+  release-candidate-checksums:
+    if: github.event_name == 'workflow_dispatch'
+    needs: release-candidate-packages
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.1
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: querynot-*
+          path: artifacts/all-packages
+      - run: npm ci
+      - run: npm run release:checksums -- --directory artifacts/all-packages --output artifacts/SHA256SUMS --manifest artifacts/checksums.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: querynot-release-candidate-checksums
+          if-no-files-found: error
+          path: |
+            artifacts/SHA256SUMS
+            artifacts/checksums.json

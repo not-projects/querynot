@@ -5,25 +5,40 @@
     "CON-1": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-PROFILE-DELETION", "P1-AUTO-FILE-PROVENANCE", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P1-AUTO-PROFILE-DELETION",
+        "P1-AUTO-FILE-PROVENANCE",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONNECTION-PROFILE-JOURNEY"]
     },
     "CON-5": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-SECRET-EXCLUSION", "P1-AUTO-VAULT-REFUSAL"],
+      "automated_test_ids": [
+        "P1-AUTO-SECRET-EXCLUSION",
+        "P1-AUTO-VAULT-REFUSAL"
+      ],
       "manual_procedure_ids": ["PENDING-P5-OS-VAULT-MATRIX"]
     },
     "CON-6": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-SECRET-EXCLUSION", "P1-AUTO-REDACTED-LOG"],
+      "automated_test_ids": [
+        "P1-AUTO-SECRET-EXCLUSION",
+        "P1-AUTO-REDACTED-LOG"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SECRET-LIFETIME-REVIEW"]
     },
     "CON-8": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-OWNERSHIP", "P1-AUTO-RELOAD-CLEANUP", "P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-CONNECTION-LIFECYCLE"],
+      "automated_test_ids": [
+        "P1-AUTO-OWNERSHIP",
+        "P1-AUTO-RELOAD-CLEANUP",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-CONNECTION-LIFECYCLE"
+      ],
       "manual_procedure_ids": ["PENDING-P5-MULTI-CONNECTION-JOURNEY"]
     },
     "CON-9": {
@@ -35,19 +50,29 @@
     "CON-10": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-REDACTED-LOG", "P1-AUTO-SECRET-EXCLUSION"],
+      "automated_test_ids": [
+        "P1-AUTO-REDACTED-LOG",
+        "P1-AUTO-SECRET-EXCLUSION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-DIAGNOSTICS-REVIEW"]
     },
     "CON-11": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-VAULT-REFUSAL", "P1-AUTO-SECRET-EXCLUSION"],
+      "automated_test_ids": [
+        "P1-AUTO-VAULT-REFUSAL",
+        "P1-AUTO-SECRET-EXCLUSION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-OS-VAULT-FAILURE-MATRIX"]
     },
     "CON-12": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-STATE-MACHINES", "P1-AUTO-SETTINGS-RESET", "P3-AUTO-CONNECTION-LIFECYCLE"],
+      "automated_test_ids": [
+        "P1-AUTO-STATE-MACHINES",
+        "P1-AUTO-SETTINGS-RESET",
+        "P3-AUTO-CONNECTION-LIFECYCLE"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONNECTION-LIFECYCLE-UX"]
     },
     "CON-15": {
@@ -59,19 +84,30 @@
     "WKS-1": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-OWNERSHIP", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P1-AUTO-OWNERSHIP",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P5-BOUND-TAB-JOURNEY"]
     },
     "WKS-2": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-FIRST-RUN-A11Y", "P1-AUTO-OFFLINE-RESTORE", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P1-AUTO-FIRST-RUN-A11Y",
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONNECTED-CONTEXT-VISIBILITY"]
     },
     "WKS-4": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-RELOAD-CLEANUP"],
+      "automated_test_ids": [
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P1-AUTO-RELOAD-CLEANUP"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CRASH-RESTORE-MATRIX"]
     },
     "WKS-6": {
@@ -83,13 +119,21 @@
     "WKS-9": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-OFFLINE-RESTORE", "P1-AUTO-STATE-MACHINES"],
+      "automated_test_ids": [
+        "P1-AUTO-OFFLINE-RESTORE",
+        "P1-AUTO-STATE-MACHINES"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CRASH-RECOVERY-REVIEW"]
     },
     "WKS-11": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-RELOAD-CLEANUP", "P1-AUTO-FIRST-RUN-A11Y", "P4-AUTO-WORKSPACE-FILES", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P1-AUTO-RELOAD-CLEANUP",
+        "P1-AUTO-FIRST-RUN-A11Y",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-WINDOW-CLOSE-MATRIX"]
     },
     "WKS-13": {
@@ -100,12 +144,18 @@
     },
     "CON-2": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-SQLITE-METADATA"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-SQLITE-METADATA"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SQLITE-FILE-DIALOG-MATRIX"]
     },
     "CON-3": {
       "status": "implemented",
-      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-AUTH-MATRIX"],
+      "automated_test_ids": [
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-AUTH-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-NETWORK-PROFILE-PLATFORM-MATRIX"]
     },
     "CON-4": {
@@ -115,12 +165,19 @@
     },
     "CON-7": {
       "status": "implemented",
-      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P5-IDENTITY-UX-REVIEW"]
     },
     "CON-13": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P5-COMPATIBILITY-UX-REVIEW"]
     },
     "CON-14": {
@@ -130,37 +187,62 @@
     },
     "CON-16": {
       "status": "implemented",
-      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P5-LEGACY-INDICATOR-REVIEW"]
     },
     "WKS-7": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-CANCELLATION", "P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-CANCELLATION-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P2-AUTO-CANCELLATION",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-CANCELLATION-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONCURRENT-ADAPTER-JOURNEY"]
     },
     "WKS-8": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P4-AUTO-CONTEXT-LOSS"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P4-AUTO-CONTEXT-LOSS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONTEXT-CHANGE-JOURNEY"]
     },
     "WKS-12": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-RELOAD-CLEANUP", "P3-AUTO-METADATA-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P3-AUTO-METADATA-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-METADATA-SESSION-MATRIX"]
     },
     "SCH-1": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-METADATA-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P3-AUTO-METADATA-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-OBJECT-UX-MATRIX"]
     },
     "SCH-2": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-EDITOR", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P2-AUTO-EDITOR",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-STATE-ACCESSIBILITY"]
     },
     "SCH-3": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-METADATA-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P3-AUTO-METADATA-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-REFRESH-UX"]
     },
     "SCH-4": {
@@ -170,12 +252,20 @@
     },
     "SCH-5": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P3-AUTO-METADATA-MATRIX", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P3-AUTO-METADATA-MATRIX",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-CAPABILITY-UX"]
     },
     "SCH-6": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-ENTRY-ACTION-JOURNEY"]
     },
     "SCH-7": {
@@ -185,12 +275,20 @@
     },
     "SCH-8": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-METADATA-BOUNDARY", "P2-AUTO-VIRTUAL-GRID", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P2-AUTO-METADATA-BOUNDARY",
+        "P2-AUTO-VIRTUAL-GRID",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-HOSTILE-METADATA-REVIEW"]
     },
     "EDT-1": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SELECTION",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P4-COMPLETION-DIAGNOSTIC-PARITY"]
     },
     "EDT-2": {
@@ -200,7 +298,11 @@
     },
     "EDT-3": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-EDITOR", "P4-AUTO-EDITOR-COMPLETION", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P2-AUTO-EDITOR",
+        "P4-AUTO-EDITOR-COMPLETION",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-FORMATTER-INTERACTION-REVIEW"]
     },
     "EDT-4": {
@@ -210,7 +312,11 @@
     },
     "EDT-5": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION", "P4-AUTO-EDITOR-COMPLETION"],
+      "automated_test_ids": [
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SELECTION",
+        "P4-AUTO-EDITOR-COMPLETION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-DIAGNOSTICS-INTERACTION-REVIEW"]
     },
     "EDT-6": {
@@ -220,7 +326,11 @@
     },
     "EDT-7": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-SQLITE-JOURNEY", "P3-AUTO-RESULT-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SELECTION",
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P3-AUTO-RESULT-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-MULTI-STATEMENT-UX"]
     },
     "EDT-8": {
@@ -230,17 +340,28 @@
     },
     "EDT-9": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SELECTION", "P2-AUTO-DESTRUCTIVE-SAFETY", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P2-AUTO-SELECTION",
+        "P2-AUTO-DESTRUCTIVE-SAFETY",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P4-PARSER-FUZZ-CORPUS"]
     },
     "EDT-10": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SQLITE-JOURNEY", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-NO-IMPLICIT-EXECUTION-JOURNEY"]
     },
     "EXE-1": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-RELOAD-CLEANUP"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-RELOAD-CLEANUP"
+      ],
       "manual_procedure_ids": ["PENDING-P5-NATIVE-BOUNDARY-REVIEW"]
     },
     "EXE-2": {
@@ -250,12 +371,19 @@
     },
     "EXE-3": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-CANCELLATION", "P2-AUTO-RELOAD-CLEANUP", "P3-AUTO-CANCELLATION-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-CANCELLATION",
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P3-AUTO-CANCELLATION-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CANCELLATION-UX-MATRIX"]
     },
     "EXE-4": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P3-AUTO-TRANSACTION-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TRANSACTION-CLOSE-UX"]
     },
     "EXE-5": {
@@ -270,47 +398,78 @@
     },
     "EXE-7": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-CANCELLATION", "P3-AUTO-ADAPTER-CONFORMANCE"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-CANCELLATION",
+        "P3-AUTO-ADAPTER-CONFORMANCE"
+      ],
       "manual_procedure_ids": ["PENDING-P5-ERROR-UX-MATRIX"]
     },
     "EXE-8": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-RELOAD-CLEANUP"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P2-AUTO-RELOAD-CLEANUP"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONCURRENT-TAB-REVIEW"]
     },
     "EXE-9": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX", "P3-AUTO-CANCELLATION-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P3-AUTO-TRANSACTION-MATRIX",
+        "P3-AUTO-CANCELLATION-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SESSION-CONTINUITY-MATRIX"]
     },
     "EXE-10": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P3-AUTO-TRANSACTION-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TRANSACTION-STATE-UX"]
     },
     "EXE-11": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-RELOAD-CLEANUP", "P2-AUTO-EVENT-INTEGRITY", "P4-AUTO-CONTEXT-LOSS"],
+      "automated_test_ids": [
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P4-AUTO-CONTEXT-LOSS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONNECTION-LOSS-JOURNEY"]
     },
     "EXE-12": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-CANCELLATION", "P3-AUTO-CONNECTION-LIFECYCLE"],
+      "automated_test_ids": [
+        "P2-AUTO-CANCELLATION",
+        "P3-AUTO-CONNECTION-LIFECYCLE"
+      ],
       "manual_procedure_ids": ["PENDING-P5-PROTOCOL-TIMEOUT-REVIEW"]
     },
     "EXE-13": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-DESTRUCTIVE-SAFETY", "P2-AUTO-APPROVAL-SINGLE-USE"],
+      "automated_test_ids": [
+        "P2-AUTO-DESTRUCTIVE-SAFETY",
+        "P2-AUTO-APPROVAL-SINGLE-USE"
+      ],
       "manual_procedure_ids": ["PENDING-P3-CONFIRMATION-DIALECT-MATRIX"]
     },
     "EXE-14": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P3-AUTO-TRANSACTION-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P3-AUTO-TRANSACTION-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-MANUAL-TRANSACTION-UX"]
     },
     "RES-1": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-EVENT-INTEGRITY", "P3-AUTO-RESULT-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-STREAM-BACKPRESSURE",
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P3-AUTO-RESULT-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-STREAMING-UX-MATRIX"]
     },
     "RES-2": {
@@ -320,12 +479,20 @@
     },
     "RES-3": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EVENT-INTEGRITY", "P3-AUTO-RESULT-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P3-AUTO-RESULT-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-MULTIPLE-RESULT-UX"]
     },
     "RES-4": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EXPORT-JSON", "P3-AUTO-RESULT-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-EXPORT-JSON",
+        "P3-AUTO-RESULT-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TYPE-DISPLAY-COPY-REVIEW"]
     },
     "RES-5": {
@@ -340,7 +507,10 @@
     },
     "RES-7": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-EXPORT-INTERRUPTION"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-EXPORT-INTERRUPTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-EXPORT-DIALOG-MATRIX"]
     },
     "RES-8": {
@@ -355,7 +525,11 @@
     },
     "RES-10": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-EVENT-INTEGRITY", "P2-AUTO-STREAM-BACKPRESSURE", "P3-AUTO-RESULT-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P2-AUTO-STREAM-BACKPRESSURE",
+        "P3-AUTO-RESULT-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-EVENT-INTEGRITY-MATRIX"]
     },
     "RES-11": {
@@ -370,7 +544,11 @@
     },
     "RES-13": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID", "P2-AUTO-EXPORT-CSV", "P2-AUTO-EXPORT-JSON"],
+      "automated_test_ids": [
+        "P2-AUTO-VIRTUAL-GRID",
+        "P2-AUTO-EXPORT-CSV",
+        "P2-AUTO-EXPORT-JSON"
+      ],
       "manual_procedure_ids": ["PENDING-P5-HOSTILE-VALUE-REVIEW"]
     },
     "RES-14": {
@@ -380,12 +558,19 @@
     },
     "WKS-3": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-WORKSPACE-FILES", "P4-AUTO-CONTEXT-LOSS"],
+      "automated_test_ids": [
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-CONTEXT-LOSS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TAB-LIFECYCLE-JOURNEY"]
     },
     "WKS-5": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-WORKSPACE-FILES", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SQL-FILE-DIALOG-MATRIX"]
     },
     "WKS-10": {
@@ -395,7 +580,11 @@
     },
     "DAT-1": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-TABLE-PLANNER", "P4-AUTO-TABLE-SQLITE", "P4-AUTO-TABLE-MATRIX"],
+      "automated_test_ids": [
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-BROWSE-JOURNEY"]
     },
     "DAT-2": {
@@ -405,12 +594,18 @@
     },
     "DAT-3": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-TABLE-PLANNER"],
+      "automated_test_ids": [
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-STAGING-INTERACTION"]
     },
     "DAT-4": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-TABLE-PLANNER"],
+      "automated_test_ids": [
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-PREVIEW-INTERACTION"]
     },
     "DAT-5": {
@@ -425,12 +620,19 @@
     },
     "DAT-7": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-TABLE-PLANNER", "P4-AUTO-TABLE-SQLITE", "P4-AUTO-TABLE-MATRIX"],
+      "automated_test_ids": [
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-CONFLICT-JOURNEY"]
     },
     "DAT-8": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-TABLE-PLANNER"],
+      "automated_test_ids": [
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-DELETE-INTERACTION"]
     },
     "DAT-9": {
@@ -440,133 +642,289 @@
     },
     "DAT-10": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-TABLE-PLANNER", "P4-AUTO-TABLE-MATRIX"],
+      "automated_test_ids": [
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TYPED-EDITOR-JOURNEY"]
     },
     "DAT-11": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-TABLE-PLANNER", "P4-AUTO-TABLE-SQLITE", "P4-AUTO-TABLE-MATRIX"],
+      "automated_test_ids": [
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-INSERT-REFRESH-JOURNEY"]
     },
     "DAT-12": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-WORKSPACE-FILES", "P4-AUTO-CONTEXT-LOSS"],
+      "automated_test_ids": [
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-CONTEXT-LOSS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-STAGED-LIFECYCLE-JOURNEY"]
     },
     "DAT-13": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-PRODUCTIVITY-CONTRACTS", "P4-AUTO-TABLE-PLANNER"],
+      "automated_test_ids": [
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS",
+        "P4-AUTO-TABLE-PLANNER"
+      ],
       "manual_procedure_ids": ["PENDING-P5-PREVIEW-FIDELITY-REVIEW"]
     },
     "HIS-1": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-HISTORY", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-HISTORY-CONTROL-JOURNEY"]
     },
     "HIS-2": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-HISTORY", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-HISTORY-PERSISTENCE-REVIEW"]
     },
     "HIS-3": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-HISTORY", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-HISTORY-REOPEN-JOURNEY"]
     },
     "HIS-4": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-WORKSPACE-FILES", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-DRAFT-PERMISSION-REVIEW"]
     },
     "HIS-5": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-HISTORY", "P4-AUTO-CONTEXT-LOSS", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-CONTEXT-LOSS",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-STORAGE-FAILURE-JOURNEY"]
     },
     "HIS-6": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-HISTORY", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-HISTORY-DELETION-REVIEW"]
     },
     "HIS-7": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-WORKSPACE-FILES", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-DRAFT-CADENCE-FAULT-JOURNEY"]
     },
     "AC-01": {
       "status": "implemented",
-      "automated_test_ids": ["P1-AUTO-PROFILE-DELETION", "P1-AUTO-VAULT-REFUSAL", "P2-AUTO-SQLITE-JOURNEY", "P3-AUTO-ADAPTER-CONFORMANCE", "P4-AUTO-CREDENTIAL-BUNDLE"],
+      "automated_test_ids": [
+        "P1-AUTO-PROFILE-DELETION",
+        "P1-AUTO-VAULT-REFUSAL",
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P4-AUTO-CREDENTIAL-BUNDLE"
+      ],
       "manual_procedure_ids": ["PENDING-P5-PROFILE-VAULT-JOURNEY"]
     },
     "AC-09": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-TABLE-PLANNER", "P4-AUTO-TABLE-SQLITE", "P4-AUTO-TABLE-MATRIX"],
+      "automated_test_ids": [
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-EDIT-ACCEPTANCE"]
     },
     "AC-11": {
       "status": "implemented",
-      "automated_test_ids": ["P1-AUTO-SECRET-EXCLUSION", "P4-AUTO-HISTORY", "P4-AUTO-WORKSPACE-FILES", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P1-AUTO-SECRET-EXCLUSION",
+        "P4-AUTO-HISTORY",
+        "P4-AUTO-WORKSPACE-FILES",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-PERSISTENCE-ACCEPTANCE"]
     },
     "AC-18": {
       "status": "implemented",
-      "automated_test_ids": ["P4-AUTO-TABLE-PLANNER", "P4-AUTO-TABLE-SQLITE", "P4-AUTO-TABLE-MATRIX"],
+      "automated_test_ids": [
+        "P4-AUTO-TABLE-PLANNER",
+        "P4-AUTO-TABLE-SQLITE",
+        "P4-AUTO-TABLE-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-TABLE-CONTRACT-ACCEPTANCE"]
     },
     "AC-05": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-EDITOR", "P2-AUTO-SELECTION", "P4-AUTO-EDITOR-COMPLETION", "P4-AUTO-NO-IMPLICIT-EXECUTION"],
+      "automated_test_ids": [
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-SELECTION",
+        "P4-AUTO-EDITOR-COMPLETION",
+        "P4-AUTO-NO-IMPLICIT-EXECUTION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-EDITOR-ACCEPTANCE"]
     },
     "AC-02": {
       "status": "implemented",
-      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-DIALECT-CONTRACT"],
+      "automated_test_ids": [
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-DIALECT-CONTRACT"
+      ],
       "manual_procedure_ids": ["PENDING-P5-MARIADB-IDENTITY-UX"]
     },
     "AC-03": {
       "status": "implemented",
-      "automated_test_ids": ["P3-AUTO-ADAPTER-CONFORMANCE", "P3-AUTO-TLS-MATRIX", "P3-AUTO-AUTH-MATRIX"],
+      "automated_test_ids": [
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P3-AUTO-TLS-MATRIX",
+        "P3-AUTO-AUTH-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-LEGACY-INDICATOR-REVIEW"]
     },
     "AC-04": {
       "status": "implemented",
-      "automated_test_ids": ["P1-AUTO-OWNERSHIP", "P2-AUTO-SESSION-ISOLATION", "P3-AUTO-ADAPTER-CONFORMANCE", "P4-AUTO-CONTEXT-LOSS"],
+      "automated_test_ids": [
+        "P1-AUTO-OWNERSHIP",
+        "P2-AUTO-SESSION-ISOLATION",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P4-AUTO-CONTEXT-LOSS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONCURRENT-CONNECTION-TAB-JOURNEY"]
     },
     "AC-06": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-JOURNEY", "P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-VIRTUAL-GRID", "P3-AUTO-RESULT-MATRIX", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-JOURNEY",
+        "P2-AUTO-STREAM-BACKPRESSURE",
+        "P2-AUTO-VIRTUAL-GRID",
+        "P3-AUTO-RESULT-MATRIX",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-RESULT-ACCEPTANCE"]
     },
     "AC-07": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-VIRTUAL-GRID", "P2-PERF-FIRST-BATCH", "P2-AUTO-RELOAD-CLEANUP"],
+      "automated_test_ids": [
+        "P2-AUTO-VIRTUAL-GRID",
+        "P2-PERF-FIRST-BATCH",
+        "P2-AUTO-RELOAD-CLEANUP"
+      ],
       "manual_procedure_ids": ["PENDING-P5-NATIVE-PERFORMANCE-MATRIX"]
     },
     "AC-08": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SQLITE-METADATA", "P2-AUTO-SCHEMA-CACHE", "P3-AUTO-METADATA-MATRIX", "P4-AUTO-PRODUCTIVITY-CONTRACTS"],
+      "automated_test_ids": [
+        "P2-AUTO-SQLITE-METADATA",
+        "P2-AUTO-SCHEMA-CACHE",
+        "P3-AUTO-METADATA-MATRIX",
+        "P4-AUTO-PRODUCTIVITY-CONTRACTS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-SCHEMA-ACCEPTANCE"]
     },
     "AC-10": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-DESTRUCTIVE-SAFETY", "P2-AUTO-APPROVAL-SINGLE-USE"],
+      "automated_test_ids": [
+        "P2-AUTO-DESTRUCTIVE-SAFETY",
+        "P2-AUTO-APPROVAL-SINGLE-USE"
+      ],
       "manual_procedure_ids": ["PENDING-P5-DESTRUCTIVE-ACCEPTANCE"]
     },
     "AC-16": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-SESSION-ISOLATION", "P2-AUTO-CANCELLATION", "P2-AUTO-RELOAD-CLEANUP", "P3-AUTO-ADAPTER-CONFORMANCE", "P4-AUTO-CONTEXT-LOSS"],
+      "automated_test_ids": [
+        "P2-AUTO-SESSION-ISOLATION",
+        "P2-AUTO-CANCELLATION",
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P3-AUTO-ADAPTER-CONFORMANCE",
+        "P4-AUTO-CONTEXT-LOSS"
+      ],
       "manual_procedure_ids": ["PENDING-P5-CONNECTION-LOSS-ACCEPTANCE"]
     },
     "AC-17": {
       "status": "implemented",
-      "automated_test_ids": ["P2-AUTO-STREAM-BACKPRESSURE", "P2-AUTO-CURSOR-EXPIRY", "P2-AUTO-EVENT-INTEGRITY", "P2-AUTO-EXPORT-INTERRUPTION", "P3-AUTO-RESULT-MATRIX"],
+      "automated_test_ids": [
+        "P2-AUTO-STREAM-BACKPRESSURE",
+        "P2-AUTO-CURSOR-EXPIRY",
+        "P2-AUTO-EVENT-INTEGRITY",
+        "P2-AUTO-EXPORT-INTERRUPTION",
+        "P3-AUTO-RESULT-MATRIX"
+      ],
       "manual_procedure_ids": ["PENDING-P5-RESULT-CONTRACT-MATRIX"]
     },
     "AC-19": {
       "status": "implemented",
-      "automated_test_ids": ["P1-AUTO-MIGRATION-ROLLBACK", "P1-AUTO-VAULT-REFUSAL", "P2-AUTO-RELOAD-CLEANUP", "P2-AUTO-EXPORT-INTERRUPTION", "P4-AUTO-CONTEXT-LOSS", "P4-AUTO-WORKSPACE-FILES"],
+      "automated_test_ids": [
+        "P1-AUTO-MIGRATION-ROLLBACK",
+        "P1-AUTO-VAULT-REFUSAL",
+        "P2-AUTO-RELOAD-CLEANUP",
+        "P2-AUTO-EXPORT-INTERRUPTION",
+        "P4-AUTO-CONTEXT-LOSS",
+        "P4-AUTO-WORKSPACE-FILES"
+      ],
       "manual_procedure_ids": ["PENDING-P5-DISK-FULL-AND-RELOAD-MATRIX"]
+    },
+    "AC-12": {
+      "status": "in_progress",
+      "automated_test_ids": [
+        "P5-AUTO-RELEASE-CONTRACTS",
+        "P5-AUTO-ARTIFACT-INSPECTION",
+        "P5-AUTO-CHECKSUMS"
+      ],
+      "manual_procedure_ids": ["P5-MAN-OS-CORE"]
+    },
+    "AC-13": {
+      "status": "in_progress",
+      "automated_test_ids": [
+        "P1-AUTO-THEME-CONTRAST",
+        "P1-AUTO-SETTINGS-A11Y",
+        "P2-AUTO-EDITOR",
+        "P2-AUTO-VIRTUAL-GRID",
+        "P5-AUTO-RELEASE-CONTRACTS"
+      ],
+      "manual_procedure_ids": ["P5-MAN-A11Y"]
+    },
+    "AC-14": {
+      "status": "in_progress",
+      "automated_test_ids": [
+        "P1-AUTO-SECRET-EXCLUSION",
+        "P1-AUTO-OWNERSHIP",
+        "P2-AUTO-DESTRUCTIVE-SAFETY",
+        "P2-AUTO-EXPORT-INTERRUPTION",
+        "P3-AUTO-TLS-MATRIX",
+        "P4-AUTO-TABLE-MATRIX",
+        "P5-AUTO-ARTIFACT-INSPECTION"
+      ],
+      "manual_procedure_ids": ["P5-MAN-SAFETY", "P5-MAN-SECURITY"]
+    },
+    "AC-15": {
+      "status": "in_progress",
+      "automated_test_ids": ["P5-AUTO-RELEASE-EVIDENCE"],
+      "manual_procedure_ids": ["P5-MAN-DOGFOOD"]
+    },
+    "AC-20": {
+      "status": "in_progress",
+      "automated_test_ids": [
+        "P5-AUTO-RELEASE-EVIDENCE",
+        "P5-AUTO-ADAPTER-CONFORMANCE"
+      ],
+      "manual_procedure_ids": ["P5-MAN-BETA", "P5-MAN-EVIDENCE"]
     },
     "SET-1": {
       "status": "implemented",
@@ -595,7 +953,10 @@
     "SET-5": {
       "status": "implemented",
       "evidence_links": ["evidence/phase-1/validation-report.json"],
-      "automated_test_ids": ["P1-AUTO-REDACTED-LOG", "P1-AUTO-SECRET-EXCLUSION"],
+      "automated_test_ids": [
+        "P1-AUTO-REDACTED-LOG",
+        "P1-AUTO-SECRET-EXCLUSION"
+      ],
       "manual_procedure_ids": ["PENDING-P5-LOGGING-MATRIX"]
     },
     "SET-6": {
