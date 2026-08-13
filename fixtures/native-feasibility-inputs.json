@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "platform": "linux-x86_64",
+  "inputs": [
+    {
+      "id": "mysql57",
+      "kind": "database_archive",
+      "format": "tar.gz",
+      "file": "mysql-5.7.44-linux-glibc2.12-x86_64.tar.gz",
+      "url": "https://cdn.mysql.com/archives/mysql-5.7/mysql-5.7.44-linux-glibc2.12-x86_64.tar.gz",
+      "sha256": "798ff0a14cdc1ab259f8a3b6a7f683403e9bbaa85957d82e5370f82b27ba6805",
+      "vendor_digest": {
+        "algorithm": "md5",
+        "value": "d7c8436bbf456e9a4398011a0c52bc40"
+      }
+    },
+    {
+      "id": "mysql84",
+      "kind": "database_archive",
+      "format": "tar.xz",
+      "file": "mysql-8.4.10-linux-glibc2.28-x86_64-minimal.tar.xz",
+      "url": "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.10-linux-glibc2.28-x86_64-minimal.tar.xz",
+      "sha256": "88ac9cc85bed076c4c8c6e816c3369a6febfbb5db13e6e174f1d8971161e0b77",
+      "vendor_digest": {
+        "algorithm": "md5",
+        "value": "a4ab34055b5294845b472e511b23b54f"
+      }
+    },
+    {
+      "id": "mariadb114",
+      "kind": "database_archive",
+      "format": "tar.gz",
+      "file": "mariadb-11.4.12-linux-systemd-x86_64.tar.gz",
+      "url": "https://distrohub.kyiv.ua/mariadb/mariadb-11.4.12/bintar-linux-systemd-x86_64/mariadb-11.4.12-linux-systemd-x86_64.tar.gz",
+      "sha256": "afb81282f977c599ecbb0390588b0005b304b4e87d64615a2649ecd2bd1dc16f",
+      "vendor_digest": {
+        "algorithm": "sha256",
+        "value": "afb81282f977c599ecbb0390588b0005b304b4e87d64615a2649ecd2bd1dc16f"
+      }
+    },
+    {
+      "id": "libaio1",
+      "kind": "runtime_package",
+      "format": "deb",
+      "file": "libaio1_0.3.112-13build1_amd64.deb",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/liba/libaio/libaio1_0.3.112-13build1_amd64.deb",
+      "sha256": "2dcfe0b49d7cccfbf1bd6a3f627cf44bea9f51fb32f7e0e552a0df75698e0d27"
+    },
+    {
+      "id": "libncurses5",
+      "kind": "runtime_package",
+      "format": "deb",
+      "file": "libncurses5_6.3-2ubuntu0.2_amd64.deb",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.2_amd64.deb",
+      "sha256": "91d18fcc4165a40d27e8181eb282bcaf89c2a5e6c6dc182b37df33827407361c"
+    },
+    {
+      "id": "libtinfo5",
+      "kind": "runtime_package",
+      "format": "deb",
+      "file": "libtinfo5_6.3-2ubuntu0.2_amd64.deb",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb",
+      "sha256": "b9bb64e716a7d9de05b1b33992763142ca81bcae3a7f8ce7e29fa3c6fd32f1e8"
+    }
+  ]
+}

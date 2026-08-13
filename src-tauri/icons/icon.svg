@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">QueryNot</title>
+  <rect width="512" height="512" rx="88" fill="#173f36" />
+  <path
+    d="M130 138c0-22 18-40 40-40h172c22 0 40 18 40 40v172c0 22-18 40-40 40h-56l62 62-34 34-96-96h-48c-22 0-40-18-40-40V138Zm48 8v156h164V146H178Zm38 42h88v40h-88v-40Zm0 68h64v40h-64v-40Z"
+    fill="#f4ead5"
+  />
+  <circle cx="350" cy="124" r="42" fill="#df7545" />
+</svg>

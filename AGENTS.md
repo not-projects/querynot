@@ -34,9 +34,26 @@ Then inspect the actual repository state and current branch before proposing cha
 
 ## Current State
 
-The repository currently contains project policy, product documentation, and an Apache-2.0 license. The application scaffold has not been created yet.
+The repository contains the Phase 0 Rust/Tauri/Svelte/TypeScript scaffold, generated command-contract checks, a 121-row release traceability matrix, CI, and fail-closed disposable SQLite/MySQL/MariaDB feasibility harnesses. It is not yet a usable SQL client, and no compatibility row is a release support claim.
 
-Do not invent build, test, lint, packaging, or release commands. Once configuration files exist, derive commands from checked-in scripts and tool configuration, run them, and update this guide with verified instructions.
+## Verified Commands
+
+- `npm install` — install the exact frontend/Tauri CLI lockfile.
+- `npm run check` — Svelte and TypeScript diagnostics.
+- `npm run test` — frontend/policy unit tests with a repository-local temporary directory.
+- `npm run build` — production frontend build.
+- `npm run test:contracts` — generated Rust/TypeScript command contract drift check.
+- `npm run test:traceability` — PRD/matrix coverage and evidence invariant check.
+- `npm run test:dependencies` — exact npm source, integrity, version-pin, and license policy check.
+- `cargo fmt --all -- --check` — Rust formatting.
+- `cargo check --workspace --all-targets` — native compile gate.
+- `cargo test --workspace` — Rust unit and SQLite feasibility tests.
+- `cargo deny check advisories licenses bans sources` — Rust advisory, license, wildcard, and source policy using `cargo-deny 0.20.2`.
+- `npm run tauri -- build` — production desktop binary build; Phase 0 has bundling disabled.
+- `npm run test:feasibility` — exact disposable network-database feasibility run; requires Docker and retains a redacted report.
+- `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — checksum-pinned Linux fallback that installs nothing, uses random loopback ports and verified TLS, and retains the same redacted report.
+
+Do not invent additional build, test, packaging, or release commands. Derive changes from checked-in scripts and configuration, verify them, and update this guide.
 
 ## Architectural Guardrails
 

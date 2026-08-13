@@ -1,0 +1,3014 @@
+{
+  "schema_version": 1,
+  "source": "docs/product-requirements.md",
+  "source_commit": "ea9cfd482408dff10b2d5af409ba7992b47a8403",
+  "source_sha256": "21e575e4fbcd7c6163c5cf772d3992a8c28f32c7e0187b25deb3ec3db86ed873",
+  "conventions": {
+    "statuses": [
+      "planned",
+      "in_progress",
+      "implemented",
+      "verified",
+      "blocked",
+      "excepted"
+    ],
+    "evidence_links": "repository-relative paths into evidence/; verified rows require at least one retained artifact",
+    "planned_test_ids": "PLANNED-* entries reserve coverage and must be replaced by executable IDs before verification"
+  },
+  "records": [
+    {
+      "id": "CON-1",
+      "kind": "requirement",
+      "title": "Saved profiles",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-1"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-2",
+      "kind": "requirement",
+      "title": "SQLite",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-2"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-3",
+      "kind": "requirement",
+      "title": "MySQL / MariaDB",
+      "priority": "must",
+      "owning_phase": 3,
+      "implementation_issues": [
+        "PHASE-3"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-3"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-4",
+      "kind": "requirement",
+      "title": "TLS",
+      "priority": "must",
+      "owning_phase": 3,
+      "implementation_issues": [
+        "PHASE-3"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-4"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-5",
+      "kind": "requirement",
+      "title": "Credential storage",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-5"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-6",
+      "kind": "requirement",
+      "title": "Transient secret handling",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-6"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-7",
+      "kind": "requirement",
+      "title": "Automatic engine selection",
+      "priority": "must",
+      "owning_phase": 3,
+      "implementation_issues": [
+        "PHASE-3"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-7"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-8",
+      "kind": "requirement",
+      "title": "Connection isolation",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-8"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-8"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-9",
+      "kind": "requirement",
+      "title": "Manual setup only",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-9"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-9"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-10",
+      "kind": "requirement",
+      "title": "Redacted diagnostics",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-10"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-10"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-11",
+      "kind": "requirement",
+      "title": "Vault failure",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-11"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-11"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-12",
+      "kind": "requirement",
+      "title": "Connection lifecycle",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-12"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-12"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-13",
+      "kind": "requirement",
+      "title": "Compatibility detection",
+      "priority": "must",
+      "owning_phase": 3,
+      "implementation_issues": [
+        "PHASE-3"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-13"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-13"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-14",
+      "kind": "requirement",
+      "title": "Authentication baseline",
+      "priority": "must",
+      "owning_phase": 3,
+      "implementation_issues": [
+        "PHASE-3"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-14"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-14"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-15",
+      "kind": "requirement",
+      "title": "Duplicate and delete semantics",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-15"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-15"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "CON-16",
+      "kind": "requirement",
+      "title": "Legacy MySQL lifecycle",
+      "priority": "must",
+      "owning_phase": 3,
+      "implementation_issues": [
+        "PHASE-3"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-CON-16"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-CON-16"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-1",
+      "kind": "requirement",
+      "title": "Connection-bound tabs",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-1"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-2",
+      "kind": "requirement",
+      "title": "Context visibility",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-2"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-3",
+      "kind": "requirement",
+      "title": "Multiple tabs",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-3"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-4",
+      "kind": "requirement",
+      "title": "Session restoration",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-4"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-5",
+      "kind": "requirement",
+      "title": "SQL files",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-5"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-6",
+      "kind": "requirement",
+      "title": "Disconnect behavior",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-6"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-7",
+      "kind": "requirement",
+      "title": "Session isolation",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-7"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-8",
+      "kind": "requirement",
+      "title": "Context changes",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-8"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-8"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-9",
+      "kind": "requirement",
+      "title": "Recovery boundary",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-9"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-9"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-10",
+      "kind": "requirement",
+      "title": "External file changes",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-10"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-10"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-11",
+      "kind": "requirement",
+      "title": "Single-window baseline",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-11"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-11"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-12",
+      "kind": "requirement",
+      "title": "Metadata session isolation",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-12"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-12"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "WKS-13",
+      "kind": "requirement",
+      "title": "First-run and empty states",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-WKS-13"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-WKS-13"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-1",
+      "kind": "requirement",
+      "title": "Common object model",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-1"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-2",
+      "kind": "requirement",
+      "title": "Progressive loading",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-2"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-3",
+      "kind": "requirement",
+      "title": "Refresh",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-3"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-4",
+      "kind": "requirement",
+      "title": "Search/filter",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-4"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-5",
+      "kind": "requirement",
+      "title": "Object detail",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-5"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-6",
+      "kind": "requirement",
+      "title": "Entry actions",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-6"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-7",
+      "kind": "requirement",
+      "title": "Cache semantics",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-7"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SCH-8",
+      "kind": "requirement",
+      "title": "Untrusted metadata",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SCH-8"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SCH-8"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-1",
+      "kind": "requirement",
+      "title": "Dialect awareness",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-1"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-2",
+      "kind": "requirement",
+      "title": "Editing capabilities",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-2"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-3",
+      "kind": "requirement",
+      "title": "Formatting",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-3"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-4",
+      "kind": "requirement",
+      "title": "Schema-aware completion",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-4"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-5",
+      "kind": "requirement",
+      "title": "Diagnostics",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-5"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-6",
+      "kind": "requirement",
+      "title": "Execution unit",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-6"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-7",
+      "kind": "requirement",
+      "title": "Multiple statements",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-7"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-8",
+      "kind": "requirement",
+      "title": "Keyboard-first operation",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-8"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-8"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-9",
+      "kind": "requirement",
+      "title": "Parser fidelity",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-9"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-9"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EDT-10",
+      "kind": "requirement",
+      "title": "No implicit execution",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EDT-10"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EDT-10"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-1",
+      "kind": "requirement",
+      "title": "Native execution boundary",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-1"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-2",
+      "kind": "requirement",
+      "title": "Visible lifecycle",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-2"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-3",
+      "kind": "requirement",
+      "title": "Cancellation",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-3"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-4",
+      "kind": "requirement",
+      "title": "Transaction context",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-4"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-5",
+      "kind": "requirement",
+      "title": "Destructive statement checks",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-5"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-6",
+      "kind": "requirement",
+      "title": "Confirmation content",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-6"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-7",
+      "kind": "requirement",
+      "title": "Errors",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-7"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-8",
+      "kind": "requirement",
+      "title": "Per-tab serialization",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-8"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-8"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-9",
+      "kind": "requirement",
+      "title": "Session continuity",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-9"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-9"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-10",
+      "kind": "requirement",
+      "title": "Transaction reconciliation",
+      "priority": "must",
+      "owning_phase": 3,
+      "implementation_issues": [
+        "PHASE-3"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-10"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-10"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-11",
+      "kind": "requirement",
+      "title": "Disconnect and loss",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-11"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-11"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-12",
+      "kind": "requirement",
+      "title": "Timeouts",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-12"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-12"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-13",
+      "kind": "requirement",
+      "title": "Confirmation integrity",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-13"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-13"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "EXE-14",
+      "kind": "requirement",
+      "title": "Manual transaction mode",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-EXE-14"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-EXE-14"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-1",
+      "kind": "requirement",
+      "title": "Streaming and limits",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-1"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-2",
+      "kind": "requirement",
+      "title": "Virtualized grid",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-2"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-3",
+      "kind": "requirement",
+      "title": "Result sets",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-3"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-4",
+      "kind": "requirement",
+      "title": "Data fidelity",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-4"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-5",
+      "kind": "requirement",
+      "title": "Grid operations",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-5"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-6",
+      "kind": "requirement",
+      "title": "Large values",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-6"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-7",
+      "kind": "requirement",
+      "title": "Export",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-7"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-8",
+      "kind": "requirement",
+      "title": "Resource cleanup",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-8"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-8"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-9",
+      "kind": "requirement",
+      "title": "Paused cursor lifetime",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-9"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-9"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-10",
+      "kind": "requirement",
+      "title": "Event integrity",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-10"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-10"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-11",
+      "kind": "requirement",
+      "title": "CSV contract",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-11"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-11"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-12",
+      "kind": "requirement",
+      "title": "JSON contract",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-12"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-12"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-13",
+      "kind": "requirement",
+      "title": "Hostile values",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-13"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-13"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "RES-14",
+      "kind": "requirement",
+      "title": "Copy contract",
+      "priority": "must",
+      "owning_phase": 2,
+      "implementation_issues": [
+        "PHASE-2"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-RES-14"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-RES-14"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-1",
+      "kind": "requirement",
+      "title": "Browse data",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-1"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-2",
+      "kind": "requirement",
+      "title": "Edit eligibility",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-2"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-3",
+      "kind": "requirement",
+      "title": "Staging",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-3"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-4",
+      "kind": "requirement",
+      "title": "Preview",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-4"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-5",
+      "kind": "requirement",
+      "title": "Parameterization",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-5"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-6",
+      "kind": "requirement",
+      "title": "Atomic save",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-6"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-7",
+      "kind": "requirement",
+      "title": "Conflict protection",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-7"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-8",
+      "kind": "requirement",
+      "title": "Destructive row actions",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-8"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-8"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-9",
+      "kind": "requirement",
+      "title": "Server-side browse controls",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-9"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-9"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-10",
+      "kind": "requirement",
+      "title": "Editable types",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-10"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-10"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-11",
+      "kind": "requirement",
+      "title": "Insert semantics",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-11"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-11"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-12",
+      "kind": "requirement",
+      "title": "Staged-data lifecycle",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-12"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-12"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "DAT-13",
+      "kind": "requirement",
+      "title": "Preview fidelity",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-DAT-13"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-DAT-13"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "HIS-1",
+      "kind": "requirement",
+      "title": "Local history",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-HIS-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-HIS-1"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "HIS-2",
+      "kind": "requirement",
+      "title": "History content",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-HIS-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-HIS-2"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "HIS-3",
+      "kind": "requirement",
+      "title": "History reuse",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-HIS-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-HIS-3"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "HIS-4",
+      "kind": "requirement",
+      "title": "Session data",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-HIS-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-HIS-4"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "HIS-5",
+      "kind": "requirement",
+      "title": "Storage failure",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-HIS-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-HIS-5"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "HIS-6",
+      "kind": "requirement",
+      "title": "Retention and deletion",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-HIS-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-HIS-6"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "HIS-7",
+      "kind": "requirement",
+      "title": "Draft cadence",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-HIS-7"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-HIS-7"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SET-1",
+      "kind": "requirement",
+      "title": "Settings",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SET-1"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SET-1"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SET-2",
+      "kind": "requirement",
+      "title": "Themes",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SET-2"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SET-2"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SET-3",
+      "kind": "requirement",
+      "title": "Diagnostics export",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SET-3"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SET-3"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SET-4",
+      "kind": "requirement",
+      "title": "No telemetry",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SET-4"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SET-4"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SET-5",
+      "kind": "requirement",
+      "title": "Local operational log",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SET-5"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SET-5"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "SET-6",
+      "kind": "requirement",
+      "title": "Defaults and reset",
+      "priority": "must",
+      "owning_phase": 1,
+      "implementation_issues": [
+        "PHASE-1"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-SET-6"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-SET-6"
+      ],
+      "supported_matrix_entries": [
+        "windows-x86_64",
+        "macos-aarch64",
+        "macos-x86_64",
+        "linux-x86_64"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-01",
+      "kind": "acceptance_criterion",
+      "title": "A new user can create SQLite and MySQL/MariaDB profiles, test/connect them, save a network credential in the OS vault or use it session-only, reconnect after restart when eligible, and delete profile/vault/cache data cleanly.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-01"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-01"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-02",
+      "kind": "acceptance_criterion",
+      "title": "MariaDB is detected automatically from the shared MySQL/MariaDB connection flow and its identity is displayed correctly.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-02"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-02"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-03",
+      "kind": "acceptance_criterion",
+      "title": "SQLite, MySQL 5.7.44, every claimed MySQL 8.x line, and every claimed MariaDB line pass the common adapter conformance suite on the published version matrix; 5.7 connections display the required legacy-version indicator.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-03"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-03"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-04",
+      "kind": "acceptance_criterion",
+      "title": "Multiple connections and connection-bound query tabs operate simultaneously without context leakage.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-04"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-04"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-05",
+      "kind": "acceptance_criterion",
+      "title": "The editor provides the required dialect-aware syntax, formatting, completion, diagnostics, selection/current-statement execution, and shortcuts.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-05"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-05"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-06",
+      "kind": "acceptance_criterion",
+      "title": "Users can run and cancel queries, inspect multiple result sets, stream to the safety cap, load more, copy data, filter/sort loaded rows, and export received rows to CSV and JSON.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-06"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-06"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-07",
+      "kind": "acceptance_criterion",
+      "title": "The application stays responsive with 10,000 ordinary result rows and releases resources after cancellation or tab closure.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-07"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-07"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-08",
+      "kind": "acceptance_criterion",
+      "title": "The schema explorer covers databases/schemas, tables, views, columns, keys, indexes, and routines where supported.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-08"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-08"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-09",
+      "kind": "acceptance_criterion",
+      "title": "Users can browse a keyed table and stage inserts, updates, and deletes; preview them; commit them atomically; and observe a full rollback on injected failure or conflict.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-09"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-09"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-10",
+      "kind": "acceptance_criterion",
+      "title": "Targeted destructive confirmations trigger for `DROP`, `TRUNCATE`, and `DELETE`/`UPDATE` statements with missing, ineffective, or uncertain predicates across each supported dialect; approval invalidates when text or context changes.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-10"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-10"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-11",
+      "kind": "acceptance_criterion",
+      "title": "Query history, drafts, and session state restore locally; retention, pause, clear, and disable controls work; credentials, result rows, and staged edits are absent from persistence.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-11"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-11"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-12",
+      "kind": "acceptance_criterion",
+      "title": "Windows, macOS, and Linux packages install through the documented unsigned flow and run the same core acceptance journey.",
+      "priority": "must",
+      "owning_phase": 5,
+      "implementation_issues": [
+        "PHASE-5"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-12"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-12"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-13",
+      "kind": "acceptance_criterion",
+      "title": "The PostNot-aligned themes and editor-first shell pass accessibility, keyboard, narrow-width, scale, and visual review.",
+      "priority": "must",
+      "owning_phase": 5,
+      "implementation_issues": [
+        "PHASE-5"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-13"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-13"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-14",
+      "kind": "acceptance_criterion",
+      "title": "No known critical or high-severity issue remains in credential handling, TLS, SQL targeting, transactions, row editing, exports, local-file access, or secret redaction.",
+      "priority": "must",
+      "owning_phase": 5,
+      "implementation_issues": [
+        "PHASE-5"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-14"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-14"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-15",
+      "kind": "acceptance_criterion",
+      "title": "The project owner completes the fixed dogfood checklist in section 14.3 over five consecutive working days without needing MySQL Workbench or DBeaver for an in-scope initial-release task.",
+      "priority": "must",
+      "owning_phase": 5,
+      "implementation_issues": [
+        "PHASE-5"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-15"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-15"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-16",
+      "kind": "acceptance_criterion",
+      "title": "Dedicated tab sessions keep transaction, context, temporary object, active-job, and cancellation state isolated under concurrent use and connection loss.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-16"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-16"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-17",
+      "kind": "acceptance_criterion",
+      "title": "Result tranche, byte, hard-retention, paused-cursor expiry, event sequencing, export-format, and cleanup contracts pass normal and fault-injection tests.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-17"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-17"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-18",
+      "kind": "acceptance_criterion",
+      "title": "Table browsing proves deterministic keyed paging, labelled unstable read-only paging, bound structured filters, typed edit validation, optimistic conflict detection, generated-value refresh, and atomic rollback.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-18"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-18"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-19",
+      "kind": "acceptance_criterion",
+      "title": "Local-store migration failure, vault failure, disk-full, frontend-reload, and interrupted-export scenarios preserve the last valid user data and enter the specified recoverable state.",
+      "priority": "must",
+      "owning_phase": 4,
+      "implementation_issues": [
+        "PHASE-4"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-19"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-19"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    },
+    {
+      "id": "AC-20",
+      "kind": "acceptance_criterion",
+      "title": "The release evidence bundle and traceability matrix contain no uncovered must requirement, unreviewed dependency exception, or unsupported compatibility claim.",
+      "priority": "must",
+      "owning_phase": 5,
+      "implementation_issues": [
+        "PHASE-5"
+      ],
+      "automated_test_ids": [
+        "PLANNED-AUTO-AC-20"
+      ],
+      "manual_procedure_ids": [
+        "PLANNED-MAN-AC-20"
+      ],
+      "supported_matrix_entries": [
+        "all_applicable_release_matrix_entries"
+      ],
+      "status": "planned",
+      "evidence_links": []
+    }
+  ]
+}

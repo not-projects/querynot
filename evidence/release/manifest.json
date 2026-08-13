@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "release_status": "incomplete",
+  "source_commit": null,
+  "reviewed_artifacts": [],
+  "checksums": [],
+  "dependency_license_vulnerability_report": null,
+  "adapter_conformance_reports": [],
+  "operating_system_results": [],
+  "accessibility_results": [],
+  "packaging_results": [],
+  "benchmark_results": [],
+  "manual_safety_review": null,
+  "dogfood_record": null,
+  "beta_record": null,
+  "known_limitations": [],
+  "approved_exceptions": []
+}

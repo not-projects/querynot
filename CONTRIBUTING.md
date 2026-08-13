@@ -52,7 +52,7 @@ Maintainers may close contributions that appear manually authored, omit authorsh
 
 ## Validation
 
-QueryNot does not yet have an application scaffold or canonical build commands. Once commands are checked into project configuration, [AGENTS.md](AGENTS.md) becomes the operational source of truth.
+Run the canonical commands in [AGENTS.md](AGENTS.md). Database feasibility/conformance commands require explicit generated disposable fixtures and fail closed when fixture proof is absent. Report every skipped platform, database, packaging, accessibility, benchmark, or manual check.
 
 Do not copy commands from another project and present them as validated QueryNot commands.
 

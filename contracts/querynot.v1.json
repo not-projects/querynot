@@ -1,0 +1,16 @@
+{
+  "contract_version": 1,
+  "commands": {
+    "application_status": {
+      "request": null,
+      "response": "ApplicationStatusResponse"
+    }
+  },
+  "events": {},
+  "types": {
+    "ApplicationStatusResponse": {
+      "contract_version": "u16",
+      "phase": "string"
+    }
+  }
+}

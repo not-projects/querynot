@@ -9,3 +9,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Established the initial project identity, community policies, security guidance, contributor workflow, agent instructions, and GitHub contribution templates.
+- Defined the planned initial-release product requirements, including legacy MySQL 5.7+ compatibility, architecture boundaries, safety constraints, acceptance criteria, and roadmap.
+- Added the Phase 0 Rust/Tauri/Svelte/TypeScript scaffold, generated command contracts, release traceability and evidence foundations, cross-platform CI, security boundaries, and disposable database feasibility harnesses.

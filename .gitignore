@@ -11,9 +11,11 @@ dist/
 coverage/
 playwright-report/
 test-results/
+.tmp/
 
 # Rust / Tauri
 target/
+src-tauri/gen/
 src-tauri/target/
 
 # Environment and credentials
@@ -33,6 +35,7 @@ tnsnames.ora
 *.sqlite
 *.sqlite3
 *.db
+*.db-journal
 *.db-shm
 *.db-wal
 *.sqlite-shm
@@ -44,6 +47,7 @@ tnsnames.ora
 .querynot/
 local-data/
 dev-data/
+.fixtures/runtime/
 
 # Logs and temporary files
 *.log
@@ -62,3 +66,6 @@ Thumbs.db
 
 # Codex local state
 .codex/
+
+# Local release artifacts and tool state
+artifacts/

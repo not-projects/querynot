@@ -9,7 +9,7 @@ QueryNot is a planned local-first desktop SQL client focused on a fast, calm, an
 
 ## Project Status
 
-QueryNot is in pre-alpha development. The repository is establishing its product and engineering foundations; it does not yet contain a usable application or a committed database-support matrix.
+QueryNot is in pre-alpha development. The repository contains the Phase 0 Rust/Tauri/Svelte/TypeScript scaffold, release traceability, and disposable adapter-feasibility harness. It does not yet contain a usable database workflow or a release-tested support matrix.
 
 The planned application stack is:
 
@@ -27,7 +27,7 @@ QueryNot is being designed around a small set of principles:
 - **Safe around data:** Credentials, destructive statements, exports, logs, and diagnostics require deliberate handling.
 - **Desktop-native:** Database work belongs in a focused application, not another crowded browser tab.
 
-Specific database engines and the first release's feature scope will be selected during product design rather than promised prematurely here.
+The planned initial engine scope is SQLite, MySQL 5.7+ (with 5.7.44, 8.0, and 8.4 LTS as the initial tested lines), and MariaDB 10.11/11.4 LTS. MySQL 5.7 is a legacy compatibility target, not a recommendation to keep using an end-of-life server. This is a product plan, not a shipped support claim; the exact tested platform, database patch, authentication, and TLS matrix must be published before a release candidate. See the [product requirements](docs/product-requirements.md) for the implementation and release gates.
 
 ## AI-Generated Project
 
@@ -37,6 +37,7 @@ Humans remain responsible for product direction, prompts, review, testing, legal
 
 ## Project Documents
 
+- [Product requirements](docs/product-requirements.md)
 - [Contributing guide](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security policy](SECURITY.md)
@@ -46,7 +47,25 @@ Humans remain responsible for product direction, prompts, review, testing, legal
 
 ## Development
 
-Build, test, and development commands will be documented after the Rust, Tauri, and Svelte scaffold is checked in. Until then, do not infer commands from another project.
+The verified foundation commands are:
+
+```sh
+npm install
+npm run check
+npm run test
+npm run test:dependencies
+npm run build
+cargo test --workspace
+npm run tauri -- build
+```
+
+`npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
+
+Linux hosts without Docker can run `npm run fixtures:fetch:native` once, then `npm run test:feasibility:native`. The fallback verifies pinned archive checksums, installs nothing, uses identity-verified TLS 1.2 on random loopback ports, and deletes the disposable servers and secrets after the run.
+
+Rust dependency policy uses `cargo-deny 0.20.2`; CI installs that exact locked tool version before running `cargo deny check advisories licenses bans sources`.
+
+These commands validate the current foundation; they do not imply that the Phase 1–6 product behavior or release compatibility matrix is complete.
 
 ## License
 
