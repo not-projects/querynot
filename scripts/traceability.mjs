@@ -173,6 +173,26 @@ function applyOverrides(records, overrideFile) {
   }
 }
 
+function attachGeneratedEvidence(records) {
+  for (const record of records) {
+    if (record.automated_test_ids.some((id) => id.startsWith('P2-'))) {
+      if (
+        !record.evidence_links.includes(
+          'evidence/phase-2/validation-report.json'
+        )
+      ) {
+        record.evidence_links.push('evidence/phase-2/validation-report.json');
+      }
+    }
+    if (
+      record.automated_test_ids.includes('P2-PERF-FIRST-BATCH') &&
+      !record.evidence_links.includes('evidence/phase-2/benchmark-report.json')
+    ) {
+      record.evidence_links.push('evidence/phase-2/benchmark-report.json');
+    }
+  }
+}
+
 function validate(records) {
   const requirementCount = records.filter(
     (record) => record.kind === 'requirement'
@@ -220,6 +240,7 @@ function buildMatrix() {
 
   const records = [...parseRequirements(prd), ...parseAcceptanceCriteria(prd)];
   applyOverrides(records, overrides);
+  attachGeneratedEvidence(records);
   validate(records);
 
   return {

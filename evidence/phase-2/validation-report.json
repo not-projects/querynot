@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "phase": 2,
+  "source_commit": "1145044585b9aa1e309cc50c74383236f1b2bdf7",
+  "status": "pass_local",
+  "started_at": "2026-08-13T17:21:44.747Z",
+  "completed_at": "2026-08-13T17:23:43.804Z",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "node": "v22.22.1",
+    "npm": "",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)",
+    "sqlite": "3.51.3"
+  },
+  "checks": [
+    {
+      "id": "P2-NPM-CI",
+      "command": "npm ci",
+      "status": "pass",
+      "duration_ms": 4478
+    },
+    {
+      "id": "P2-CONTRACTS",
+      "command": "npm run test:contracts",
+      "status": "pass",
+      "duration_ms": 483
+    },
+    {
+      "id": "P2-TRACEABILITY",
+      "command": "npm run test:traceability",
+      "status": "pass",
+      "duration_ms": 531
+    },
+    {
+      "id": "P2-NPM-POLICY",
+      "command": "npm run test:dependencies",
+      "status": "pass",
+      "duration_ms": 594
+    },
+    {
+      "id": "P2-SVELTE-CHECK",
+      "command": "npm run check",
+      "status": "pass",
+      "duration_ms": 2983
+    },
+    {
+      "id": "P2-FRONTEND-TEST",
+      "command": "npm run test",
+      "status": "pass",
+      "duration_ms": 2971
+    },
+    {
+      "id": "P2-FRONTEND-BUILD",
+      "command": "npm run build",
+      "status": "pass",
+      "duration_ms": 3726
+    },
+    {
+      "id": "P2-FORMAT",
+      "command": "npm run format:check",
+      "status": "pass",
+      "duration_ms": 1731
+    },
+    {
+      "id": "P2-RUSTFMT",
+      "command": "cargo fmt --all -- --check",
+      "status": "pass",
+      "duration_ms": 115
+    },
+    {
+      "id": "P2-CARGO-CHECK",
+      "command": "cargo check --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 271
+    },
+    {
+      "id": "P2-CARGO-TEST",
+      "command": "cargo test --locked --workspace --all-targets",
+      "status": "pass",
+      "duration_ms": 383
+    },
+    {
+      "id": "P2-CLIPPY",
+      "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
+      "status": "pass",
+      "duration_ms": 321
+    },
+    {
+      "id": "P2-CARGO-DENY",
+      "command": "cargo deny --offline check advisories licenses bans sources",
+      "status": "pass",
+      "duration_ms": 845
+    },
+    {
+      "id": "P2-REFERENCE-BENCHMARK",
+      "command": "npm run benchmark:phase2",
+      "status": "pass",
+      "duration_ms": 3863
+    },
+    {
+      "id": "P2-TAURI-BUILD",
+      "command": "npm run tauri -- build --no-bundle",
+      "status": "pass",
+      "duration_ms": 95761
+    }
+  ],
+  "executable_test_ids": {
+    "P2-AUTO-SQLITE-JOURNEY": "querynot_core::tests::sqlite_vertical_slice::sqlite_read_only_query_stream_retain_and_export_journey",
+    "P2-AUTO-SQLITE-METADATA": "querynot_core::sqlite::tests::connection_metadata_and_read_only_mode_are_real",
+    "P2-AUTO-METADATA-BOUNDARY": "querynot_core::sqlite::tests::hostile_metadata_is_rejected_at_the_display_boundary",
+    "P2-AUTO-SCHEMA-CACHE": "querynot_core::store::tests::schema_cache_is_typed_bounded_and_removed_with_its_profile",
+    "P2-AUTO-SESSION-ISOLATION": "querynot_core::sqlite::tests::dedicated_sessions_isolate_transactions_and_temporary_objects",
+    "P2-AUTO-STREAM-BACKPRESSURE": "querynot_core::sqlite::tests::streaming_waits_for_acknowledgement_and_honors_load_more",
+    "P2-AUTO-CANCELLATION": "querynot_core::sqlite::tests::cancellation_interrupts_query_and_leaves_session_usable",
+    "P2-AUTO-CURSOR-EXPIRY": "querynot_core::sqlite::tests::paused_cursor_control_expires_without_reexecution",
+    "P2-AUTO-EVENT-INTEGRITY": "querynot_lib::phase2::tests::bridge_retention_rejects_duplicate_events_and_cleanup_releases_rows",
+    "P2-AUTO-RELOAD-CLEANUP": "src/phase2-contracts.test.ts > retains hard native bounds, acknowledgement backpressure, ownership checks, and atomic exports",
+    "P2-AUTO-DESTRUCTIVE-SAFETY": "querynot_core::sql::tests::destructive_classifier_flags_all_uncertain_or_unbounded_statements",
+    "P2-AUTO-APPROVAL-SINGLE-USE": "querynot_lib::phase2::tests::destructive_approval_is_exact_single_use_and_cleanup_invalidates_it",
+    "P2-AUTO-SELECTION": "querynot_core::sql::tests::multi_statement_selection_preserves_order_and_document_ranges",
+    "P2-AUTO-VIRTUAL-GRID": "src/phase2-contracts.test.ts > virtualizes 10,000 hostile rows and renders database content as text",
+    "P2-AUTO-EXPORT-CSV": "querynot_core::export::tests::csv_is_rfc4180_shaped_and_preserves_hostile_values",
+    "P2-AUTO-EXPORT-JSON": "querynot_core::export::tests::json_keeps_duplicate_columns_and_lossless_type_tags",
+    "P2-AUTO-EXPORT-INTERRUPTION": "querynot_core::export::tests::interrupted_export_preserves_existing_destination_and_cleans_temp",
+    "P2-AUTO-EDITOR": "src/phase2-contracts.test.ts > uses CodeMirror with SQLite parsing, completion, diagnostics, and fixed execution shortcuts",
+    "P2-PERF-FIRST-BATCH": "scripts/benchmark-phase2.mjs > 30 measured release-build ordinary-result samples after one discarded setup run"
+  },
+  "phase_gate": {
+    "sqlite_complete_query_journey": "pass_local",
+    "read_only_execution": "pass",
+    "fault_injection_and_last_valid_data": "pass",
+    "native_ownership_reload_and_cursor_cleanup": "pass",
+    "hostile_values_and_metadata": "pass",
+    "destructive_confirmation_integrity": "pass",
+    "reference_first_batch_performance": "pass",
+    "virtualized_10000_row_dom_bound": "pass_jsdom",
+    "local_linux_desktop_build": "pass",
+    "critical_high_safety_findings": "none_found_by_phase_2_automated_review",
+    "target_webview_fps_and_memory": "pending Phase 5 native Windows/macOS/Linux benchmark procedure",
+    "manual_security_review": "pending Phase 5 named-reviewer sign-off"
+  },
+  "release_blockers_remaining": [
+    "MySQL-family adapter parity and the published conformance matrix remain Phase 3 work.",
+    "Phase 4 productivity, history, SQL-file save, and safe table-data editing requirements remain incomplete.",
+    "Native target-platform frame-rate, memory, accessibility, packaging, and manual safety evidence remain Phase 5 work.",
+    "The fixed five-day dogfood period and five-person opt-in beta cannot be inferred from automation and remain unperformed."
+  ],
+  "failure": null
+}

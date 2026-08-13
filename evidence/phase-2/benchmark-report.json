@@ -1,0 +1,102 @@
+{
+  "first_driver_stream_to_first_1000_row_batch_ms": {
+    "p95": 5.0662329999999995,
+    "samples": [
+      4.207021,
+      4.4473139999999995,
+      4.354229999999999,
+      4.327758,
+      4.181635,
+      4.525900999999999,
+      5.158424,
+      4.9562219999999995,
+      5.0662329999999995,
+      4.072793,
+      4.374412,
+      4.3042050000000005,
+      4.088804,
+      4.193507,
+      4.822776,
+      3.9463399999999997,
+      3.898724,
+      4.445599,
+      4.33319,
+      4.353165,
+      4.284984000000001,
+      4.210596,
+      3.880376,
+      4.0096430000000005,
+      4.400118,
+      4.156752,
+      4.111474,
+      4.956862999999999,
+      4.298627,
+      4.632358
+    ],
+    "status": "pass",
+    "target_max_ms": 100
+  },
+  "fixture": {
+    "approximate_payload_bytes_per_row": 1000,
+    "columns": 12,
+    "rows": 10000,
+    "synthetic": true
+  },
+  "full_10000_row_stream_and_discard_ms": {
+    "p95": 125.01009299999998,
+    "samples": [
+      116.16125600000001,
+      115.913354,
+      115.930989,
+      110.230553,
+      115.277506,
+      119.392136,
+      125.52906899999999,
+      125.01009299999998,
+      119.911253,
+      116.65368,
+      112.71114299999999,
+      122.041888,
+      116.323722,
+      119.687155,
+      121.40258399999999,
+      112.807679,
+      114.08346499999999,
+      115.773772,
+      114.59312000000001,
+      115.994216,
+      115.748368,
+      116.25443,
+      116.55742400000001,
+      115.122186,
+      117.18001799999999,
+      116.951585,
+      113.74736100000001,
+      117.920551,
+      117.878553,
+      115.265406
+    ]
+  },
+  "limitations": [
+    "The first-batch sample includes local SQLite driver time and is therefore conservative relative to the PRD processing-overhead definition.",
+    "Native WebView frame-rate, resident-memory return, cold-launch, and target-platform interaction measurements remain Phase 5 procedures."
+  ],
+  "sample_policy": {
+    "discarded_setup_runs": 1,
+    "measured_independent_runs": 30
+  },
+  "schema_version": 1,
+  "sqlite_exact_version": "3.51.3",
+  "source_commit": "1145044585b9aa1e309cc50c74383236f1b2bdf7",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
+    "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
+    "node": "v22.22.1",
+    "npm": "",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)",
+    "sqlite": "3.51.3"
+  }
+}

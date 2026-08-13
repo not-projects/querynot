@@ -12,3 +12,5 @@ Every evidence record identifies:
 - links to any report, screenshot, recording, benchmark, checksum, or review artifact retained in this directory.
 
 Automated output is evidence only when produced by the checked-in command on the stated commit. Human-only gates such as multi-day dogfood, opt-in beta, installation review, and manual safety review remain incomplete until a named reviewer records a redacted result; they are never inferred from unit tests.
+
+Phase 2 retains both a full local validation report and the raw 30-sample release-build SQLite benchmark report. The benchmark is development evidence for the first-batch processing target only; its recorded limitations keep native WebView FPS, memory return, cold launch, and target-platform interaction performance open for Phase 5.
