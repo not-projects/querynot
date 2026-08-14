@@ -1,0 +1,4 @@
+# Tauri reads and may serialize Cargo manifests while preparing a build. Keep
+# TOML byte-stable across Windows and Unix checkouts so a semantic no-op does
+# not appear as an uncommitted release input after packaging.
+*.toml text eol=lf

@@ -71,6 +71,7 @@ describe('Phase 5 Windows-first release boundary', () => {
 
   it('invokes the pinned Tauri CLI without a platform shell shim', () => {
     const packaging = read('scripts/package-platform.mjs');
+    const attributes = read('.gitattributes');
 
     expect(packaging).toContain("'@tauri-apps',\n  'cli',\n  'tauri.js'");
     expect(packaging).toContain('process.execPath');
@@ -78,6 +79,7 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(packaging).toContain(
       'candidate packaging refuses uncommitted application or packaging inputs'
     );
+    expect(attributes).toContain('*.toml text eol=lf');
   });
 
   it('makes disposable TLS mounts traversable and redacts failed-service diagnostics', () => {
