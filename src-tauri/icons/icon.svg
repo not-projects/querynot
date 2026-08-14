@@ -1,9 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title description">
   <title id="title">QueryNot</title>
-  <rect width="512" height="512" rx="88" fill="#173f36" />
+  <desc id="description">An open cream letter Q with an orange query dot on the dark green Not Projects tile.</desc>
+  <rect x="6" y="6" width="500" height="500" rx="88" fill="#162623" stroke="#2D4B45" stroke-width="12" />
   <path
-    d="M130 138c0-22 18-40 40-40h172c22 0 40 18 40 40v172c0 22-18 40-40 40h-56l62 62-34 34-96-96h-48c-22 0-40-18-40-40V138Zm48 8v156h164V146H178Zm38 42h88v40h-88v-40Zm0 68h64v40h-64v-40Z"
-    fill="#f4ead5"
+    d="M356 151A146 146 0 1 0 356 361"
+    stroke="#F6F0E3"
+    stroke-width="78"
+    stroke-linecap="round"
   />
-  <circle cx="350" cy="124" r="42" fill="#df7545" />
+  <path d="M297 304L397 404" stroke="#F6F0E3" stroke-width="54" stroke-linecap="square" />
+  <circle cx="252" cy="238" r="50" fill="#E47E4B" />
 </svg>

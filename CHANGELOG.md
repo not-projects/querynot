@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Schema starter queries now open a dedicated query-tab session on an already connected profile, while local history is compact and positioned below the schema explorer.
 - Removed unused direct frontend test/editor declarations and unused direct Rust core declarations; required Tauri, OS-vault, database-driver, and CodeMirror transitive dependencies remain lockfile-pinned.
+- Reworked the application icon into the PostNot family: an open cream `Q` with an orange query dot inside the shared dark-green bordered tile.
 
 ## [0.1.0] - 2026-08-14
 
