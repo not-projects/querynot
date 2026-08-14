@@ -75,6 +75,9 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(packaging).toContain("'@tauri-apps',\n  'cli',\n  'tauri.js'");
     expect(packaging).toContain('process.execPath');
     expect(packaging).not.toContain('npm.cmd');
+    expect(packaging).toContain(
+      'candidate packaging refuses uncommitted application or packaging inputs'
+    );
   });
 
   it('makes disposable TLS mounts traversable and redacts failed-service diagnostics', () => {
@@ -184,9 +187,11 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(inspection).toContain(
       "['status', '--porcelain', '--untracked-files=all']"
     );
+    expect(inspection).toContain('allowGeneratedOutputs: true');
     expect(inspection).toContain(
       'release artifact inspection refuses uncommitted application or packaging inputs'
     );
+    expect(checksums).toContain('allowGeneratedOutputs: true');
     expect(checksums).toContain(
       'release checksums refuse uncommitted application or packaging inputs'
     );

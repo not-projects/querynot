@@ -10,7 +10,10 @@ import { basename, relative, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
-import { porcelainPaths } from './release-source-state.mjs';
+import {
+  disallowedReleaseChanges,
+  releaseChangeSummary
+} from './release-source-state.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const { values } = parseArgs({
@@ -96,12 +99,12 @@ const gitStatus = spawnSync(
 );
 if (gitStatus.status !== 0)
   throw new Error('could not inspect the release source tree');
-const disallowedChanges = porcelainPaths(gitStatus.stdout).filter(
-  (path) => !path.startsWith('evidence/phase-5/')
-);
+const disallowedChanges = disallowedReleaseChanges(gitStatus.stdout, {
+  allowGeneratedOutputs: true
+});
 if (disallowedChanges.length > 0) {
   throw new Error(
-    'release checksums refuse uncommitted application or packaging inputs'
+    `release checksums refuse uncommitted application or packaging inputs: ${releaseChangeSummary(disallowedChanges)}`
   );
 }
 const packageJson = JSON.parse(

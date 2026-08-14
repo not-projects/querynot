@@ -6,7 +6,11 @@ import {
   parseChecksumManifest,
   validatePublicationContract
 } from '../scripts/release-publication.mjs';
-import { porcelainPaths } from '../scripts/release-source-state.mjs';
+import {
+  disallowedReleaseChanges,
+  porcelainPaths,
+  releaseChangeSummary
+} from '../scripts/release-source-state.mjs';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 const sha = (digit: string) => digit.repeat(64);
@@ -103,6 +107,27 @@ describe('Phase 6 publication boundary', () => {
       'evidence/phase-5/adapter-conformance-report.json',
       'evidence/phase-5/new.json'
     ]);
+  });
+
+  it('normalizes Windows porcelain paths and distinguishes source from generated output', () => {
+    const status =
+      ' M evidence\\phase-5\\local-validation-report.json\r\n' +
+      '?? target\\release-candidate-windows\\querynot.exe\r\n' +
+      ' M Cargo.lock\r\n';
+
+    expect(disallowedReleaseChanges(status)).toEqual([
+      'target/release-candidate-windows/querynot.exe',
+      'Cargo.lock'
+    ]);
+    expect(
+      disallowedReleaseChanges(status, { allowGeneratedOutputs: true })
+    ).toEqual(['Cargo.lock']);
+  });
+
+  it('keeps dirty-source diagnostics bounded and free of control characters', () => {
+    expect(releaseChangeSummary(['Cargo.lock', 'bad\tpath'])).toBe(
+      'Cargo.lock, [path contains unsupported characters]'
+    );
   });
 
   it('publishes only by manual confirmation after a round-trip draft check', () => {
