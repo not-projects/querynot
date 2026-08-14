@@ -3311,7 +3311,11 @@
         "all_applicable_release_matrix_entries"
       ],
       "status": "in_progress",
-      "evidence_links": []
+      "evidence_links": [
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/linux-artifact-inspection.json",
+        "evidence/phase-5/linux-checksums.json"
+      ]
     },
     {
       "id": "AC-13",
@@ -3337,6 +3341,7 @@
       ],
       "status": "in_progress",
       "evidence_links": [
+        "evidence/phase-5/local-validation-report.json",
         "evidence/phase-2/validation-report.json"
       ]
     },
@@ -3367,6 +3372,10 @@
       ],
       "status": "in_progress",
       "evidence_links": [
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/dependency-review.json",
+        "evidence/phase-5/adapter-conformance-report.json",
+        "evidence/phase-5/linux-artifact-inspection.json",
         "evidence/phase-4/validation-report.json",
         "evidence/phase-4/table-conformance-report.json",
         "evidence/phase-3/validation-report.json",
@@ -3393,7 +3402,9 @@
         "all_applicable_release_matrix_entries"
       ],
       "status": "in_progress",
-      "evidence_links": []
+      "evidence_links": [
+        "evidence/phase-5/local-validation-report.json"
+      ]
     },
     {
       "id": "AC-16",
@@ -3530,7 +3541,11 @@
         "all_applicable_release_matrix_entries"
       ],
       "status": "in_progress",
-      "evidence_links": []
+      "evidence_links": [
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/dependency-review.json",
+        "evidence/phase-5/adapter-conformance-report.json"
+      ]
     }
   ]
 }

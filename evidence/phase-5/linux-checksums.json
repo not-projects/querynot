@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "algorithm": "sha256",
+  "source_commit": "5d401b468dbf7b380ee11627e6b1607b8808f9ca",
+  "application_version": "0.1.0",
+  "artifacts": [
+    {
+      "name": "QueryNot_0.1.0_amd64.AppImage",
+      "repository_relative_path": "target/release-candidate-linux/release/bundle/appimage/QueryNot_0.1.0_amd64.AppImage",
+      "bytes": 81840632,
+      "sha256": "5b277bd2f80cb29a9eaaa55db1067f7ae6ceaf923bab82459f57c588e1be2401"
+    },
+    {
+      "name": "QueryNot_0.1.0_amd64.deb",
+      "repository_relative_path": "target/release-candidate-linux/release/bundle/deb/QueryNot_0.1.0_amd64.deb",
+      "bytes": 4316794,
+      "sha256": "29fa8d356f3cfcdc7ebe5c2de7acb00e497c8fb84a58467c06015a5629d1203c"
+    }
+  ]
+}

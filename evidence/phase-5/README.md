@@ -19,4 +19,6 @@ Required final files:
 
 Templates are planning aids and are never release evidence.
 
+The committed `local-validation-report.json`, `dependency-review.json`, `adapter-conformance-report.json`, `linux-artifact-inspection.json`, `linux-checksums.json`, and `SHA256SUMS.linux` are partial, commit-addressed local automation evidence. They deliberately leave the Phase 5 gate incomplete and are not substitutes for any required final file above.
+
 Expand `operating-system-results.example.json` to all eight matrix IDs. Each Windows row contains the reviewed NSIS artifact, each macOS row the reviewed architecture-specific DMG, and each Ubuntu row both reviewed Linux artifacts; every listed package needs its own install, core-journey, warning, uninstall, checksum, and retained-evidence result. Expand the dogfood day object to exactly five consecutive working days and retain only tasks applicable on each date while satisfying every frequency rule enforced by the auditor.

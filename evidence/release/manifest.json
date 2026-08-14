@@ -9,17 +9,22 @@
     "evidence/phase-1/validation-report.json",
     "evidence/phase-2/validation-report.json",
     "evidence/phase-3/validation-report.json",
-    "evidence/phase-4/validation-report.json"
+    "evidence/phase-4/validation-report.json",
+    "evidence/phase-5/local-validation-report.json"
   ],
-  "dependency_license_vulnerability_report": "evidence/phase-4/dependency-review.json",
+  "dependency_license_vulnerability_report": "evidence/phase-5/dependency-review.json",
   "adapter_conformance_reports": [
     "evidence/phase-0/feasibility-report.json",
     "evidence/phase-3/adapter-conformance-report.json",
-    "evidence/phase-4/table-conformance-report.json"
+    "evidence/phase-4/table-conformance-report.json",
+    "evidence/phase-5/adapter-conformance-report.json"
   ],
   "operating_system_results": [],
   "accessibility_results": [],
-  "packaging_results": [],
+  "packaging_results": [
+    "evidence/phase-5/linux-artifact-inspection.json",
+    "evidence/phase-5/linux-checksums.json"
+  ],
   "benchmark_results": ["evidence/phase-2/benchmark-report.json"],
   "manual_safety_review": null,
   "dogfood_record": null,
@@ -30,7 +35,7 @@
     "Phase 2 has commit-addressed local Linux SQLite journey, fault, hostile-value, result-contract, release-build benchmark, and desktop-build evidence; native target-platform WebView FPS/memory, accessibility, dialogs/clipboard, and manual safety review remain pending.",
     "Phase 3 has commit-addressed local Linux five-server MySQL/MariaDB conformance, complete SQLite regression, dependency gates, and an optimized desktop build; native target-platform trust stores, interaction evidence, accessibility, and packaging remain pending Phase 5 procedures.",
     "Phase 4 has commit-addressed local productivity, persistence, SQL-file, table planner/fault, five-server table conformance, dependency, and optimized desktop-build evidence; native target-platform interaction, accessibility, performance, diagnostics, and manual safety review remain pending Phase 5 procedures.",
-    "Phase 5 has package configuration, local Linux package preflight, checksum/artifact inspection, fail-closed auditing, and executable evidence procedures in progress; these are not retained release evidence until rerun against a clean candidate commit.",
+    "Phase 5 has commit-addressed local regression, dependency, exact five-server conformance, isolated Linux package, checksum/artifact inspection, fail-closed auditing, and executable evidence procedures; these are partial local evidence only.",
     "Phase 5 dogfood, beta, cross-platform release-candidate evidence, named manual reviews, and Phase 6 publication remain incomplete."
   ],
   "approved_exceptions": []

@@ -62,6 +62,7 @@ npm run test:conformance:phase4
 npm run tauri -- build --no-bundle
 npm run package:linux
 npm run test:release-evidence
+npm run verify:phase5:local
 ```
 
 `npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for the pending Windows/macOS/Linux OS-vault and manual accessibility procedures.
@@ -73,6 +74,8 @@ npm run test:release-evidence
 `npm run test:conformance:phase4` extends the same exact five-server matrix with deterministic table paging, bound structured filters, typed staged inserts/updates/deletes, generated-value refresh, optimistic conflicts, and atomic rollback. `npm run verify:phase4` runs the full Phase 4 regression, dependency review, conformance, and desktop-build gate from a clean commit and retains commit-addressed validation, table-conformance, and dependency reports.
 
 Phase 5 prepares unsigned NSIS, architecture-specific DMG, AppImage, and Debian packages without updater artifacts. `npm run package:linux` has produced and inspected the two Linux candidate formats locally. Windows and macOS package jobs are configured for manual CI dispatch but are not evidence until they run and their native journeys pass. `npm run test:release-evidence` intentionally fails while any required native, human, traceability, or release-manifest record is absent. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md); do not infer a support claim from a successful build.
+
+`npm run verify:phase5:local` has passed for the commit recorded in `evidence/phase-5/local-validation-report.json`. It reruns the complete local regression, exact dependency gates, five-server candidate conformance, and isolated Linux package/inspection/checksum path. Its explicit incomplete phase gate is authoritative: it does not replace the eight native OS/package journeys, native accessibility and performance, named safety/security review, fixed five-day dogfood period, five-person beta, or final all-20 evidence audit.
 
 `npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
 

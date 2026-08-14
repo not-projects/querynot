@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "source_commit": "5d401b468dbf7b380ee11627e6b1607b8808f9ca",
+  "application_version": "0.1.0",
+  "status": "pass",
+  "environment": {
+    "os": "linux",
+    "architecture": "x64",
+    "os_release": "6.18.33.2-microsoft-standard-WSL2",
+    "node": "v22.22.1",
+    "ci_runner_image": null,
+    "ci_runner_version": null
+  },
+  "binary": {
+    "name": "querynot",
+    "bytes": 9179064,
+    "sha256": "d5a53ae979b3ea56a7dcd80d5a411a4b70e9a9a4a10c2d81da021298fa8907c7",
+    "forbidden_material_scan": "pass"
+  },
+  "artifacts": [
+    {
+      "format": "deb",
+      "name": "QueryNot_0.1.0_amd64.deb",
+      "bytes": 4316794,
+      "sha256": "29fa8d356f3cfcdc7ebe5c2de7acb00e497c8fb84a58467c06015a5629d1203c"
+    },
+    {
+      "format": "appimage",
+      "name": "QueryNot_0.1.0_amd64.AppImage",
+      "bytes": 81840632,
+      "sha256": "5b277bd2f80cb29a9eaaa55db1067f7ae6ceaf923bab82459f57c588e1be2401"
+    }
+  ],
+  "updater_artifacts": false,
+  "capability_and_csp_review": "pass"
+}

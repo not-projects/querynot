@@ -882,6 +882,11 @@
     },
     "AC-12": {
       "status": "in_progress",
+      "evidence_links": [
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/linux-artifact-inspection.json",
+        "evidence/phase-5/linux-checksums.json"
+      ],
       "automated_test_ids": [
         "P5-AUTO-RELEASE-CONTRACTS",
         "P5-AUTO-ARTIFACT-INSPECTION",
@@ -891,6 +896,7 @@
     },
     "AC-13": {
       "status": "in_progress",
+      "evidence_links": ["evidence/phase-5/local-validation-report.json"],
       "automated_test_ids": [
         "P1-AUTO-THEME-CONTRAST",
         "P1-AUTO-SETTINGS-A11Y",
@@ -902,6 +908,12 @@
     },
     "AC-14": {
       "status": "in_progress",
+      "evidence_links": [
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/dependency-review.json",
+        "evidence/phase-5/adapter-conformance-report.json",
+        "evidence/phase-5/linux-artifact-inspection.json"
+      ],
       "automated_test_ids": [
         "P1-AUTO-SECRET-EXCLUSION",
         "P1-AUTO-OWNERSHIP",
@@ -915,11 +927,17 @@
     },
     "AC-15": {
       "status": "in_progress",
+      "evidence_links": ["evidence/phase-5/local-validation-report.json"],
       "automated_test_ids": ["P5-AUTO-RELEASE-EVIDENCE"],
       "manual_procedure_ids": ["P5-MAN-DOGFOOD"]
     },
     "AC-20": {
       "status": "in_progress",
+      "evidence_links": [
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/dependency-review.json",
+        "evidence/phase-5/adapter-conformance-report.json"
+      ],
       "automated_test_ids": [
         "P5-AUTO-RELEASE-EVIDENCE",
         "P5-AUTO-ADAPTER-CONFORMANCE"
