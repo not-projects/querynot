@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.0 is the first Windows 11 x86-64 release; 0.1.1 is the signed-updater release candidate.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.1 is the current Windows 11 x86-64 release and the first release on the signed-updater channel.
 
 > Query your data, not your patience.
 
@@ -36,7 +36,7 @@ Then inspect the actual repository state and current branch before proposing cha
 
 The repository contains the completed Phase 0–6 implementation and release evidence. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB release matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids.
 
-The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 adds the dedicated QueryNot signed update channel under ADR 0011; it is not publishable until its repository key variable, signing secret, signed candidate, and no-rebuild publication verification pass. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
+The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011 and was published from the exact reviewed candidate recorded under `evidence/release-updates/0.1.1`. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
 
 ## Verified Commands
 
@@ -61,12 +61,13 @@ The approved support and publication envelope is Windows 11 x86-64 only. WSL2/br
 - `npm run test:conformance:phase4` — the same exact five-server fixture matrix plus deterministic paging, bound structured filters, typed staged mutations, generated-value refresh, optimistic conflicts, and atomic rollback.
 - `npm run verify:phase4` — clean-tree, commit-addressed Phase 4 conformance plus complete local regression, dependency review, and desktop-build evidence generation; native Windows owner review remains a post-release non-claim.
 - `npm run release:validate-updater-signing` — fail closed unless the dedicated QueryNot updater public/private key environment is present and structurally valid; it never prints key material.
+- `npm run release:verify-updater-signature -- <installer.exe> <installer.exe.sig>` — verify the Tauri Minisign installer and trusted-comment signatures against `QUERYNOT_UPDATER_PUBLIC_KEY` without requiring the private key.
 - `npm run release:inspect -- --binary <path> --directory <path> --expect <formats> --report <path>` — inspect one platform's nonempty packages, matching updater signature, binary material, CSP/capability boundary, version, and commit.
 - `npm run release:checksums -- --directory <path> --output <path> --manifest <path>` — generate commit/version-addressed SHA-256 text and JSON records for the exact candidate packages.
 - `npm run release:create-updater-manifest -- --directory <path> --output <latest.json> --report <report>` — generate the stable Windows updater manifest from exactly one signed NSIS candidate and the checked-in versioned release notes.
 - `npm run test:conformance:phase5` — exact five-server candidate rerun retained separately from earlier phase evidence.
-- `npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.1 --confirm publish-v0.1.1 --report <report>` — verify the candidate source and retained reports, then stage exactly the installer, signature, `latest.json`, and checksum.
-- `npm run release:verify-update-publication -- --directory <download-dir> --tag v0.1.1 --report <report>` — round-trip verify the four draft assets before publication; this is run by the manual signed-release workflow.
+- `npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.1 --confirm publish-v0.1.1 --report <report>` — verify the candidate source, retained reports, hashes, manifest, and updater signature, then stage exactly the installer, signature, `latest.json`, and checksum.
+- `npm run release:verify-update-publication -- --directory <download-dir> --tag v0.1.1 --report <report>` — cryptographically and byte-for-byte verify the four draft or public assets; the manual signed-release workflow runs this before publication.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — canonical checksum-pinned Linux feasibility gate used by candidate CI; installs nothing, exercises all five exact targets on random loopback ports with verified TLS 1.2, and retains a redacted report.
 
 `npm run test:feasibility` is a supplemental three-image Docker smoke harness, not release evidence. A legacy image that cannot negotiate QueryNot's TLS floor must fail rather than weaken the adapter.

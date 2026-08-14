@@ -27,7 +27,7 @@ The release candidate boundary requires all of the following:
 - an installer-only `SHA256SUMS` file for manual verification; and
 - commit/version-addressed inspection, checksum, and updater-manifest reports.
 
-Candidate packaging fails closed when either required key is absent or malformed. Publication never receives signing secrets and never rebuilds. It resolves one successful manual `CI` run on `master`, checks out that exact source commit, downloads the candidate, stages only the installer, signature, `latest.json`, and `SHA256SUMS`, creates an unpublished draft, downloads those four assets again, verifies them, and only then publishes the stable release.
+Candidate packaging fails closed when either required key is absent or malformed. Publication never receives signing secrets and never rebuilds. It resolves one successful manual `CI` run on `master`, checks out that exact source commit, downloads the candidate, verifies both Minisign signatures against the configured public key, stages only the installer, signature, `latest.json`, and `SHA256SUMS`, creates an unpublished draft, downloads those four assets again, verifies them, and only then publishes the stable release.
 
 The Windows packaging script supplies Tauri's required `plugins.updater` configuration as an ephemeral CLI overlay derived from `QUERYNOT_UPDATER_PUBLIC_KEY`. The same repository variable therefore configures both the compiled Rust updater and the bundler that creates signed updater artifacts; the public key is not duplicated in source, and a missing value fails before compilation. Release-note text is normalized to LF before entering `latest.json`, so candidate bytes and publication verification remain deterministic across Windows and Linux runners.
 
@@ -40,3 +40,4 @@ The Windows packaging script supplies Tauri's required `plugins.updater` configu
 - A compromised GitHub release alone cannot install modified bytes because the compiled public key verifies the updater signature.
 - Publishing an updater-enabled release remains impossible until the dedicated key material is configured and a signed candidate passes CI.
 - The historical `0.1.0` evidence and unsigned-installation guidance remain immutable release records.
+- The first signed release, `v0.1.1`, was published from candidate CI run `31843628362` by publication run `31844465799`; its exact reports and public-download verification are retained under `evidence/release-updates/0.1.1`.

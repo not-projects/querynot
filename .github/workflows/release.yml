@@ -68,6 +68,7 @@ jobs:
       - name: Verify and stage only the four signed release assets
         env:
           PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
+          QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
         run: >-
           npm run release:prepare-update-publication --
           --directory artifacts/candidate
@@ -91,6 +92,8 @@ jobs:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: gh release download "$RELEASE_TAG" --dir artifacts/release-roundtrip
       - name: Verify the draft bytes before publication
+        env:
+          QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
         run: >-
           npm run release:verify-update-publication --
           --directory artifacts/release-roundtrip

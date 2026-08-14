@@ -1,3 +1,5 @@
+import { createHash, generateKeyPairSync, sign } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
 import { buildUpdaterManifest } from '../scripts/create-updater-manifest.mjs';
@@ -6,11 +8,54 @@ import {
   updaterBuildConfig
 } from '../scripts/updater-build-config.mjs';
 import { validateUpdaterSigningEnvironment } from '../scripts/updater-signing-environment.mjs';
+import { verifyUpdaterSignature } from '../scripts/verify-updater-signature.mjs';
 
 function publicKeyDocument(): string {
   return Buffer.from(
     `untrusted comment: minisign public key: 0123456789ABCDEF\nRW${'A'.repeat(50)}\n`
   ).toString('base64');
+}
+
+function signedUpdaterFixture(keyId = Buffer.from('0123456789abcdef', 'hex')) {
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const publicDer = publicKey.export({ type: 'spki', format: 'der' });
+  const installer = Buffer.from('synthetic updater installer');
+  const installerSignature = sign(
+    null,
+    createHash('blake2b512').update(installer).digest(),
+    privateKey
+  );
+  const trustedComment = 'timestamp:1\tfile:QueryNot_0.1.1_x64-setup.exe';
+  const globalSignature = sign(
+    null,
+    Buffer.concat([installerSignature, Buffer.from(trustedComment, 'utf8')]),
+    privateKey
+  );
+  const publicPacket = Buffer.concat([
+    Buffer.from('Ed'),
+    keyId,
+    publicDer.subarray(-32)
+  ]);
+  const signaturePacket = Buffer.concat([
+    Buffer.from('ED'),
+    keyId,
+    installerSignature
+  ]);
+  const publicDocument = [
+    `untrusted comment: minisign public key: ${Buffer.from(keyId).reverse().toString('hex').toUpperCase()}`,
+    publicPacket.toString('base64')
+  ].join('\n');
+  const signatureDocument = [
+    'untrusted comment: synthetic updater signature',
+    signaturePacket.toString('base64'),
+    `trusted comment: ${trustedComment}`,
+    globalSignature.toString('base64')
+  ].join('\n');
+  return {
+    installer,
+    publicKey: Buffer.from(`${publicDocument}\n`).toString('base64'),
+    signature: Buffer.from(`${signatureDocument}\n`).toString('base64')
+  };
 }
 
 describe('updater release trust boundary', () => {
@@ -77,5 +122,28 @@ describe('updater release trust boundary', () => {
     );
     expect(manifest.notes).toBe('Release\nnotes');
     expect(manifest.notes).not.toContain('\r');
+  });
+
+  it('cryptographically verifies the updater payload and trusted comment', () => {
+    const fixture = signedUpdaterFixture();
+    expect(verifyUpdaterSignature(fixture)).toEqual({
+      status: 'pass',
+      format: 'minisign',
+      algorithm: 'Ed25519-BLAKE2b',
+      public_key_id: 'EFCDAB8967452301'
+    });
+
+    const changedInstaller = Buffer.from(fixture.installer);
+    changedInstaller[0] ^= 1;
+    expect(() =>
+      verifyUpdaterSignature({ ...fixture, installer: changedInstaller })
+    ).toThrow('installer signature does not verify');
+
+    const otherKey = signedUpdaterFixture(
+      Buffer.from('fedcba9876543210', 'hex')
+    );
+    expect(() =>
+      verifyUpdaterSignature({ ...fixture, publicKey: otherKey.publicKey })
+    ).toThrow('key ID does not match');
   });
 });

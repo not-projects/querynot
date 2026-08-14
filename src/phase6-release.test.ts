@@ -148,6 +148,10 @@ describe('Phase 6 publication boundary', () => {
     );
     expect(workflow).not.toContain('--confirm "${{ inputs.confirmation }}"');
     expect(workflow).toContain('release:prepare-update-publication');
+    expect(workflow.match(/QUERYNOT_UPDATER_PUBLIC_KEY:/g)).toHaveLength(2);
+    expect(read('scripts/release-update-publication.mjs')).toContain(
+      'verifyUpdaterSignature'
+    );
     expect(workflow).toContain('gh release create "$RELEASE_TAG"');
     expect(workflow).toContain('--draft');
     expect(workflow).toContain('--target "$RELEASE_SOURCE"');

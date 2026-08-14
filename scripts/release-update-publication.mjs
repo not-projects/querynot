@@ -18,6 +18,7 @@ import {
   safeArtifactName
 } from './release-evidence-contract.mjs';
 import { normalizeReleaseNotes } from './create-updater-manifest.mjs';
+import { verifyUpdaterSignature } from './verify-updater-signature.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const expectedPlatformKeys = ['windows-x86_64', 'windows-x86_64-nsis'];
@@ -456,6 +457,16 @@ function main() {
     signature: assets.signature,
     latest,
     checksumText: assets.checksums.content.toString('utf8')
+  });
+  const publicKey = process.env.QUERYNOT_UPDATER_PUBLIC_KEY?.trim();
+  requireCondition(
+    publicKey,
+    'QUERYNOT_UPDATER_PUBLIC_KEY is required to verify the updater signature'
+  );
+  report.signature_verification = verifyUpdaterSignature({
+    installer: assets.installer.content,
+    signature: assets.signature.content.toString('utf8').trim(),
+    publicKey
   });
   report.source_commit = currentSourceCommit();
   report.latest.sha256 = assets.latest.sha256;

@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Security
+
+- Added independent Ed25519-BLAKE2b verification of updater installer and trusted-comment signatures against the configured public key before future signed-release publication.
+
 ## [0.1.1] - 2026-08-14
 
 ### Added

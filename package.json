@@ -34,6 +34,7 @@
     "release:checksums": "node scripts/release-checksums.mjs",
     "release:inspect": "node scripts/inspect-release-artifacts.mjs",
     "release:validate-updater-signing": "node scripts/updater-signing-environment.mjs",
+    "release:verify-updater-signature": "node scripts/verify-updater-signature.mjs",
     "release:create-updater-manifest": "node scripts/create-updater-manifest.mjs",
     "test:release-evidence": "node scripts/audit-release-evidence.mjs",
     "verify:phase5:local": "node scripts/verify-phase5-local.mjs",

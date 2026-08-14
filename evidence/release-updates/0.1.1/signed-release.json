@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "application_version": "0.1.1",
+  "source_commit": "cf14accab85d88cafcccb14a3ddffd6a700b7ada",
+  "completed_at": "2026-08-14T22:06:01Z",
+  "candidate": {
+    "workflow": "CI",
+    "run_id": 31843628362,
+    "run_url": "https://github.com/not-projects/querynot/actions/runs/31843628362",
+    "event": "workflow_dispatch",
+    "created_at": "2026-08-14T21:43:05Z",
+    "completed_at": "2026-08-14T21:53:15Z",
+    "status": "pass",
+    "complete_cross_platform_matrix": true,
+    "checksum_pinned_five_server_feasibility": "pass",
+    "signed_windows_candidate": "pass"
+  },
+  "publication": {
+    "workflow": "Publish reviewed signed release",
+    "run_id": 31844465799,
+    "run_url": "https://github.com/not-projects/querynot/actions/runs/31844465799",
+    "created_at": "2026-08-14T21:54:55Z",
+    "completed_at": "2026-08-14T21:55:17Z",
+    "status": "pass",
+    "release_tag": "v0.1.1",
+    "release_url": "https://github.com/not-projects/querynot/releases/tag/v0.1.1",
+    "published_at": "2026-08-14T21:55:13Z",
+    "tag_target": "cf14accab85d88cafcccb14a3ddffd6a700b7ada",
+    "draft": false,
+    "prerelease": false,
+    "draft_round_trip_verification": "pass",
+    "public_download_verification": "pass",
+    "updater_signature_verification": {
+      "status": "pass",
+      "format": "minisign",
+      "algorithm": "Ed25519-BLAKE2b",
+      "public_key_id": "FD25C4E1F33E86DD"
+    }
+  },
+  "public_assets": [
+    {
+      "name": "QueryNot_0.1.1_x64-setup.exe",
+      "bytes": 3375223,
+      "sha256": "44a7c01c8a751380c9535c066d6a41a8cac469e278070417b83ffb0b14b2cf55"
+    },
+    {
+      "name": "QueryNot_0.1.1_x64-setup.exe.sig",
+      "bytes": 420,
+      "sha256": "284eafc04ce65b1550b8a490f5e08ea1c492f5f5b2d8b47a5883862630b0bd92"
+    },
+    {
+      "name": "latest.json",
+      "bytes": 3233,
+      "sha256": "961dec8b43f91d93ba88023a5191d537b57bbe560077d09e5aac34bec35bd368"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 95,
+      "sha256": "59cfbf76bebf4dc8d06e434950cf6ed82323e8bb11d9f4b39988cd82d8adbaa1"
+    }
+  ],
+  "rejected_attempts": [
+    {
+      "candidate_run_id": 31841198308,
+      "published": false,
+      "reason": "Tauri bundling required the updater plugin configuration; fixed in d58d5b9efaddbd9da1e587b2a264bf0e6995095f."
+    },
+    {
+      "candidate_run_id": 31842593806,
+      "published": false,
+      "reason": "Windows CRLF release notes failed the exact Linux publication verifier; fixed in cf14accab85d88cafcccb14a3ddffd6a700b7ada."
+    }
+  ],
+  "claims": {
+    "signed_windows_candidate_verified": true,
+    "automatic_update_publication_verified": true,
+    "native_owner_checks_performed": false,
+    "fixed_dogfood_performed": false,
+    "external_beta_performed": false,
+    "unperformed_checks_represented_as_pass": false
+  }
+}

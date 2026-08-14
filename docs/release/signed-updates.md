@@ -20,7 +20,7 @@ Configure the `not-projects/querynot` repository:
 
 For example, GNU `base64 -w 0 <public-key-file>` produces the public repository-variable value. The public key is not secret, but it must match the retained private key exactly.
 
-The candidate job validates only presence and document shape without printing any key material. Missing or malformed configuration stops packaging before a release candidate is created.
+The candidate job validates presence and document shape without printing any key material. Publication independently verifies the installer and Minisign trusted comment against the configured public key without receiving the private key. Missing, malformed, or mismatched configuration fails closed.
 
 ## Candidate and publication
 
@@ -28,9 +28,11 @@ The candidate job validates only presence and document shape without printing an
 2. Manually dispatch `CI` on `master`.
 3. Review all jobs and the `querynot-windows-x64` artifact. The artifact must contain one NSIS `.exe`, its `.exe.sig`, `latest.json`, `SHA256SUMS`, and the three candidate reports.
 4. Manually dispatch `Publish reviewed signed release` with that successful CI run ID and the exact confirmation `publish-v0.1.1`.
-5. The workflow resolves and checks out the candidate run's exact commit, validates the four public assets, creates a draft, downloads and re-verifies it, then publishes it as the stable release.
+5. The workflow resolves and checks out the candidate run's exact commit, validates and cryptographically verifies the four public assets, creates a draft, downloads and re-verifies it, then publishes it as the stable release.
 
 The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset.
+
+The first completed signed release is `v0.1.1`: candidate CI run `31843628362`, publication run `31844465799`, and source commit `cf14accab85d88cafcccb14a3ddffd6a700b7ada`. Retained reports are under `evidence/release-updates/0.1.1`.
 
 ## Rotation and recovery
 

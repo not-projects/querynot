@@ -171,7 +171,7 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(workflow).toContain('macos-15');
     expect(workflow).toContain('macos-15-intel');
     expect(workflow).toContain('windows-2022');
-    expect(compatibility).toContain('Sole supported and published 0.1.0 row');
+    expect(compatibility).toContain('Sole supported and published 0.1.1 row');
     expect(compatibility).toContain(
       'Deferred; no `0.1.0` support or artifact claim'
     );
