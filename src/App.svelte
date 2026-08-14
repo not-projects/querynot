@@ -40,6 +40,7 @@
     type SqlEditorApi
   } from './lib/components/SqlEditor.svelte';
   import { hasNativeRuntime, invokeCommand } from './lib/native';
+  import { requiresWindowCloseDecision } from './lib/window-close';
   import {
     localMutationErrors,
     nativeMutationOperations,
@@ -318,29 +319,29 @@
       });
       void getCurrentWindow()
         .onCloseRequested(async (event) => {
-          event.preventDefault();
           if (
-            busy ||
-            Object.keys(connectionOperations).length > 0 ||
-            workspace.tabs.some((tab) => tab.dirty) ||
-            Object.values(tableTabs).some((table) => table.staged.length > 0) ||
-            Object.keys(sessions).length > 0 ||
-            Object.values(executions).some((execution) =>
-              ['queued', 'running', 'paused', 'cancelling'].includes(
-                execution.state
-              )
-            )
+            requiresWindowCloseDecision({
+              busy,
+              connectionOperationCount:
+                Object.keys(connectionOperations).length,
+              dirtyTabCount: workspace.tabs.filter((tab) => tab.dirty).length,
+              stagedTableChangeCount: Object.values(tableTabs).filter(
+                (table) => table.staged.length > 0
+              ).length,
+              sessionCount: Object.keys(sessions).length,
+              activeExecutionCount: Object.values(executions).filter(
+                (execution) =>
+                  ['queued', 'running', 'paused', 'cancelling'].includes(
+                    execution.state
+                  )
+              ).length,
+              workspaceSavePending: workspaceRecoveryWarning !== null
+            })
           ) {
+            event.preventDefault();
             await openModal('close-window');
             statusMessage =
               'Window close paused so offline draft changes can be preserved.';
-          } else {
-            if (await saveWorkspaceNow()) {
-              await getCurrentWindow().destroy();
-            } else {
-              statusMessage =
-                'Window close stopped because draft recovery could not reach a valid saved state.';
-            }
           }
         })
         .then((removeListener) => {
@@ -3577,7 +3578,11 @@
 </div>
 
 {#if modal}
-  <div class="modal-backdrop">
+  <div
+    class="modal-backdrop theme-context"
+    data-theme={displayedSettings.theme}
+    style:font-size={`${displayedSettings.ui_scale_percent}%`}
+  >
     <div
       class="modal-card"
       class:modal-wide={modal === 'settings' || modal === 'file-review'}
@@ -3913,7 +3918,7 @@
               <label class="field">
                 <span>Theme</span>
                 <select bind:value={settingsDraft.theme}>
-                  <option value="system">Follow operating system</option>
+                  <option value="system">System</option>
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                   <option value="forest">Forest</option>

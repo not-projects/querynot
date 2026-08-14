@@ -25,6 +25,9 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm run check
       - run: npm run test:unit
+      - name: Install Chromium for UI layout checks
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:ui-layout
       - run: npm run build
       - run: npm run format:check
 

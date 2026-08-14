@@ -40,6 +40,14 @@ describe('Phase 1 native boundaries', () => {
     }
   });
 
+  it('keeps the optional recovery row from stretching the status bar', () => {
+    const css = read('src/styles/app.css');
+
+    expect(css).toMatch(/\.workbench\s*\{[^}]*grid-row:\s*3;/s);
+    expect(css).toMatch(/footer\s*\{[^}]*grid-row:\s*4;/s);
+    expect(css).toContain('grid-template-rows: auto auto minmax(0, 1fr) auto;');
+  });
+
   it('keeps query execution behind explicit native commands and grants no frontend filesystem or network capability', () => {
     const contract = JSON.parse(read('contracts/querynot.v1.json')) as {
       commands: Record<string, unknown>;

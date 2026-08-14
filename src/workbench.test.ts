@@ -55,6 +55,7 @@ describe('Phase 1 workbench', () => {
 
     const dialog = document.querySelector('[role="dialog"]');
     expect(dialog?.getAttribute('aria-modal')).toBe('true');
+    expect(dialog?.closest('.theme-context')).not.toBeNull();
     expect(dialog?.textContent).toContain('Appearance and editor');
     expect(dialog?.textContent).toContain('Connection timeout');
     expect(dialog?.textContent).toContain('Result tranche rows');
@@ -62,6 +63,9 @@ describe('Phase 1 workbench', () => {
     expect(dialog?.textContent).toContain('History retention');
     expect(dialog?.textContent).toContain('Restore drafts and tabs offline');
     expect(dialog?.textContent).toContain('5 MiB');
+    expect(dialog?.querySelector('option[value="system"]')?.textContent).toBe(
+      'System'
+    );
     expect(button('Save settings').disabled).toBe(false);
   });
 });

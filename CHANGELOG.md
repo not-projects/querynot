@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored a content-height bottom status bar at large window sizes, opaque themed dialogs, PostNot-aligned theme names, and the standard native close path for windows without active or unsaved work.
+
 ### Added
 
 - Established the initial project identity, community policies, security guidance, contributor workflow, agent instructions, and GitHub contribution templates.

@@ -10,6 +10,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "node scripts/run-vitest.mjs",
     "test:unit": "node scripts/run-vitest.mjs",
+    "test:ui-layout": "node scripts/check-ui-layout.mjs",
     "test:contracts": "node scripts/contracts.mjs --check",
     "test:traceability": "node scripts/traceability.mjs --check",
     "test:dependencies": "node scripts/check-npm-dependencies.mjs",

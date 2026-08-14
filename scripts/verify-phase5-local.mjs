@@ -248,6 +248,10 @@ try {
   );
   run('P5-SVELTE-CHECK', 'npm run check', 'npm', ['run', 'check']);
   run('P5-FRONTEND-TEST', 'npm run test', 'npm', ['run', 'test']);
+  run('P5-UI-LAYOUT', 'npm run test:ui-layout', 'npm', [
+    'run',
+    'test:ui-layout'
+  ]);
   run('P5-FRONTEND-BUILD', 'npm run build', 'npm', ['run', 'build']);
   run('P5-FORMAT', 'npm run format:check', 'npm', ['run', 'format:check']);
   run('P5-RUSTFMT', 'cargo fmt --all -- --check', 'cargo', [
@@ -415,6 +419,8 @@ const report = {
   executable_test_ids: {
     'P5-AUTO-RELEASE-CONTRACTS':
       'src/phase5-release.test.ts > candidate version, packaging, unsigned guidance, and fail-closed evidence contracts',
+    'P5-AUTO-UI-LAYOUT':
+      'scripts/check-ui-layout.mjs > large/narrow viewport status-bar geometry, PostNot theme names, and opaque themed dialogs',
     'P5-AUTO-ARTIFACT-INSPECTION':
       'scripts/inspect-release-artifacts.mjs > package count, binary material, updater, CSP, and capability inspection',
     'P5-AUTO-CHECKSUMS':
