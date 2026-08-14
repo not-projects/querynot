@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "phase": 5,
-  "source_commit": "5d401b468dbf7b380ee11627e6b1607b8808f9ca",
+  "source_commit": "d4a9a3e78848abc8eae645a890ba188400de83e7",
   "application_version": "0.1.0",
   "status": "pass_local_automation",
-  "started_at": "2026-08-14T00:04:43.111Z",
-  "completed_at": "2026-08-14T00:12:13.070Z",
+  "started_at": "2026-08-14T01:01:48.645Z",
+  "completed_at": "2026-08-14T01:09:18.622Z",
   "environment": {
     "os": "linux",
     "architecture": "x64",
@@ -24,112 +24,118 @@
       "duration_ms": 0
     },
     {
+      "id": "P6-PUBLICATION-FAIL-CLOSED",
+      "command": "npm run release:prepare-publication",
+      "status": "pass_expected_incomplete",
+      "duration_ms": 0
+    },
+    {
       "id": "P5-NPM-CI",
       "command": "npm ci",
       "status": "pass",
-      "duration_ms": 5070
+      "duration_ms": 4219
     },
     {
       "id": "P5-CONTRACTS",
       "command": "npm run test:contracts",
       "status": "pass",
-      "duration_ms": 761
+      "duration_ms": 472
     },
     {
       "id": "P5-TRACEABILITY",
       "command": "npm run test:traceability",
       "status": "pass",
-      "duration_ms": 521
+      "duration_ms": 474
     },
     {
       "id": "P5-NPM-POLICY",
       "command": "npm run test:dependencies",
       "status": "pass",
-      "duration_ms": 544
+      "duration_ms": 485
     },
     {
       "id": "P5-NPM-AUDIT",
       "command": "npm audit --audit-level=high --json",
       "status": "pass",
-      "duration_ms": 3660
+      "duration_ms": 3290
     },
     {
       "id": "P5-SVELTE-CHECK",
       "command": "npm run check",
       "status": "pass",
-      "duration_ms": 3541
+      "duration_ms": 3312
     },
     {
       "id": "P5-FRONTEND-TEST",
       "command": "npm run test",
       "status": "pass",
-      "duration_ms": 3111
+      "duration_ms": 2908
     },
     {
       "id": "P5-FRONTEND-BUILD",
       "command": "npm run build",
       "status": "pass",
-      "duration_ms": 4607
+      "duration_ms": 4284
     },
     {
       "id": "P5-FORMAT",
       "command": "npm run format:check",
       "status": "pass",
-      "duration_ms": 2252
+      "duration_ms": 1948
     },
     {
       "id": "P5-RUSTFMT",
       "command": "cargo fmt --all -- --check",
       "status": "pass",
-      "duration_ms": 184
+      "duration_ms": 177
     },
     {
       "id": "P5-CARGO-CHECK",
       "command": "cargo check --locked --workspace --all-targets",
       "status": "pass",
-      "duration_ms": 707
+      "duration_ms": 256
     },
     {
       "id": "P5-CARGO-TEST",
       "command": "cargo test --locked --workspace --all-targets",
       "status": "pass",
-      "duration_ms": 21746
+      "duration_ms": 455
     },
     {
       "id": "P5-CLIPPY",
       "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
       "status": "pass",
-      "duration_ms": 8142
+      "duration_ms": 280
     },
     {
       "id": "P5-CARGO-DENY",
       "command": "cargo deny --offline check advisories licenses bans sources",
       "status": "pass",
-      "duration_ms": 921
+      "duration_ms": 847
     },
     {
       "id": "P5-ADAPTER-CONFORMANCE",
       "command": "npm run test:conformance:phase5",
       "status": "pass",
-      "duration_ms": 123172
+      "duration_ms": 120077
     },
     {
       "id": "P5-LINUX-PACKAGES",
       "command": "npm run package:linux",
       "status": "pass",
-      "duration_ms": 269130
+      "duration_ms": 303838
     },
     {
       "id": "P5-LINUX-ARTIFACT-INSPECTION",
       "command": "npm run release:inspect -- --binary target/release-candidate-linux/release/querynot --directory target/release-candidate-linux/release/bundle --expect deb,appimage --report evidence/phase-5/linux-artifact-inspection.json",
       "status": "pass",
-      "duration_ms": 642
+      "duration_ms": 841
     },
     {
       "id": "P5-LINUX-CHECKSUMS",
       "command": "npm run release:checksums -- --directory target/release-candidate-linux/release/bundle --output evidence/phase-5/SHA256SUMS.linux --manifest evidence/phase-5/linux-checksums.json",
       "status": "pass",
-      "duration_ms": 625
+      "duration_ms": 726
     }
   ],
   "executable_test_ids": {
@@ -137,7 +143,8 @@
     "P5-AUTO-ARTIFACT-INSPECTION": "scripts/inspect-release-artifacts.mjs > package count, binary material, updater, CSP, and capability inspection",
     "P5-AUTO-CHECKSUMS": "scripts/release-checksums.mjs > commit-addressed SHA-256 records for nonempty regular packages",
     "P5-AUTO-ADAPTER-CONFORMANCE": "querynot-fixture-harness across the exact five-server release candidate matrix",
-    "P5-AUTO-RELEASE-EVIDENCE": "scripts/audit-release-evidence.mjs > fail-closed 101-requirement and 20-criterion release gate"
+    "P5-AUTO-RELEASE-EVIDENCE": "scripts/audit-release-evidence.mjs > fail-closed 101-requirement and 20-criterion release gate",
+    "P6-AUTO-PUBLICATION-GUARD": "src/phase6-release.test.ts and scripts/release-publication.mjs > exact reviewed artifact, checksum, tag, confirmation, and Phase 5 prerequisite boundary"
   },
   "phase_gate": {
     "local_regression_dependency_and_conformance": "pass",

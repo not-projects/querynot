@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "source_commit": "5d401b468dbf7b380ee11627e6b1607b8808f9ca",
+  "source_commit": "d4a9a3e78848abc8eae645a890ba188400de83e7",
   "application_version": "0.1.0",
   "status": "pass",
   "environment": {
@@ -22,13 +22,13 @@
       "format": "deb",
       "name": "QueryNot_0.1.0_amd64.deb",
       "bytes": 4316794,
-      "sha256": "29fa8d356f3cfcdc7ebe5c2de7acb00e497c8fb84a58467c06015a5629d1203c"
+      "sha256": "5b2f49ad4c1e5396414fcb0f488d01db0e6b5add56b182c25914d834923bc1c1"
     },
     {
       "format": "appimage",
       "name": "QueryNot_0.1.0_amd64.AppImage",
       "bytes": 81840632,
-      "sha256": "5b277bd2f80cb29a9eaaa55db1067f7ae6ceaf923bab82459f57c588e1be2401"
+      "sha256": "6d2ab110b7ba4e15040e1e29712d34678f423b078fd22e2812618f01d71c3220"
     }
   ],
   "updater_artifacts": false,
