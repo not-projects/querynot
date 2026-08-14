@@ -46,10 +46,10 @@ describe('Phase 5 release-candidate boundaries', () => {
     const packageJson = JSON.parse(read('package.json'));
     const inputs = JSON.parse(read('fixtures/release-tool-inputs.json'));
     const fetcher = read('scripts/fetch-release-tools.mjs');
-    const packager = read('scripts/package-linux.mjs');
+    const packager = read('scripts/package-platform.mjs');
 
     expect(packageJson.scripts['package:linux']).toBe(
-      'node scripts/package-linux.mjs'
+      'node scripts/package-platform.mjs linux'
     );
     expect(inputs.inputs).toHaveLength(5);
     for (const input of inputs.inputs) {
@@ -64,6 +64,10 @@ describe('Phase 5 release-candidate boundaries', () => {
     expect(fetcher).toContain("resolve(cacheRoot, 'reviewed')");
     expect(fetcher).toContain('copyFileSync(reviewed, working, 0)');
     expect(packager).toContain('XDG_CACHE_HOME: cacheRoot');
+    expect(packager).toContain('CARGO_TARGET_DIR: targetRoot');
+    expect(packager).toContain(
+      'rmSync(targetRoot, { recursive: true, force: true })'
+    );
     expect(packager.indexOf('fetch-release-tools.mjs')).toBeLessThan(
       packager.indexOf("'build', '--bundles'")
     );

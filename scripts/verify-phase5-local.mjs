@@ -263,16 +263,16 @@ try {
   ]);
   run(
     'P5-LINUX-ARTIFACT-INSPECTION',
-    'npm run release:inspect -- --binary target/release/querynot --directory target/release/bundle --expect deb,appimage --report evidence/phase-5/linux-artifact-inspection.json',
+    'npm run release:inspect -- --binary target/release-candidate-linux/release/querynot --directory target/release-candidate-linux/release/bundle --expect deb,appimage --report evidence/phase-5/linux-artifact-inspection.json',
     'npm',
     [
       'run',
       'release:inspect',
       '--',
       '--binary',
-      'target/release/querynot',
+      'target/release-candidate-linux/release/querynot',
       '--directory',
-      'target/release/bundle',
+      'target/release-candidate-linux/release/bundle',
       '--expect',
       'deb,appimage',
       '--report',
@@ -281,14 +281,14 @@ try {
   );
   run(
     'P5-LINUX-CHECKSUMS',
-    'npm run release:checksums -- --directory target/release/bundle --output evidence/phase-5/SHA256SUMS.linux --manifest evidence/phase-5/linux-checksums.json',
+    'npm run release:checksums -- --directory target/release-candidate-linux/release/bundle --output evidence/phase-5/SHA256SUMS.linux --manifest evidence/phase-5/linux-checksums.json',
     'npm',
     [
       'run',
       'release:checksums',
       '--',
       '--directory',
-      'target/release/bundle',
+      'target/release-candidate-linux/release/bundle',
       '--output',
       'evidence/phase-5/SHA256SUMS.linux',
       '--manifest',
