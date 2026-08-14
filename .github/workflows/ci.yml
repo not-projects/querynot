@@ -107,7 +107,7 @@ jobs:
       - run: npm ci
       - run: cargo check --locked --workspace --all-targets
 
-  disposable-feasibility:
+  checksum-pinned-feasibility:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
@@ -121,7 +121,8 @@ jobs:
         with:
           workspaces: ./ -> target
       - run: npm ci
-      - run: npm run test:feasibility
+      - run: npm run fixtures:fetch:native
+      - run: npm run test:feasibility:native
       - uses: actions/upload-artifact@v4
         with:
           name: phase-0-feasibility

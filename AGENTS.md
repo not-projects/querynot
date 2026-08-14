@@ -67,8 +67,9 @@ The approved `0.1.0` support and publication envelope is Windows 11 x86-64 only.
 - `npm run verify:phase5:local` — clean-tree WSL2 regression, UI layout, dependency, and conformance gate; requires `cargo-deny 0.20.2` on `PATH` and does not replace the Windows package gate.
 - `npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report <report>` — after the complete Phase 5 gate only, verify and stage the exact reviewed Windows installer plus retained checksum; it is expected to fail while evidence is incomplete.
 - `npm run release:verify-publication -- --directory <download-dir> --tag v0.1.0 --report <report>` — round-trip verify the draft release bytes before publication; this is run by the manual Phase 6 workflow.
-- `npm run test:feasibility` — exact disposable network-database feasibility run; requires Docker and retains a redacted report.
-- `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — checksum-pinned Linux fallback that installs nothing, uses random loopback ports and verified TLS, and retains the same redacted report.
+- `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — canonical checksum-pinned Linux feasibility gate used by candidate CI; installs nothing, exercises all five exact targets on random loopback ports with verified TLS 1.2, and retains a redacted report.
+
+`npm run test:feasibility` is a supplemental three-image Docker smoke harness, not release evidence. A legacy image that cannot negotiate QueryNot's TLS floor must fail rather than weaken the adapter.
 
 Do not invent additional build, test, packaging, or release commands. Derive changes from checked-in scripts and configuration, verify them, and update this guide.
 

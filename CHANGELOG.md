@@ -27,3 +27,4 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Revised the `0.1.0` release envelope to Windows 11 x86-64 while preserving the complete SQLite/MySQL/MariaDB workflow; WSL2/Linux packages are engineering evidence and Windows 10/macOS/native Linux distribution is deferred.
 - Made native owner checks, the fixed five-day dogfood checklist, and external beta explicit post-release validation for the sole initial participant without representing unperformed evidence as passed.
+- Made the checksum-pinned five-server native fixture matrix the candidate-CI feasibility gate; the three-image Docker path remains a supplemental fail-closed smoke test and cannot weaken the TLS floor for a legacy image.

@@ -61,6 +61,10 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(toolchain).toContain('channel = "1.97.0"');
     expect(ci).toContain('npx playwright install --with-deps chromium');
     expect(ci).toContain('npm run test:ui-layout');
+    expect(ci).toContain('checksum-pinned-feasibility:');
+    expect(ci).toContain('npm run fixtures:fetch:native');
+    expect(ci).toContain('npm run test:feasibility:native');
+    expect(ci).not.toContain('- run: npm run test:feasibility\n');
   });
 
   it('keeps matrix build caches OS-runner specific', () => {

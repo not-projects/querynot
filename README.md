@@ -82,9 +82,9 @@ Phase 5 prepares the unsigned Windows 11 x86-64 NSIS release artifact without up
 
 The Phase 6 publication command is intended for the manual release workflow after the Phase 5 gate. It reruns that gate, rejects substituted or extra artifacts, stages only the reviewed Windows installer and retained checksum file, and requires an exact release confirmation. The workflow creates and round-trip verifies a draft before publication; it never rebuilds or overwrites a candidate.
 
-`npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
+Release-candidate CI runs `npm run fixtures:fetch:native` and then `npm run test:feasibility:native`. This canonical Linux gate verifies the pinned archive checksums, installs nothing, exercises all five exact database targets over identity-verified TLS 1.2 on random loopback ports, and deletes the disposable servers and secrets after the run.
 
-Linux hosts without Docker can run `npm run fixtures:fetch:native` once, then `npm run test:feasibility:native`. The fallback verifies pinned archive checksums, installs nothing, uses identity-verified TLS 1.2 on random loopback ports, and deletes the disposable servers and secrets after the run.
+`npm run test:feasibility` remains an optional three-image Docker smoke harness. It never discovers an existing database, but it is not release evidence: an image whose legacy TLS stack cannot meet QueryNot's TLS floor is rejected rather than triggering a security downgrade. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
 
 Rust dependency policy uses `cargo-deny 0.20.2`; CI installs that exact locked tool version before running `cargo deny check advisories licenses bans sources`.
 
