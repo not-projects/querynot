@@ -49,14 +49,14 @@ jobs:
           --tag v0.1.0
           --confirm "$PUBLISH_CONFIRMATION"
           --report artifacts/publication-plan.json
-      - name: Create an unpublished draft at the audited evidence commit
+      - name: Create and verify an unpublished draft at the audited evidence commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           evidence_commit="$(git rev-parse HEAD)"
           gh release create v0.1.0 artifacts/publication/* --draft --target "$evidence_commit" --title "QueryNot 0.1.0" --notes-file docs/release/initial-release-notes.md
-          git fetch --force origin refs/tags/v0.1.0:refs/tags/v0.1.0
-          test "$(git rev-list -n 1 v0.1.0)" = "$evidence_commit"
+          test "$(gh release view v0.1.0 --json isDraft --jq .isDraft)" = "true"
+          test "$(gh release view v0.1.0 --json targetCommitish --jq .targetCommitish)" = "$evidence_commit"
       - name: Round-trip the draft assets
         env:
           GH_TOKEN: ${{ github.token }}

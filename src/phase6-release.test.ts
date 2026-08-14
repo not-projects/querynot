@@ -151,6 +151,13 @@ describe('Phase 6 publication boundary', () => {
     expect(workflow).toContain('--draft');
     expect(workflow).toContain('evidence_commit="$(git rev-parse HEAD)"');
     expect(workflow).toContain('--target "$evidence_commit"');
+    expect(workflow).toContain(
+      'gh release view v0.1.0 --json isDraft --jq .isDraft'
+    );
+    expect(workflow).toContain(
+      'gh release view v0.1.0 --json targetCommitish --jq .targetCommitish'
+    );
+    expect(workflow).not.toContain('git fetch --force origin refs/tags/v0.1.0');
     expect(workflow).toContain('gh release download v0.1.0');
     expect(workflow).toContain('release:verify-publication');
     expect(workflow).toContain('gh release edit v0.1.0 --draft=false');
