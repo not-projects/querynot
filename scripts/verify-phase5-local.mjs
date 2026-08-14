@@ -219,7 +219,6 @@ try {
   ) {
     throw new Error('UI layout evidence is incomplete or stale');
   }
-  copyFileSync(uiLayoutPath, retainedUiLayoutPath);
   run('P5-FRONTEND-BUILD', 'npm run build', 'npm', ['run', 'build']);
   run('P5-FORMAT', 'npm run format:check', 'npm', ['run', 'format:check']);
   run('P5-RUSTFMT', 'cargo fmt --all -- --check', 'cargo', [
@@ -269,6 +268,7 @@ try {
     { capture: true }
   );
   assertConformance(JSON.parse(readFileSync(conformancePath, 'utf8')));
+  copyFileSync(uiLayoutPath, retainedUiLayoutPath);
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error);
 }
