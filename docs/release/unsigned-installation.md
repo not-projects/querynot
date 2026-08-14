@@ -1,12 +1,14 @@
-# Unsigned release-candidate installation
+# Unsigned QueryNot 0.1.0 installation
 
-Status: procedure for reviewed release-candidate artifacts; no artifact is a supported release until the Phase 5 evidence gate passes.
+Status: reviewed Windows 11 x86-64 release artifact.
 
 QueryNot's initial Windows package is intentionally unsigned. Verify the SHA-256 digest published with the release before opening it. The application has no self-updater and never asks you to disable an operating-system security feature.
 
 ## Verify the download
 
 Use the filename and digest from the release's `SHA256SUMS` file. A mismatch means the package must not be installed.
+
+The reviewed `0.1.0` installer is `QueryNot_0.1.0_x64-setup.exe`, 3,120,800 bytes, with SHA-256 `3a0b5cf5eecd74ccba7668f0ad6ed59a5de8b927b78d2943dc3dabd7f286b84d`.
 
 ### Windows PowerShell
 
@@ -26,7 +28,7 @@ The x86-64 NSIS installer is per-user and requires an already installed, support
 4. Complete the current-user installation and launch QueryNot.
 5. If the WebView2 runtime is absent, cancel, install a supported runtime through Microsoft's documented administrator-approved process, and repeat. Do not weaken SmartScreen or system security policy globally.
 
-Uninstall QueryNot from **Settings > Apps** after completing the release-candidate procedure.
+Uninstall QueryNot from **Settings > Apps** when it is no longer needed.
 
 Windows 10, macOS, AppImage, and Debian packages are not distributed or supported in `0.1.0`. WSL2/Linux package builds in the repository are engineering outputs only.
 

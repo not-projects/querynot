@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
+  "application_version": "0.1.0",
+  "status": "pass",
+  "environment": {
+    "os": "win32",
+    "architecture": "x64",
+    "os_release": "10.0.20348",
+    "node": "v24.18.1",
+    "ci_runner_image": "win22",
+    "ci_runner_version": "20260802.262.1"
+  },
+  "binary": {
+    "name": "querynot.exe",
+    "bytes": 8189440,
+    "sha256": "477e8cc19aa541b242cedb71258bceaf1b12e173a613a11ce39929b7026f1ae5",
+    "forbidden_material_scan": "pass"
+  },
+  "artifacts": [
+    {
+      "format": "nsis",
+      "name": "QueryNot_0.1.0_x64-setup.exe",
+      "bytes": 3120800,
+      "sha256": "3a0b5cf5eecd74ccba7668f0ad6ed59a5de8b927b78d2943dc3dabd7f286b84d"
+    }
+  ],
+  "updater_artifacts": false,
+  "capability_and_csp_review": "pass"
+}

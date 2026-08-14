@@ -41,10 +41,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-1/validation-report.json",
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -71,9 +73,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -100,10 +104,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -130,10 +136,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -160,9 +168,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -189,9 +199,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -218,10 +230,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -250,11 +264,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-1/validation-report.json",
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -281,9 +297,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -310,9 +328,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -339,9 +359,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -369,10 +391,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-1/validation-report.json",
-        "evidence/phase-3/validation-report.json"
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -400,11 +424,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -431,10 +457,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -461,9 +489,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -490,10 +520,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -516,10 +548,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-1/validation-report.json",
-        "evidence/phase-3/validation-report.json"
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -542,10 +576,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-1/validation-report.json",
-        "evidence/phase-3/validation-report.json"
+        "evidence/phase-3/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -568,9 +604,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -592,9 +630,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -616,9 +656,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -640,10 +682,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-1/validation-report.json",
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -667,11 +711,13 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -693,10 +739,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -718,9 +766,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -741,9 +791,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -767,10 +819,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-1/validation-report.json",
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -793,11 +847,13 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -819,9 +875,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -848,11 +906,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -880,10 +940,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -910,11 +972,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -940,9 +1004,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -970,11 +1036,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1002,10 +1070,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1032,10 +1102,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1063,10 +1135,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1094,10 +1168,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1123,9 +1199,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1153,10 +1231,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1183,10 +1263,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1214,10 +1296,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1244,10 +1328,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1275,11 +1361,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1306,10 +1394,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1337,10 +1427,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1368,10 +1460,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1398,9 +1492,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1427,9 +1523,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1457,11 +1555,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1488,11 +1588,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1519,9 +1621,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1547,9 +1651,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1577,11 +1683,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1608,9 +1716,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1638,11 +1748,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1669,11 +1781,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1701,10 +1815,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1731,10 +1847,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1761,9 +1879,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1790,11 +1910,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1822,11 +1944,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1853,10 +1977,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-2/validation-report.json",
-        "evidence/phase-2/benchmark-report.json"
+        "evidence/phase-2/benchmark-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1884,11 +2010,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1916,11 +2044,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1946,9 +2076,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -1974,9 +2106,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2003,9 +2137,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2032,9 +2168,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2061,9 +2199,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2091,11 +2231,13 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2121,9 +2263,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2149,9 +2293,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2179,9 +2325,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2207,9 +2355,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2237,10 +2387,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2267,10 +2419,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2297,9 +2451,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2326,9 +2482,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2355,10 +2513,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2385,10 +2545,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2416,10 +2578,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2446,9 +2610,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2475,10 +2641,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2506,10 +2674,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2537,10 +2707,12 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2568,9 +2740,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2597,9 +2771,11 @@
         "mariadb-10.11-lts",
         "mariadb-11.4-lts"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2621,9 +2797,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2645,9 +2823,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2669,9 +2849,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2693,9 +2875,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2718,9 +2902,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2742,9 +2928,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2766,9 +2954,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2790,9 +2980,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2814,9 +3006,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2838,9 +3032,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2861,9 +3057,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2885,9 +3083,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2909,9 +3109,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-1/validation-report.json"
+        "evidence/phase-1/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2936,12 +3138,14 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2963,10 +3167,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -2989,10 +3195,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
-        "evidence/phase-3/adapter-conformance-report.json"
+        "evidence/phase-3/adapter-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3016,12 +3224,14 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3045,10 +3255,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3073,12 +3285,14 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3101,10 +3315,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-2/validation-report.json",
-        "evidence/phase-2/benchmark-report.json"
+        "evidence/phase-2/benchmark-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3128,12 +3344,14 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3156,10 +3374,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3181,9 +3401,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3207,9 +3429,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-4/validation-report.json"
+        "evidence/phase-4/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3233,9 +3457,13 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "in_progress",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-5/local-validation-report.json"
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/windows-artifact-inspection.json",
+        "evidence/phase-5/windows-checksums.json",
+        "evidence/phase-5/packaging-results.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3260,10 +3488,11 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "in_progress",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-5/local-validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3291,7 +3520,7 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "in_progress",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-5/local-validation-report.json",
         "evidence/phase-5/dependency-review.json",
@@ -3300,7 +3529,8 @@
         "evidence/phase-4/table-conformance-report.json",
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3321,9 +3551,10 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "in_progress",
+      "status": "verified",
       "evidence_links": [
-        "evidence/phase-5/local-validation-report.json"
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3348,12 +3579,14 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3378,11 +3611,13 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-3/validation-report.json",
         "evidence/phase-3/adapter-conformance-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3405,10 +3640,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-4/table-conformance-report.json"
+        "evidence/phase-4/table-conformance-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3434,10 +3671,12 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "implemented",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-4/validation-report.json",
-        "evidence/phase-2/validation-report.json"
+        "evidence/phase-2/validation-report.json",
+        "evidence/phase-5/local-validation-report.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     },
     {
@@ -3461,11 +3700,15 @@
       "supported_matrix_entries": [
         "windows-11-x86_64"
       ],
-      "status": "in_progress",
+      "status": "verified",
       "evidence_links": [
         "evidence/phase-5/local-validation-report.json",
         "evidence/phase-5/dependency-review.json",
-        "evidence/phase-5/adapter-conformance-report.json"
+        "evidence/phase-5/adapter-conformance-report.json",
+        "evidence/phase-5/windows-artifact-inspection.json",
+        "evidence/phase-5/windows-checksums.json",
+        "evidence/phase-5/packaging-results.json",
+        "evidence/phase-5/product-owner-scope.json"
       ]
     }
   ]

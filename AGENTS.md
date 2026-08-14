@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a pre-alpha, local-first desktop SQL client from Not Projects.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.0 is the first Windows 11 x86-64 release.
 
 > Query your data, not your patience.
 
@@ -34,7 +34,7 @@ Then inspect the actual repository state and current branch before proposing cha
 
 ## Current State
 
-The repository contains implemented Phases 0–4 and Phase 5–6 validation/publication tooling. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB development matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids.
+The repository contains the completed Phase 0–6 implementation and release evidence. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB release matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids.
 
 The approved `0.1.0` support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
 
@@ -53,19 +53,19 @@ The approved `0.1.0` support and publication envelope is Windows 11 x86-64 only.
 - `cargo test --workspace` — Rust unit and SQLite feasibility tests.
 - `cargo deny check advisories licenses bans sources` — Rust advisory, license, wildcard, and source policy using `cargo-deny 0.20.2`.
 - `npm run tauri -- build --no-bundle` — production desktop binary build without packaging.
-- `npm run verify:phase1` — clean-tree, commit-addressed Phase 1 local validation and evidence generation; real OS-vault and manual target-platform procedures remain separate gates.
+- `npm run verify:phase1` — clean-tree, commit-addressed Phase 1 local validation and evidence generation; post-release native Windows vault and accessibility observation remains a non-claim.
 - `npm run benchmark:phase2` — 30-sample release-build SQLite ordinary-result first-batch benchmark after one discarded setup run.
-- `npm run verify:phase2` — clean-tree, commit-addressed Phase 2 local validation, benchmark, desktop build, and evidence generation; native target-platform performance and manual review remain separate gates.
+- `npm run verify:phase2` — clean-tree, commit-addressed Phase 2 local validation, benchmark, desktop build, and evidence generation; post-release native Windows performance and manual review remains a non-claim.
 - `npm run test:conformance:phase3` — checksum-pinned, marker-verified five-server common-adapter conformance including TLS/client identity, authentication, metadata, results, transactions, and cancellation.
-- `npm run verify:phase3` — clean-tree, commit-addressed Phase 3 conformance plus complete local regression, dependency, and desktop-build evidence generation; target-platform release procedures remain separate gates.
+- `npm run verify:phase3` — clean-tree, commit-addressed Phase 3 conformance plus complete local regression, dependency, and desktop-build evidence generation; native Windows owner review remains a post-release non-claim.
 - `npm run test:conformance:phase4` — the same exact five-server fixture matrix plus deterministic paging, bound structured filters, typed staged mutations, generated-value refresh, optimistic conflicts, and atomic rollback.
-- `npm run verify:phase4` — clean-tree, commit-addressed Phase 4 conformance plus complete local regression, dependency review, and desktop-build evidence generation; target-platform release procedures remain separate gates.
+- `npm run verify:phase4` — clean-tree, commit-addressed Phase 4 conformance plus complete local regression, dependency review, and desktop-build evidence generation; native Windows owner review remains a post-release non-claim.
 - `npm run release:inspect -- --binary <path> --directory <path> --expect <formats> --report <path>` — inspect one platform's nonempty packages, binary material, CSP/capability boundary, version, commit, and updater state.
 - `npm run release:checksums -- --directory <path> --output <path> --manifest <path>` — generate commit/version-addressed SHA-256 text and JSON records for the exact candidate packages.
-- `npm run test:release-evidence` — final fail-closed revision-2 audit; expected to fail until the exact Windows artifact/checksum, complete WSL2/browser automation, all 121 verified traceability rows, product-owner scope record, and ready release manifest exist.
+- `npm run test:release-evidence` — final fail-closed revision-2 audit for the exact Windows artifact/checksum, complete WSL2/browser automation, all 121 verified traceability rows, product-owner scope record, and ready release manifest.
 - `npm run test:conformance:phase5` — exact five-server candidate rerun retained separately from earlier phase evidence.
 - `npm run verify:phase5:local` — clean-tree WSL2 regression, UI layout, dependency, and conformance gate; requires `cargo-deny 0.20.2` on `PATH` and does not replace the Windows package gate.
-- `npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report <report>` — after the complete Phase 5 gate only, verify and stage the exact reviewed Windows installer plus retained checksum; it is expected to fail while evidence is incomplete.
+- `npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report <report>` — after the complete Phase 5 gate only, verify and stage the exact reviewed Windows installer plus retained checksum.
 - `npm run release:verify-publication -- --directory <download-dir> --tag v0.1.0 --report <report>` — round-trip verify the draft release bytes before publication; this is run by the manual Phase 6 workflow.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — canonical checksum-pinned Linux feasibility gate used by candidate CI; installs nothing, exercises all five exact targets on random loopback ports with verified TLS 1.2, and retains a redacted report.
 

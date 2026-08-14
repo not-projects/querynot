@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
+  "tested_at": "2026-08-14T15:00:15.003Z",
+  "viewport_height": 1068,
+  "layouts": [
+    {
+      "viewport_width": 2048,
+      "document_scroll_width": 2048,
+      "workbench_bottom": 1039,
+      "footer_top": 1039,
+      "footer_bottom": 1068,
+      "footer_height": 29
+    },
+    {
+      "viewport_width": 1280,
+      "document_scroll_width": 1280,
+      "workbench_bottom": 1039,
+      "footer_top": 1039,
+      "footer_bottom": 1068,
+      "footer_height": 29
+    },
+    {
+      "viewport_width": 960,
+      "document_scroll_width": 960,
+      "workbench_bottom": 1039,
+      "footer_top": 1039,
+      "footer_bottom": 1068,
+      "footer_height": 29
+    },
+    {
+      "viewport_width": 720,
+      "document_scroll_width": 720,
+      "workbench_bottom": 1039,
+      "footer_top": 1039,
+      "footer_bottom": 1068,
+      "footer_height": 29
+    }
+  ],
+  "dialog_themes": [
+    {
+      "theme": "system",
+      "background_color": "rgb(255, 250, 240)",
+      "color": "rgb(23, 58, 51)",
+      "inside_theme_context": true,
+      "width": 960,
+      "height": 611.8125
+    },
+    {
+      "theme": "light",
+      "background_color": "rgb(255, 250, 240)",
+      "color": "rgb(23, 58, 51)",
+      "inside_theme_context": true,
+      "width": 960,
+      "height": 611.8125
+    },
+    {
+      "theme": "dark",
+      "background_color": "rgb(255, 250, 240)",
+      "color": "rgb(23, 58, 51)",
+      "inside_theme_context": true,
+      "width": 960,
+      "height": 611.8125
+    },
+    {
+      "theme": "forest",
+      "background_color": "rgb(26, 64, 54)",
+      "color": "rgb(23, 58, 51)",
+      "inside_theme_context": true,
+      "width": 960,
+      "height": 611.8125
+    }
+  ],
+  "theme_labels": [
+    "System",
+    "Light",
+    "Dark",
+    "Forest"
+  ],
+  "screenshot": "artifacts/ui-layout-settings.png"
+}

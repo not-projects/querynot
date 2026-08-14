@@ -1,11 +1,22 @@
 {
   "schema_version": 1,
-  "release_status": "incomplete",
-  "source_commit": null,
+  "release_status": "ready_to_publish",
+  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
   "application_version": "0.1.0",
   "release_tag": "v0.1.0",
-  "reviewed_artifacts": [],
-  "checksums": [],
+  "candidate_run_id": "31812585873",
+  "candidate_run_url": "https://github.com/not-projects/querynot/actions/runs/31812585873",
+  "release_platforms": ["windows-11-x64"],
+  "product_owner_scope": "evidence/phase-5/product-owner-scope.json",
+  "reviewed_artifacts": [
+    {
+      "id": "windows-nsis-x64",
+      "name": "QueryNot_0.1.0_x64-setup.exe",
+      "bytes": 3120800,
+      "sha256": "3a0b5cf5eecd74ccba7668f0ad6ed59a5de8b927b78d2943dc3dabd7f286b84d"
+    }
+  ],
+  "checksums": ["evidence/phase-5/SHA256SUMS"],
   "phase_validation_reports": [
     "evidence/phase-0/validation-report.json",
     "evidence/phase-1/validation-report.json",
@@ -21,24 +32,19 @@
     "evidence/phase-4/table-conformance-report.json",
     "evidence/phase-5/adapter-conformance-report.json"
   ],
-  "operating_system_results": [],
-  "accessibility_results": [],
-  "packaging_results": [
-    "evidence/phase-5/linux-artifact-inspection.json",
-    "evidence/phase-5/linux-checksums.json"
+  "operating_system_results": [
+    "evidence/phase-5/windows-artifact-inspection.json"
   ],
+  "accessibility_results": ["evidence/phase-5/ui-layout-report.json"],
+  "packaging_results": ["evidence/phase-5/packaging-results.json"],
   "benchmark_results": ["evidence/phase-2/benchmark-report.json"],
   "manual_safety_review": null,
   "dogfood_record": null,
   "beta_record": null,
   "known_limitations": [
-    "Phase 0 has commit-addressed local Linux validation; the configured cross-platform CI matrix still requires execution from a pushed commit.",
-    "Phase 1 has commit-addressed local Linux automation and build evidence; real OS-vault integration, target-platform accessibility review, and cross-platform CI execution remain pending.",
-    "Phase 2 has commit-addressed local Linux SQLite journey, fault, hostile-value, result-contract, release-build benchmark, and desktop-build evidence; native target-platform WebView FPS/memory, accessibility, dialogs/clipboard, and manual safety review remain pending.",
-    "Phase 3 has commit-addressed local Linux five-server MySQL/MariaDB conformance, complete SQLite regression, dependency gates, and an optimized desktop build; native target-platform trust stores, interaction evidence, accessibility, and packaging remain pending Phase 5 procedures.",
-    "Phase 4 has commit-addressed local productivity, persistence, SQL-file, table planner/fault, five-server table conformance, dependency, and optimized desktop-build evidence; native target-platform interaction, accessibility, performance, diagnostics, and manual safety review remain pending Phase 5 procedures.",
-    "Phase 5 has commit-addressed local regression, dependency, exact five-server conformance, isolated Linux package, checksum/artifact inspection, fail-closed auditing, and executable evidence procedures; these are partial local evidence only.",
-    "Phase 5 dogfood, beta, cross-platform release-candidate evidence, named manual reviews, and Phase 6 publication remain incomplete."
+    "The sole 0.1.0 support and publication row is Windows 11 25H2 x86-64 with the reviewed unsigned NSIS installer; Windows 10, macOS, and native Linux distribution are unsupported.",
+    "Native Windows owner interaction, manual safety/accessibility/performance review, the fixed five-day dogfood checklist, and external beta remain explicit post-release validation and are not represented as passed.",
+    "PostgreSQL, SSH tunnelling, administration suites, cloud features, telemetry, automatic updates, and signed packages are not included in 0.1.0."
   ],
   "approved_exceptions": []
 }

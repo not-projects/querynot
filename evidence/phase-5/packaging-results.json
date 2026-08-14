@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
+  "status": "pass",
+  "updater_artifacts": false,
+  "checksum_verification": "pass",
+  "checksum_manifest": "evidence/phase-5/SHA256SUMS",
+  "candidate_run_id": "31812585873",
+  "candidate_run_url": "https://github.com/not-projects/querynot/actions/runs/31812585873",
+  "artifacts": [
+    {
+      "id": "windows-nsis-x64",
+      "format": "nsis",
+      "name": "QueryNot_0.1.0_x64-setup.exe",
+      "bytes": 3120800,
+      "sha256": "3a0b5cf5eecd74ccba7668f0ad6ed59a5de8b927b78d2943dc3dabd7f286b84d",
+      "unsigned": true,
+      "evidence_link": "evidence/phase-5/windows-artifact-inspection.json"
+    }
+  ]
+}

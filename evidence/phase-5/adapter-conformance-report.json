@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "status": "pass",
-  "tested_source": "a0671d5ce5e4f540fcc6d04529abee4de3b87b5b",
+  "tested_source": "3da341d9f83619d96c17ec54ea20331301bb9346",
   "environment": {
     "os": "linux",
     "architecture": "x64",
     "kernel": "Linux 6.18.33.2-microsoft-standard-WSL2",
     "node": "v22.22.1",
-    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)"
+    "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)"
   },
   "fixture": "querynot-disposable-fixture-v1",
   "command": "npm run test:conformance:phase5",

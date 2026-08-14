@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "phase": 5,
-  "source_commit": "a0671d5ce5e4f540fcc6d04529abee4de3b87b5b",
+  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
   "application_version": "0.1.0",
   "status": "pass_local_automation",
-  "started_at": "2026-08-14T01:33:10.638Z",
-  "completed_at": "2026-08-14T01:40:16.818Z",
+  "started_at": "2026-08-14T14:59:52.854Z",
+  "completed_at": "2026-08-14T15:02:21.297Z",
   "environment": {
     "os": "linux",
     "architecture": "x64",
@@ -13,8 +13,8 @@
     "cpu": "12th Gen Intel(R) Core(TM) i7-12700H",
     "node": "v22.22.1",
     "npm": "10.9.4",
-    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
-    "cargo": "cargo 1.94.0 (85eff7c80 2026-01-15)"
+    "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+    "cargo": "cargo 1.97.0 (c980f4866 2026-06-30)"
   },
   "checks": [
     {
@@ -33,113 +33,102 @@
       "id": "P5-NPM-CI",
       "command": "npm ci",
       "status": "pass",
-      "duration_ms": 4288
+      "duration_ms": 4734
     },
     {
       "id": "P5-CONTRACTS",
       "command": "npm run test:contracts",
       "status": "pass",
-      "duration_ms": 438
+      "duration_ms": 533
     },
     {
       "id": "P5-TRACEABILITY",
       "command": "npm run test:traceability",
       "status": "pass",
-      "duration_ms": 616
+      "duration_ms": 493
     },
     {
       "id": "P5-NPM-POLICY",
       "command": "npm run test:dependencies",
       "status": "pass",
-      "duration_ms": 613
+      "duration_ms": 543
     },
     {
       "id": "P5-NPM-AUDIT",
       "command": "npm audit --audit-level=high --json",
       "status": "pass",
-      "duration_ms": 2665
+      "duration_ms": 3824
     },
     {
       "id": "P5-SVELTE-CHECK",
       "command": "npm run check",
       "status": "pass",
-      "duration_ms": 3285
+      "duration_ms": 4058
     },
     {
       "id": "P5-FRONTEND-TEST",
       "command": "npm run test",
       "status": "pass",
-      "duration_ms": 2795
+      "duration_ms": 3129
+    },
+    {
+      "id": "P5-UI-LAYOUT",
+      "command": "npm run test:ui-layout",
+      "status": "pass",
+      "duration_ms": 4601
     },
     {
       "id": "P5-FRONTEND-BUILD",
       "command": "npm run build",
       "status": "pass",
-      "duration_ms": 3624
+      "duration_ms": 4430
     },
     {
       "id": "P5-FORMAT",
       "command": "npm run format:check",
       "status": "pass",
-      "duration_ms": 1895
+      "duration_ms": 2226
     },
     {
       "id": "P5-RUSTFMT",
       "command": "cargo fmt --all -- --check",
       "status": "pass",
-      "duration_ms": 328
+      "duration_ms": 344
     },
     {
       "id": "P5-CARGO-CHECK",
       "command": "cargo check --locked --workspace --all-targets",
       "status": "pass",
-      "duration_ms": 671
+      "duration_ms": 783
     },
     {
       "id": "P5-CARGO-TEST",
       "command": "cargo test --locked --workspace --all-targets",
       "status": "pass",
-      "duration_ms": 556
+      "duration_ms": 630
     },
     {
       "id": "P5-CLIPPY",
       "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
       "status": "pass",
-      "duration_ms": 309
+      "duration_ms": 358
     },
     {
       "id": "P5-CARGO-DENY",
       "command": "cargo deny --offline check advisories licenses bans sources",
       "status": "pass",
-      "duration_ms": 892
+      "duration_ms": 1266
     },
     {
       "id": "P5-ADAPTER-CONFORMANCE",
       "command": "npm run test:conformance:phase5",
       "status": "pass",
-      "duration_ms": 116690
-    },
-    {
-      "id": "P5-LINUX-PACKAGES",
-      "command": "npm run package:linux",
-      "status": "pass",
-      "duration_ms": 283933
-    },
-    {
-      "id": "P5-LINUX-ARTIFACT-INSPECTION",
-      "command": "npm run release:inspect -- --binary target/release-candidate-linux/release/querynot --directory target/release-candidate-linux/release/bundle --expect deb,appimage --report evidence/phase-5/linux-artifact-inspection.json",
-      "status": "pass",
-      "duration_ms": 737
-    },
-    {
-      "id": "P5-LINUX-CHECKSUMS",
-      "command": "npm run release:checksums -- --directory target/release-candidate-linux/release/bundle --output evidence/phase-5/SHA256SUMS.linux --manifest evidence/phase-5/linux-checksums.json",
-      "status": "pass",
-      "duration_ms": 792
+      "duration_ms": 115125
     }
   ],
   "executable_test_ids": {
     "P5-AUTO-RELEASE-CONTRACTS": "src/phase5-release.test.ts > candidate version, packaging, unsigned guidance, and fail-closed evidence contracts",
+    "P5-AUTO-UI-LAYOUT": "scripts/check-ui-layout.mjs > large/narrow viewport status-bar geometry, PostNot theme names, and opaque themed dialogs",
     "P5-AUTO-ARTIFACT-INSPECTION": "scripts/inspect-release-artifacts.mjs > package count, binary material, updater, CSP, and capability inspection",
     "P5-AUTO-CHECKSUMS": "scripts/release-checksums.mjs > commit-addressed SHA-256 records for nonempty regular packages",
     "P5-AUTO-ADAPTER-CONFORMANCE": "querynot-fixture-harness across the exact five-server release candidate matrix",
@@ -148,24 +137,21 @@
   },
   "phase_gate": {
     "local_regression_dependency_and_conformance": "pass",
-    "linux_x86_64_debian_and_appimage_build_inspection": "pass_local",
-    "windows_macos_and_exact_native_os_journeys": "pending manual-dispatch builds and P5-MAN-OS-CORE",
-    "accessibility_performance_safety_and_security": "pending named native reviews",
-    "fixed_five_day_dogfood": "unperformed",
-    "five_person_opt_in_beta": "unperformed",
+    "wsl2_engineering_automation": "pass",
+    "windows_11_x64_nsis_build_and_inspection": "pending_ci_candidate",
+    "native_owner_journey": "post_release_unperformed",
+    "native_accessibility_performance_safety_and_security": "post_release_unperformed",
+    "fixed_five_day_dogfood": "post_release_unperformed",
+    "external_beta": "post_release_deferred",
     "all_20_acceptance_criteria": "incomplete",
     "release_evidence_bundle": "incomplete"
   },
   "release_blockers_remaining": [
-    "The eight-row native operating-system installation and core-journey matrix has not passed.",
-    "Native accessibility, performance, manual safety, and security reviews have not passed.",
-    "The fixed five-consecutive-working-day dogfood checklist has not been performed.",
-    "The five-person opt-in beta has not been performed.",
-    "Traceability and the release manifest must remain incomplete until all external evidence passes."
+    "The Windows 11 x86-64 NSIS candidate must be built, inspected, and checksummed by CI.",
+    "Traceability and the release manifest must remain incomplete until the retained Windows candidate evidence is complete."
   ],
   "adapter_conformance_report": "evidence/phase-5/adapter-conformance-report.json",
-  "linux_artifact_inspection": "evidence/phase-5/linux-artifact-inspection.json",
-  "linux_checksums": "evidence/phase-5/linux-checksums.json",
+  "ui_layout_report": "evidence/phase-5/ui-layout-report.json",
   "release_tool_inputs": "fixtures/release-tool-inputs.json",
   "dependency_review": "evidence/phase-5/dependency-review.json",
   "failure": null
