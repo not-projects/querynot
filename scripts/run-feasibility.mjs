@@ -136,7 +136,10 @@ DELIMITER ;
 }
 
 function generateCertificates() {
-  mkdirSync(tlsDirectory, { mode: 0o700 });
+  // The database daemons run as unprivileged container users. The bind-mounted
+  // directory must therefore be traversable even though its disposable private
+  // key is only used by synthetic loopback fixtures.
+  mkdirSync(tlsDirectory, { mode: 0o755 });
   mkdirSync(tlsAuthorityDirectory, { mode: 0o700 });
   const caKey = resolve(tlsAuthorityDirectory, 'ca-key.pem');
   const caCertificate = resolve(tlsDirectory, 'ca.pem');
@@ -226,7 +229,22 @@ function target(
 try {
   writeFileSync(initSqlPath, initSql(), { encoding: 'utf8', mode: 0o600 });
   const caCertificate = generateCertificates();
-  compose(['up', '--detach', '--wait', '--quiet-pull']);
+  try {
+    compose(['up', '--detach', '--wait', '--quiet-pull']);
+  } catch (error) {
+    try {
+      const diagnostics = compose(
+        ['logs', '--no-color', '--timestamps', '--tail', '200'],
+        true
+      ).replaceAll(password, '[REDACTED]');
+      if (diagnostics) process.stderr.write(`${diagnostics}\n`);
+    } catch {
+      process.stderr.write(
+        `warning: Docker diagnostics for ${composeProject} were unavailable\n`
+      );
+    }
+    throw error;
+  }
 
   const manifest = {
     generated_for: 'querynot-disposable-fixture-v1',

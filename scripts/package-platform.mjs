@@ -44,8 +44,9 @@ if (platform === 'linux') {
 }
 
 const cacheRoot = resolve(root, '.tmp', 'release-tool-cache');
+const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const build = spawnSync(
-  'npm',
+  npmExecutable,
   ['run', 'tauri', '--', 'build', '--bundles', bundles.get(platform)],
   {
     cwd: root,

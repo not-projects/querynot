@@ -63,6 +63,30 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(ci).toContain('npm run test:ui-layout');
   });
 
+  it('keeps matrix build caches OS-runner specific', () => {
+    const ci = read('.github/workflows/ci.yml');
+
+    expect(ci.match(/key: \$\{\{ matrix\.runner \}\}/g)).toHaveLength(4);
+  });
+
+  it('uses the Windows npm shim for candidate packaging', () => {
+    const packaging = read('scripts/package-platform.mjs');
+
+    expect(packaging).toContain(
+      "process.platform === 'win32' ? 'npm.cmd' : 'npm'"
+    );
+  });
+
+  it('makes disposable TLS mounts traversable and redacts failed-service diagnostics', () => {
+    const feasibility = read('scripts/run-feasibility.mjs');
+
+    expect(feasibility).toContain('mkdirSync(tlsDirectory, { mode: 0o755 })');
+    expect(feasibility).toContain(".replaceAll(password, '[REDACTED]')");
+    expect(feasibility).toContain(
+      "['logs', '--no-color', '--timestamps', '--tail', '200']"
+    );
+  });
+
   it('retains cross-platform compile checks without making release claims', () => {
     const workflow = read('.github/workflows/ci.yml');
     const compatibility = read('docs/compatibility-matrix.md');

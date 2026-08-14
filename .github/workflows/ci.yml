@@ -50,6 +50,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./ -> target
+          key: ${{ matrix.runner }}
       - run: cargo test --locked -p querynot-core
       - run: cargo clippy --locked -p querynot-core --all-targets -- -D warnings
 
@@ -82,6 +83,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./ -> target
+          key: ${{ matrix.runner }}
       - run: npm ci
       - run: cargo check --locked --workspace --all-targets
 
@@ -101,6 +103,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./ -> target
+          key: ${{ matrix.runner }}
       - run: npm ci
       - run: cargo check --locked --workspace --all-targets
 
@@ -150,6 +153,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: ./ -> target
+          key: ${{ matrix.runner }}
       - run: npm ci
       - run: npm run ${{ matrix.package_script }}
       - name: Prepare retained candidate records

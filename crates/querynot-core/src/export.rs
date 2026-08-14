@@ -305,9 +305,9 @@ fn create_private(path: &Path) -> io::Result<File> {
     options.open(path)
 }
 
-fn sync_directory(path: &Path) {
+fn sync_directory(_path: &Path) {
     #[cfg(unix)]
-    if let Ok(directory) = File::open(path) {
+    if let Ok(directory) = File::open(_path) {
         let _ = directory.sync_all();
     }
 }
