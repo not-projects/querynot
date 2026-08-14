@@ -3,6 +3,8 @@
 - Status: Accepted for implementation
 - Date: 2026-08-14
 
+> Superseded in part by [ADR 0010](0010-windows-first-release-validation-boundary.md): `0.1.0` publishes one reviewed Windows NSIS artifact plus its checksum, while preserving the exact-byte publication boundary described here.
+
 ## Context
 
 Phase 5 can prove that one exact source commit and five exact unsigned packages meet the approved release gates. Phase 6 must not rebuild those packages, substitute same-named files, publish before the gate, or let a partial upload become a public release. Release notes must preserve the tested support boundary and distinguish post-release roadmap ideas from shipped behavior.

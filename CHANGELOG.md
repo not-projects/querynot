@@ -22,3 +22,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Added the Phase 5 release-candidate framework: aligned unpublished `0.1.0` build metadata, explicit unsigned NSIS/DMG/AppImage/Debian packaging without updater artifacts, application icons, manual-dispatch cross-platform package jobs, SHA-256 generation, release-binary/package inspection, fail-closed evidence auditing, redacted evidence templates, and executable installation/accessibility/performance/safety/security/dogfood/beta procedures. The Phase 5 exit and release remain blocked on the recorded native and human gates.
 - Added fail-closed Phase 6 publication preparation: exact manifest/package/checksum matching, explicit confirmation, a no-rebuild manual workflow, draft tag/source validation, draft-asset round-trip verification, fixed release notes with unsupported roadmap labels, and data-safety-first failure triage. Actual publication remains blocked on the complete Phase 5 gate.
 - Strengthened the Phase 5 evidence contract with per-package core-journey checks, one network journey per OS family, per-platform accessibility matrices, and recomputed native performance statistics from retained raw samples.
+
+### Changed
+
+- Revised the `0.1.0` release envelope to Windows 11 x86-64 while preserving the complete SQLite/MySQL/MariaDB workflow; WSL2/Linux packages are engineering evidence and Windows 10/macOS/native Linux distribution is deferred.
+- Made native owner checks, the fixed five-day dogfood checklist, and external beta explicit post-release validation for the sole initial participant without representing unperformed evidence as passed.

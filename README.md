@@ -5,11 +5,13 @@
 
 > **Query your data, not your patience.**
 
-QueryNot is a planned local-first desktop SQL client focused on a fast, calm, and dependable workflow for working with databases.
+QueryNot is a local-first desktop SQL client focused on a fast, calm, and dependable workflow for working with databases.
 
 ## Project Status
 
-QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, the locally implemented Phase 4 productivity and safe-data-editing slice, a Phase 5 release-candidate validation framework, and fail-closed Phase 6 publication preparation. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Unsigned package configuration, checksum and artifact inspection, fail-closed evidence/publication auditing, and executable native/manual procedures now exist. This remains development behavior, not a release-tested support claim: the exact cross-platform packages and journeys, accessibility, native performance, named safety/security review, dogfood, beta, and final release gates remain incomplete.
+QueryNot is in pre-release development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, Phase 4 productivity and safe-data-editing, and Phase 5–6 validation/publication tooling. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations.
+
+The approved `0.1.0` release envelope is Windows 11 x86-64 only. WSL2 and Linux package builds are engineering evidence, not supported application platforms or public release artifacts. Native owner checks, five-day dogfood, and external beta follow the first release and remain explicitly unperformed until they occur.
 
 The planned application stack is:
 
@@ -27,7 +29,7 @@ QueryNot is being designed around a small set of principles:
 - **Safe around data:** Credentials, destructive statements, exports, logs, and diagnostics require deliberate handling.
 - **Desktop-native:** Database work belongs in a focused application, not another crowded browser tab.
 
-The planned initial engine scope is SQLite, MySQL 5.7+ (with 5.7.44, 8.0, and 8.4 LTS as the initial tested lines), and MariaDB 10.11/11.4 LTS. MySQL 5.7 is a legacy compatibility target, not a recommendation to keep using an end-of-life server. This is a product plan, not a shipped support claim; the exact tested platform, database patch, authentication, and TLS matrix must be published before a release candidate. See the [product requirements](docs/product-requirements.md) for the implementation and release gates.
+The initial engine scope is SQLite, MySQL 5.7+ (with 5.7.44, 8.0, and 8.4 LTS as the tested lines), and MariaDB 10.11/11.4 LTS. MySQL 5.7 is a legacy compatibility target, not a recommendation to keep using an end-of-life server. The exact tested platform, database patch, authentication, and TLS matrix is frozen before publication. See the [product requirements](docs/product-requirements.md) for the implementation and release gates.
 
 ## AI-Generated Project
 
@@ -53,6 +55,7 @@ The verified foundation commands are:
 npm install
 npm run check
 npm run test
+npm run test:ui-layout
 npm run test:dependencies
 npm run build
 cargo test --workspace
@@ -74,11 +77,11 @@ npm run release:prepare-publication -- --directory <candidate-dir> --output arti
 
 `npm run test:conformance:phase4` extends the same exact five-server matrix with deterministic table paging, bound structured filters, typed staged inserts/updates/deletes, generated-value refresh, optimistic conflicts, and atomic rollback. `npm run verify:phase4` runs the full Phase 4 regression, dependency review, conformance, and desktop-build gate from a clean commit and retains commit-addressed validation, table-conformance, and dependency reports.
 
-Phase 5 prepares unsigned NSIS, architecture-specific DMG, AppImage, and Debian packages without updater artifacts. `npm run package:linux` has produced and inspected the two Linux candidate formats locally. Windows and macOS package jobs are configured for manual CI dispatch but are not evidence until they run and their native journeys pass. `npm run test:release-evidence` intentionally fails while any required native, human, traceability, or release-manifest record is absent; it cross-matches the exact five checksums, requires structured per-package and per-OS evidence, and recomputes native performance summaries from retained raw samples. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md); do not infer a support claim from a successful build.
+Phase 5 prepares the unsigned Windows 11 x86-64 NSIS release artifact without updater material. `npm run package:linux` has also produced and inspected two WSL2 engineering formats, but they are not published or supported in `0.1.0`. `npm run test:ui-layout` exercises large/narrow status-bar geometry, all PostNot-aligned theme names, and opaque dialog surfaces in Chromium. `npm run test:release-evidence` remains fail-closed until the Windows package, exact checksum, commit-addressed automation, revised traceability, manifest, and product-owner scope record agree. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md).
 
-`npm run verify:phase5:local` has passed for the commit recorded in `evidence/phase-5/local-validation-report.json`. It reruns the complete local regression, exact dependency gates, five-server candidate conformance, and isolated Linux package/inspection/checksum path. Its explicit incomplete phase gate is authoritative: it does not replace the eight native OS/package journeys, native accessibility and performance, named safety/security review, fixed five-day dogfood period, five-person beta, or final all-20 evidence audit.
+`npm run verify:phase5:local` reruns the complete local regression, automated UI layout gate, exact dependency gates, five-server candidate conformance, and isolated Linux engineering package/inspection/checksum path. It does not substitute for the required Windows NSIS construction and inspection. Native interaction, dogfood, and beta remain post-release owner validation under the approved revision-2 scope.
 
-The Phase 6 publication command is intended for the manual release workflow after the Phase 5 gate. It reruns that gate, rejects substituted or extra artifacts, stages only the five reviewed package bytes and retained checksum file, and requires an exact release confirmation. The workflow creates and round-trip verifies a draft before publication; it never rebuilds or overwrites a candidate. The command is expected to fail while the manifest remains incomplete.
+The Phase 6 publication command is intended for the manual release workflow after the Phase 5 gate. It reruns that gate, rejects substituted or extra artifacts, stages only the reviewed Windows installer and retained checksum file, and requires an exact release confirmation. The workflow creates and round-trip verifies a draft before publication; it never rebuilds or overwrites a candidate.
 
 `npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
 
@@ -86,7 +89,7 @@ Linux hosts without Docker can run `npm run fixtures:fetch:native` once, then `n
 
 Rust dependency policy uses `cargo-deny 0.20.2`; CI installs that exact locked tool version before running `cargo deny check advisories licenses bans sources`.
 
-These commands validate the current local implementation; they do not imply that cross-platform exit evidence, Phase 5–6 behavior, or the release compatibility matrix is complete.
+These commands validate the current local implementation; only the published compatibility matrix and passing release audit establish a support claim.
 
 ## License
 

@@ -34,13 +34,16 @@ Then inspect the actual repository state and current branch before proposing cha
 
 ## Current State
 
-The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, implemented Phase 4 productivity and safe data editing, the Phase 5 release-candidate validation framework, and Phase 6 exact-artifact publication preparation. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB development matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids. Commit-addressed local regression, dependency, exact five-server candidate conformance, Linux package, checksum, and artifact-inspection evidence passes. Publication preparation refuses incomplete evidence or substituted package bytes. Cross-platform native execution, human evidence, Phase 5 exit, and actual Phase 6 publication remain incomplete; no compatibility row is a release support claim.
+The repository contains implemented Phases 0–4 and Phase 5–6 validation/publication tooling. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB development matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids.
+
+The approved `0.1.0` support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
 
 ## Verified Commands
 
 - `npm install` — install the exact frontend/Tauri CLI lockfile.
 - `npm run check` — Svelte and TypeScript diagnostics.
 - `npm run test` — frontend/policy unit tests with a repository-local temporary directory.
+- `npm run test:ui-layout` — Chromium regression checks for large/narrow status-bar geometry, PostNot theme names, and opaque themed dialogs; install the pinned browser once with `npx playwright install chromium`.
 - `npm run build` — production frontend build.
 - `npm run test:contracts` — generated Rust/TypeScript command contract drift check.
 - `npm run test:traceability` — PRD/matrix coverage and evidence invariant check.
@@ -60,10 +63,10 @@ The repository contains the Phase 0 scaffold, Phase 1 secure local foundation, P
 - `npm run package:linux` — production x86-64 Debian and AppImage candidate build through the checksum-pinned release-tool cache; requires AppImage mount/tooling access and does not prove installation compatibility.
 - `npm run release:inspect -- --binary <path> --directory <path> --expect <formats> --report <path>` — inspect one platform's nonempty packages, binary material, CSP/capability boundary, version, commit, and updater state.
 - `npm run release:checksums -- --directory <path> --output <path> --manifest <path>` — generate commit/version-addressed SHA-256 text and JSON records for the exact candidate packages.
-- `npm run test:release-evidence` — final fail-closed audit; expected to fail until every Phase 5 native/human record, all 121 verified traceability rows, and the ready release manifest exist.
+- `npm run test:release-evidence` — final fail-closed revision-2 audit; expected to fail until the exact Windows artifact/checksum, complete WSL2/browser automation, all 121 verified traceability rows, product-owner scope record, and ready release manifest exist.
 - `npm run test:conformance:phase5` — exact five-server candidate rerun retained separately from earlier phase evidence.
-- `npm run verify:phase5:local` — clean-tree candidate regression, dependency, conformance, isolated Linux packaging, artifact-inspection, and checksum gate; requires `cargo-deny 0.20.2` on `PATH` and retains an explicitly incomplete Phase 5 report.
-- `npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report <report>` — after the complete Phase 5 gate only, verify and stage the exact five reviewed packages plus retained checksums; it is expected to fail while evidence is incomplete.
+- `npm run verify:phase5:local` — clean-tree WSL2 regression, UI layout, dependency, conformance, isolated Linux engineering packaging, artifact-inspection, and checksum gate; requires `cargo-deny 0.20.2` on `PATH` and does not replace the Windows package gate.
+- `npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report <report>` — after the complete Phase 5 gate only, verify and stage the exact reviewed Windows installer plus retained checksum; it is expected to fail while evidence is incomplete.
 - `npm run release:verify-publication -- --directory <download-dir> --tag v0.1.0 --report <report>` — round-trip verify the draft release bytes before publication; this is run by the manual Phase 6 workflow.
 - `npm run test:feasibility` — exact disposable network-database feasibility run; requires Docker and retains a redacted report.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — checksum-pinned Linux fallback that installs nothing, uses random loopback ports and verified TLS, and retains the same redacted report.

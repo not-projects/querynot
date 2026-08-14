@@ -1,22 +1,22 @@
 # Compatibility and conformance matrix
 
-Status: Phase 5 engineering candidate in progress; not a support claim
-Selection date: 2026-08-13; local candidate conformance/package rerun 2026-08-14
+Status: Revision-2 Windows release candidate in progress; not a support claim until the final gate passes
+Selection date: 2026-08-14
 
-No row becomes supported until Phase 5 retains native packaging, installation, end-to-end, accessibility, and applicable adapter conformance evidence for the exact patch/runtime combination.
+Only the `windows-11-x64` row is eligible for the `0.1.0` support claim. It becomes supported only after Phase 5 retains the exact Windows package, inspection, checksum, complete WSL2/browser automation, and applicable adapter conformance evidence. Native owner checks follow the release under ADR 0010 and are not represented as already performed.
 
 ## Application platforms
 
 | Matrix ID | Operating system | Architecture | Web runtime/package | Current status |
 | --- | --- | --- | --- | --- |
-| `windows-10-22h2-x64` | Windows 10 22H2, final applicable patch | x86-64 | Supported WebView2, NSIS | Planned |
-| `windows-11-x64` | Windows 11, exact RC patch | x86-64 | Supported WebView2, NSIS | Planned |
-| `macos-13-intel` | macOS 13, exact RC patch | Intel | System WebKit, unsigned DMG | Planned |
-| `macos-13-apple` | macOS 13, exact RC patch | Apple silicon | System WebKit, unsigned DMG | Planned |
-| `macos-current-intel` | Latest selected macOS at RC | Intel | System WebKit, unsigned DMG | Planned |
-| `macos-current-apple` | Latest selected macOS at RC | Apple silicon | System WebKit, unsigned DMG | Planned |
-| `ubuntu-22.04-x64` | Ubuntu 22.04 LTS, exact RC patch | x86-64 | WebKitGTK 4.1, AppImage + Debian | Candidate formats build locally; exact native row pending |
-| `ubuntu-24.04-x64` | Ubuntu 24.04 LTS, exact RC patch | x86-64 | WebKitGTK 4.1, AppImage + Debian | Planned |
+| `windows-11-x64` | Windows 11 25H2, build 26200.8655 | x86-64 | Microsoft Edge WebView2 151.0.4129.78, unsigned NSIS | Selected `0.1.0` row; package and final audit pending |
+| `windows-10-22h2-x64` | Windows 10 22H2 | x86-64 | WebView2, NSIS | Deferred; no `0.1.0` support or artifact claim |
+| `macos-13-intel` | macOS 13 | Intel | System WebKit, DMG | Deferred; no `0.1.0` support or artifact claim |
+| `macos-13-apple` | macOS 13 | Apple silicon | System WebKit, DMG | Deferred; no `0.1.0` support or artifact claim |
+| `macos-current-intel` | Current macOS | Intel | System WebKit, DMG | Deferred; no `0.1.0` support or artifact claim |
+| `macos-current-apple` | Current macOS | Apple silicon | System WebKit, DMG | Deferred; no `0.1.0` support or artifact claim |
+| `ubuntu-22.04-x64` | Ubuntu 22.04 LTS | x86-64 | WebKitGTK 4.1, AppImage + Debian | WSL2 engineering packages only; no `0.1.0` support or publication claim |
+| `ubuntu-24.04-x64` | Ubuntu 24.04 LTS | x86-64 | WebKitGTK 4.1, AppImage + Debian | Deferred; no `0.1.0` support or artifact claim |
 
 ## Database fixtures
 
@@ -33,4 +33,4 @@ MySQL 8.0 reached the lifecycle date identified by the vendor before this select
 
 The retained Phase 4 reports cover the full Phase 3 contract plus deterministic keyset paging, labelled read-only fallbacks in the local planner, bound hostile structured filters, typed validation, insert/update/delete, generated-value refresh, optimistic conflicts, and atomic rollback. Positive system-trust validation against a publicly trusted target and native target-platform trust-store behavior remain Phase 5 procedures; fixture automation intentionally never contacts a non-fixture database.
 
-The unpublished `0.1.0` engineering candidate configuration has produced nonempty Debian and AppImage packages locally and passed binary/package/checksum inspection. This is build evidence only: it does not identify an exact Ubuntu patch/runtime, prove install/uninstall, or promote either Ubuntu row to supported. The manually dispatched packaging matrix uses GitHub's documented `macos-15-intel` x86-64 and `macos-15` arm64 hosted-runner labels, but hosted builds likewise do not replace the macOS 13/current native journeys.
+The unpublished `0.1.0` engineering configuration has produced nonempty Debian and AppImage packages in WSL2 and passed binary/package/checksum inspection. Under ADR 0010, those bytes are development evidence only and are excluded from publication. Cross-platform CI compilation is likewise portability evidence, not a support claim.

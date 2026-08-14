@@ -1,7 +1,7 @@
 # QueryNot Product Requirements Document
 
-Date: 2026-08-13  
-Status: Approved for implementation  
+Date: 2026-08-14
+Status: Approved for implementation — revision 2
 Product: QueryNot  
 Initial release: Everyday developer workflow  
 Decision owner: QueryNot product owner  
@@ -10,7 +10,7 @@ Decision owner: QueryNot product owner
 
 ## 1. Document purpose
 
-This document defines the planned product, architecture boundaries, initial-release requirements, acceptance criteria, and roadmap for QueryNot. It is a product specification, not a statement of implemented behavior. At the time of writing, QueryNot has no application scaffold or usable release.
+This document defines the planned product, architecture boundaries, initial-release requirements, acceptance criteria, and roadmap for QueryNot. It is a product specification, not a statement of implemented behavior. Revision 2 preserves the complete everyday database workflow while changing the first public release envelope and evidence boundary by product-owner decision.
 
 The words **must**, **should**, and **may** indicate required, preferred, and optional behavior. All numbered requirements are release-blocking unless they explicitly say otherwise. A capability is not considered shipped until it exists in the repository and passes the release gates in this document.
 
@@ -23,6 +23,9 @@ This baseline is ready to decompose into architecture decisions, issues, and ver
 - Every implementation issue must cite the requirement identifiers it satisfies. Every requirement must map to automated or manual acceptance evidence in the release traceability matrix.
 - Acceptance evidence includes the commit, tested platform and database versions, fixture, command or procedure, result, and retained artifact such as a report, screenshot, recording, or benchmark output.
 - “Initial release” means the first publicly distributed pre-1.0 build declared usable for the everyday workflow in this document. Internal foundation builds are not the initial release.
+- For revision 2, the claimed and distributed platform is Windows 11 x86-64. WSL2 is an approved development and automated-validation environment, not a supported application platform. Windows 10, macOS, and native Linux distribution are deferred until a later approved support-matrix expansion.
+- The product owner is the sole initial participant. Native human checks, the five-day dogfood checklist, and external beta are retained as post-release validation work and do not block `0.1.0`. Their absence must be labelled as deferred; no unperformed result may be recorded as a pass.
+- Release-blocking evidence for `0.1.0` consists of reproducible WSL2 automation, disposable database conformance, automated browser layout/accessibility checks, dependency/security policy gates, and real Windows package construction, inspection, and checksums. The approved scope record must identify every nonblocking post-release check.
 
 ### 1.2 Product assumptions
 
@@ -50,7 +53,7 @@ This baseline is ready to decompose into architecture decisions, issues, and ver
 
 ## 2. Product summary
 
-QueryNot is a local-first, cross-platform desktop SQL client for software developers. It is intended to replace MySQL Workbench and DBeaver for routine development work with a faster, calmer, and more dependable experience.
+QueryNot is a local-first desktop SQL client for software developers, with a Windows 11 first release and planned cross-platform expansion. It is intended to replace MySQL Workbench and DBeaver for routine development work with a faster, calmer, and more dependable experience.
 
 The initial release focuses on the complete everyday loop:
 
@@ -118,7 +121,7 @@ Database administrators are not a primary initial-release audience.
 - Replace MySQL Workbench and DBeaver for the project owner's routine development workflow.
 - Support SQLite, MySQL 5.7+ with initial conformance coverage for 5.7.44, 8.0, and 8.4 LTS, and MariaDB 10.11 and 11.4 LTS through a common adapter architecture.
 - Make MySQL-versus-MariaDB selection automatic after connection; users choose a single “MySQL / MariaDB” connection family.
-- Deliver the same core workflow on Windows, macOS, and Linux.
+- Deliver the complete core workflow on Windows 11 while retaining portable architecture and CI compile coverage for later macOS and Linux support.
 - Provide a rich, dialect-aware SQL editor and an editor-first workspace.
 - Safely stream and render large result sets with bounded memory use.
 - Provide staged table-row insert, update, and delete operations with SQL preview and transactional rollback.
@@ -578,7 +581,7 @@ Library choice may change implementation details but cannot weaken a numbered re
 
 ### 11.1 Performance
 
-Targets are measured from production builds on an otherwise idle reference machine with at least four modern CPU cores, 16 GiB RAM, and SSD storage. Phase 0 records the exact CPU, OS, runtime, power mode, display scale, and benchmark commands in the repository. Percentiles use at least 30 independent samples after one discarded setup run. The ordinary-result fixture contains 10,000 rows, 12 mixed-type columns, approximately 1 KiB encoded payload per row, nulls, Unicode, and variable-width text. The large-schema fixture contains at least 100 namespaces and 10,000 objects.
+Targets are measured from production builds on an otherwise idle reference machine with at least four modern CPU cores, 16 GiB RAM, and SSD storage. Phase 0 records the exact CPU, OS, runtime, power mode, display scale, and benchmark commands in the repository. Percentiles use at least 30 independent samples after one discarded setup run. The ordinary-result fixture contains 10,000 rows, 12 mixed-type columns, approximately 1 KiB encoded payload per row, nulls, Unicode, and variable-width text. The large-schema fixture contains at least 100 namespaces and 10,000 objects. Revision 2 accepts the retained WSL2 release-build benchmark and automated browser geometry checks for the `0.1.0` gate; native Windows interaction FPS and resident-memory confirmation remain labelled post-release validation.
 
 - Cold launch to an interactive restored shell: at most 3 seconds at the 95th percentile.
 - Local UI response to typing, tab switching, tree expansion from cache, and common commands: at most 100 ms at the 95th percentile.
@@ -607,9 +610,8 @@ Targets are measured from production builds on an otherwise idle reference machi
 
 ### 11.4 Compatibility
 
-- Windows 10 22H2 and Windows 11 on x86-64 with a supported Microsoft Edge WebView2 runtime.
-- macOS 13 or later on Apple silicon and Intel.
-- Ubuntu 22.04 LTS and 24.04 LTS on x86-64. Other glibc-based distributions may work but are not supported until added to the matrix.
+- Windows 11 on x86-64 with the exact Microsoft Edge WebView2 runtime recorded for the release candidate.
+- Windows 10, macOS, and native Linux packages are not part of the `0.1.0` support or distribution claim. Portable compile checks and WSL2/Linux engineering packages are development evidence only.
 - MySQL 5.7.44 as a legacy compatibility target, MySQL 8.0 at the exact patch selected for the release fixture, and MySQL 8.4 LTS at the latest maintenance patch selected for the release fixture. “MySQL 5.7+” establishes the compatibility floor; it does not claim untested innovation, future, forked, or vendor-patched versions.
 - MariaDB 10.11 and 11.4 LTS, using the latest maintenance patch selected for the release fixtures.
 - SQLite format 3 database files accepted by the exact bundled SQLite library version; extension loading is disabled in the initial release.
@@ -618,7 +620,7 @@ The repository must publish the exact tested operating-system patch, WebView/run
 
 ### 11.5 Distribution
 
-Initial artifacts are an x86-64 Windows NSIS installer, separate Apple-silicon and Intel macOS DMGs, and x86-64 Linux AppImage plus Debian package. They are unsigned and unnotarized. Release notes and installation documentation must state the resulting operating-system warnings and give exact verification instructions.
+The initial public artifact is one x86-64 Windows NSIS installer. It is unsigned. Release notes and installation documentation must state the resulting Windows warning and give exact checksum-verification instructions. Existing Linux AppImage and Debian engineering packages are not published or described as supported release artifacts; macOS artifacts are deferred.
 
 Releases publish SHA-256 checksums through the project release channel. The initial application does not self-update or bypass operating-system security prompts.
 
@@ -662,16 +664,16 @@ SQLite uses temporary files. MySQL and MariaDB use isolated disposable instances
 - Unit tests for state machines, destructive-statement classification, tab binding, result transport, value formatting, history retention, and mutation planning.
 - Component tests for keyboard behavior, focus restoration, loading/error/empty states, and accessibility semantics.
 - Integration tests across the Tauri boundary for commands, events, backpressure, cancellation, secret references, persistence, and exports.
-- End-to-end tests for the acceptance journeys on all three desktop platforms.
+- Automated end-to-end and contract tests for the acceptance journeys in WSL2/browser automation, plus Windows package construction and inspection for the claimed platform.
 - Visual regression coverage for light, dark, and forest themes at standard and narrow widths.
 - Upgrade tests for every local-storage migration once a released schema exists.
 - Property/fuzz tests for statement splitting, destructive classification, tagged values, driver-error redaction, metadata/value size limits, CSV/JSON encoding, and command/event deserialization.
 - Fault-injection tests for vault refusal, local-store corruption/migration failure, disk full, export interruption, frontend reload, network loss, cursor expiry, driver panic/error, and rollback failure.
 - Security tests for Tauri capability denial, resource-ownership checks, CSP, hostile metadata/value rendering, path validation, secret exclusion, and release artifact inspection.
 
-### 12.3 Manual safety review
+### 12.3 Post-release owner validation
 
-Before release, reviewers validate credential persistence, TLS modes, diagnostic redaction, history clearing, destructive confirmations, transaction-close warnings, export overwrite behavior, unsigned installation instructions, and inability of tests to reach non-fixture databases.
+The sole initial participant validates native Windows interaction, credential-vault behavior, TLS modes, diagnostic redaction, history clearing, destructive confirmations, transaction-close warnings, export overwrite behavior, unsigned installation, accessibility, performance, and the fixed dogfood journey after `0.1.0` is available. External beta begins when additional participants are acquired. These checks remain safety-prioritized product feedback, but they are not `0.1.0` release gates under revision 2.
 
 Test harnesses fail closed when fixture connection details are absent. Database tests require an explicit generated fixture marker and reject loopback/non-loopback targets that do not present that marker. CI and local scripts must not read generic database environment variables or scan standard ports.
 
@@ -684,9 +686,9 @@ The release evidence bundle contains:
 - the exact source commit and reproducible build metadata;
 - dependency/license/vulnerability reports and reviewed exceptions;
 - adapter conformance reports for every claimed database combination;
-- operating-system end-to-end, accessibility, and packaging results;
-- benchmark raw data and environment description;
-- manual safety-review sign-off;
+- the claimed Windows package construction, inspection, and checksum results;
+- WSL2 release-build benchmark data, automated UI layout/accessibility evidence, and exact environment descriptions;
+- the product-owner scope record listing nonblocking post-release native, dogfood, and beta checks;
 - known limitations and all approved requirement exceptions.
 
 ## 13. Initial-release acceptance criteria
@@ -704,15 +706,15 @@ The initial release is ready only when all of the following are true:
 9. Users can browse a keyed table and stage inserts, updates, and deletes; preview them; commit them atomically; and observe a full rollback on injected failure or conflict.
 10. Targeted destructive confirmations trigger for `DROP`, `TRUNCATE`, and `DELETE`/`UPDATE` statements with missing, ineffective, or uncertain predicates across each supported dialect; approval invalidates when text or context changes.
 11. Query history, drafts, and session state restore locally; retention, pause, clear, and disable controls work; credentials, result rows, and staged edits are absent from persistence.
-12. Windows, macOS, and Linux packages install through the documented unsigned flow and run the same core acceptance journey.
-13. The PostNot-aligned themes and editor-first shell pass accessibility, keyboard, narrow-width, scale, and visual review.
+12. The Windows 11 x86-64 NSIS package is built from the reviewed source, passes automated artifact inspection and checksum verification, and is documented through the unsigned Windows flow; other desktop packages make no `0.1.0` support claim.
+13. The PostNot-aligned System, Light, Dark, and Forest themes and editor-first shell pass automated accessibility semantics, keyboard contracts, 2048px/1280px/960px/720px layout checks, 80%–200% scale contracts, and visual-style invariants.
 14. No known critical or high-severity issue remains in credential handling, TLS, SQL targeting, transactions, row editing, exports, local-file access, or secret redaction.
-15. The project owner completes the fixed dogfood checklist in section 14.3 over five consecutive working days without needing MySQL Workbench or DBeaver for an in-scope initial-release task.
+15. The product-owner-approved revision-2 scope record is retained, identifies the sole initial participant, and keeps the fixed dogfood checklist and external beta as explicit post-release validation without treating either as performed.
 16. Dedicated tab sessions keep transaction, context, temporary object, active-job, and cancellation state isolated under concurrent use and connection loss.
 17. Result tranche, byte, hard-retention, paused-cursor expiry, event sequencing, export-format, and cleanup contracts pass normal and fault-injection tests.
 18. Table browsing proves deterministic keyed paging, labelled unstable read-only paging, bound structured filters, typed edit validation, optimistic conflict detection, generated-value refresh, and atomic rollback.
 19. Local-store migration failure, vault failure, disk-full, frontend-reload, and interrupted-export scenarios preserve the last valid user data and enter the specified recoverable state.
-20. The release evidence bundle and traceability matrix contain no uncovered must requirement, unreviewed dependency exception, or unsupported compatibility claim.
+20. The release evidence bundle and traceability matrix contain no uncovered revision-2 release blocker, unreviewed dependency exception, fabricated manual result, or unsupported compatibility claim; every post-release check is explicit.
 
 ## 14. Success measures
 
@@ -720,7 +722,7 @@ QueryNot does not collect telemetry. Success is evaluated through local benchmar
 
 ### 14.1 Primary measure
 
-The project owner passes the fixed checklist in section 14.3 over five consecutive working days without using MySQL Workbench or DBeaver for an in-scope task.
+After `0.1.0`, the project owner passes the fixed checklist in section 14.3 over five consecutive working days without using MySQL Workbench or DBeaver for an in-scope task. Findings are triaged by data-safety impact before broader distribution.
 
 ### 14.2 Supporting measures
 
@@ -729,11 +731,11 @@ The project owner passes the fixed checklist in section 14.3 over five consecuti
 - Median dogfood time from selecting a saved local connection to an editable query tab is under 5 seconds, including a local test connection.
 - Median dogfood time from opening a table to finding and copying a known row is under 10 seconds on the reference fixture.
 - No unrecoverable workspace loss during the five-day dogfood period.
-- At least five opt-in external beta developers attempt the scripted core journey; at least four complete it without maintainer intervention, and no participant encounters an unresolved data-safety or workspace-loss issue before a broader public announcement.
+- When participants are acquired, at least five opt-in external beta developers attempt the scripted core journey; at least four complete it without maintainer intervention, and no participant encounters an unresolved data-safety or workspace-loss issue before a broader cross-platform announcement.
 
-### 14.3 Fixed five-day dogfood checklist
+### 14.3 Post-release fixed five-day dogfood checklist
 
-Acceptance criterion 15 uses this checklist as its fixed definition of routine development work. The project owner records a redacted daily result for each applicable item, including date, engine/profile category, outcome, fallback used, and an evidence link. The record must not contain credentials, connection endpoints, SQL text containing sensitive literals, database metadata, or result values.
+This checklist remains the fixed definition of routine development work for post-release owner validation. The project owner records a redacted daily result for each applicable item, including date, engine/profile category, outcome, fallback used, and an evidence link. The record must not contain credentials, connection endpoints, SQL text containing sensitive literals, database metadata, or result values.
 
 | ID | Dogfood task | Required frequency during the five-day period |
 | --- | --- | --- |
@@ -768,7 +770,7 @@ Exit: the seeded traceability matrix is checked in and current; dependency gates
 - Implement profile, native-session, tab, job, and error state machines with ownership checks and fault injection.
 - Build the editor-first shell, themes, accessible primitives, and offline session/draft restoration without database execution.
 
-Exit: vault/local-store/file failure cases preserve data and never persist secrets; the shell restores drafts accessibly on all target platforms.
+Exit: vault/local-store/file failure cases preserve data and never persist secrets; the shell restores drafts accessibly on every claimed release platform.
 
 ### Phase 2 — SQLite query vertical slice
 
@@ -791,16 +793,16 @@ Exit: every claimed MySQL-family matrix entry passes conformance and the SQLite 
 
 Exit: all functional requirements and acceptance criteria 1–11 and 16–19 pass on the applicable matrix entries.
 
-### Phase 5 — Cross-platform release candidate
+### Phase 5 — Windows 11 release candidate
 
-- Freeze the compatibility matrix, validate packaging, checksums, unsigned installation, accessibility, performance, migrations, diagnostics, security, dependency/license/vulnerability review, and full end-to-end journeys.
-- Run the fixed five-day dogfood checklist in section 14.3 and the five-person opt-in beta, resolving data-safety and workspace-loss issues before workflow polish.
+- Freeze the Windows 11 compatibility row; validate real NSIS construction, artifact inspection, checksums, automated accessibility/layout/performance proxies, migrations, diagnostics, security, dependency/license/vulnerability policy, and disposable-database journeys.
+- Retain the product-owner revision-2 scope record. Keep native interaction, fixed dogfood, and external beta procedures available as post-release work without claiming they ran.
 
-Exit: all 20 acceptance criteria pass, the evidence bundle is complete, and every exception is product-owner approved and documented with an expiry.
+Exit: all 20 revised acceptance criteria pass, the release-blocking evidence bundle is complete, every nonblocking post-release check is explicit, and there is no unsupported platform claim.
 
 ### Phase 6 — Initial release
 
-- Publish the exact reviewed artifacts and checksums only after the Phase 5 gate.
+- Publish the exact reviewed Windows NSIS artifact and checksum only after the Phase 5 gate.
 - Keep unsupported roadmap behavior clearly labelled.
 - Triage failures by data-safety impact first, then reliability and workflow friction.
 
@@ -841,6 +843,12 @@ Roadmap items are directional and do not constitute shipped promises.
 - Continue adding compiled-in adapters through the common contract.
 - Consider third-party adapters only after designing process isolation, code signing/trust, compatibility, upgrades, permissions, and support boundaries. The initial architecture must not imply that arbitrary adapter loading is safe or supported.
 
+### 16.6 Platform and participant expansion
+
+- Complete native package, interaction, accessibility, performance, vault, installation, and uninstall evidence before adding Windows 10, macOS, or Linux to the support matrix.
+- Run the fixed owner dogfood checklist and resolve safety or workspace-loss findings before broadening the announcement.
+- Recruit explicit opt-in beta participants, retain consent-safe redacted results, and expand distribution only through a new product-approved matrix revision.
+
 ## 17. Principal risks and mitigations
 
 | Risk | Impact | Mitigation |
@@ -874,7 +882,7 @@ The following product decisions are fixed for the initial-release plan:
 - First post-release engine: PostgreSQL.
 - Initial workflow level: core querying plus productivity features and staged table-data editing.
 - Credentials: OS credential vault/keychain.
-- Platforms: Windows, macOS, and Linux from the initial release.
+- Platforms: Windows 11 x86-64 for `0.1.0`; Windows 10, macOS, and native Linux distribution are deferred until separately validated and approved.
 - Signing: deferred; unsigned installation is documented.
 - Destructive safeguards: targeted confirmation for clearly high-risk statements.
 - Large results: incremental streaming, virtualization, safety cap, and explicit load more.
@@ -884,6 +892,7 @@ The following product decisions are fixed for the initial-release plan:
 - Visual direction: aligned with PostNot; shared component extraction deferred to a separate project.
 - Profile migration: manual connection setup; no Workbench/DBeaver import initially.
 - Primary success criterion: replace the project owner's current client for routine development work.
+- Initial validation participants: the project owner only; fixed dogfood, native manual checks, and external beta are post-release and must not be represented as completed beforehand.
 - Result retention: 10,000-row default tranches with explicit load more and a 100,000-row/128-MiB hard retained limit.
 - Diagnostics: bounded redacted local logs and explicit local-only export; no remote upload.
 
@@ -931,5 +940,5 @@ This PRD intentionally delegates library selection, internal module names, exact
 | Results and data fidelity | Corrected | Tranches, hard byte/row limits, cursor expiry, event integrity, exact export shapes, and lossy-number avoidance are defined. |
 | Table-data mutation safety | Corrected | Identity eligibility, paging, filtering, editable types, optimistic predicates, preview invalidation, and rollback semantics are defined. |
 | Measurability and traceability | Corrected | Fixtures, sample rules, performance targets, evidence bundle, requirement matrix, and definitions of ready/done are specified. |
-| Product approval | Pass | The QueryNot product owner approved this implementation baseline on 2026-08-13, including the full first-release scope, local-only product boundary, unsigned open-source distribution, and fixed five-day dogfood checklist. |
+| Product approval | Pass | The QueryNot product owner approved the full workflow baseline on 2026-08-13, then approved revision 2 on 2026-08-14: Windows 11 x86-64 is the sole `0.1.0` support/publication row; WSL2 and automated browser evidence are accepted release inputs; native manual checks, fixed dogfood, and external beta are post-release; unperformed results remain explicit rather than being fabricated as passes. |
 | Remaining blocking product questions | None | Implementation can begin without inventing scope or safety behavior; changes to fixed decisions follow the product-review rule in section 19.3. |

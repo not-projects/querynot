@@ -3,6 +3,8 @@
 - Status: Accepted for implementation
 - Date: 2026-08-14
 
+> Superseded in part by [ADR 0010](0010-windows-first-release-validation-boundary.md) for the `0.1.0` platform count, artifact count, and manual/dogfood/beta gate. This document retains the earlier five-artifact design history.
+
 ## Context
 
 The approved initial release is unsigned and unnotarized, has no self-updater, and requires five exact package artifacts plus native-platform, accessibility, performance, safety, dogfood, beta, and traceability evidence. Earlier phase reports prove local implementation slices but cannot establish a release support claim.
