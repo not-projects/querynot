@@ -141,6 +141,10 @@ jobs:
             expected_formats: nsis
             artifact_name: querynot-windows-x64
     runs-on: ${{ matrix.runner }}
+    env:
+      QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
       - name: Install Tauri system dependencies
@@ -156,6 +160,8 @@ jobs:
           workspaces: ./ -> target
           key: ${{ matrix.runner }}
       - run: npm ci
+      - name: Validate dedicated updater signing identity
+        run: npm run release:validate-updater-signing
       - run: npm run ${{ matrix.package_script }}
       - name: Prepare retained candidate records
         run: node -e "require('node:fs').mkdirSync('artifacts/release-candidate',{recursive:true})"
@@ -163,34 +169,13 @@ jobs:
         run: npm run release:inspect -- --binary ${{ matrix.binary }} --directory ${{ matrix.bundle_directory }} --expect ${{ matrix.expected_formats }} --report artifacts/release-candidate/inspection.json
       - name: Hash candidate package
         run: npm run release:checksums -- --directory ${{ matrix.bundle_directory }} --output artifacts/release-candidate/SHA256SUMS --manifest artifacts/release-candidate/checksums.json
+      - name: Build signed stable updater manifest
+        run: npm run release:create-updater-manifest -- --directory ${{ matrix.bundle_directory }} --output artifacts/release-candidate/latest.json --report artifacts/release-candidate/updater-manifest-report.json
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
           path: |
             target/release-candidate-*/release/bundle/**/*.exe
+            target/release-candidate-*/release/bundle/**/*.exe.sig
             artifacts/release-candidate/**
-
-  release-candidate-checksums:
-    if: github.event_name == 'workflow_dispatch'
-    needs: release-candidate-packages
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: querynot-*
-          path: artifacts/all-packages
-      - run: npm ci
-      - run: npm run release:checksums -- --directory artifacts/all-packages --output artifacts/SHA256SUMS --manifest artifacts/checksums.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: querynot-release-candidate-checksums
-          if-no-files-found: error
-          path: |
-            artifacts/SHA256SUMS
-            artifacts/checksums.json

@@ -1,6 +1,6 @@
 {
   "name": "querynot",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -33,10 +33,14 @@
     "package:macos": "node scripts/package-platform.mjs macos",
     "release:checksums": "node scripts/release-checksums.mjs",
     "release:inspect": "node scripts/inspect-release-artifacts.mjs",
+    "release:validate-updater-signing": "node scripts/updater-signing-environment.mjs",
+    "release:create-updater-manifest": "node scripts/create-updater-manifest.mjs",
     "test:release-evidence": "node scripts/audit-release-evidence.mjs",
     "verify:phase5:local": "node scripts/verify-phase5-local.mjs",
     "release:prepare-publication": "node scripts/release-publication.mjs prepare",
     "release:verify-publication": "node scripts/release-publication.mjs verify",
+    "release:prepare-update-publication": "node scripts/release-update-publication.mjs prepare",
+    "release:verify-update-publication": "node scripts/release-update-publication.mjs verify",
     "format": "prettier --write \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "format:check": "prettier --check \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "tauri": "tauri"

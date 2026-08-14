@@ -10,6 +10,27 @@ pub struct ApplicationStatusResponse {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct AvailableUpdateView {
+    pub current_version: String,
+    pub version: String,
+    pub date: Option<String>,
+    pub body: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct UpdateCheckResponse {
+    pub configured: bool,
+    pub update: Option<AvailableUpdateView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct UpdateDownloadProgressView {
+    pub downloaded_bytes: u64,
+    pub content_length: Option<u64>,
+    pub finished: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct BootstrapWorkspaceResponse {
     pub contract_version: u16,
     pub phase: String,

@@ -40,6 +40,7 @@
     type SqlEditorApi
   } from './lib/components/SqlEditor.svelte';
   import { hasNativeRuntime, invokeCommand } from './lib/native';
+  import { updater } from './lib/updater.svelte';
   import {
     executionElapsedMs,
     isExecutionActive,
@@ -292,6 +293,7 @@
   );
 
   onMount(() => {
+    void updater.initialize();
     void bootstrap();
     let disposed = false;
     let unlisten: UnlistenFn | undefined;
@@ -347,6 +349,7 @@
       unlisten?.();
       unlistenExecution?.();
       unlistenOpenFiles?.();
+      updater.dispose();
       window.clearInterval(elapsedTimer);
       if (saveTimer) clearTimeout(saveTimer);
     };
@@ -374,6 +377,7 @@
           : 'No database connection is active.';
       nativeBootstrapComplete = true;
       await requestPendingSqlFileDrain();
+      void updater.checkSilently();
     });
     for (const profile of profiles.filter(
       (candidate) => candidate.automatic_reconnect && candidate.has_saved_secret
@@ -2419,7 +2423,7 @@
     }
   }
 
-  async function closeWindowAfterSafetyChecks() {
+  async function prepareForApplicationExit() {
     if (Object.keys(connectionOperations).length > 0) {
       throw new Error(
         'Wait for or cancel connection setup before closing the window.'
@@ -2451,6 +2455,10 @@
         'Draft recovery did not reach a valid saved state. The window remains open with current in-memory work.'
       );
     }
+  }
+
+  async function closeWindowAfterSafetyChecks() {
+    await prepareForApplicationExit();
     for (const session of Object.values(sessions)) {
       await invokeCommand('close_tab_session', {
         profile_id: session.profile_id,
@@ -2460,6 +2468,14 @@
       delete sessions[session.tab_id];
     }
     await getCurrentWindow().destroy();
+  }
+
+  async function installAvailableUpdate() {
+    if (!hasNativeRuntime()) return;
+    await runAction(async () => {
+      statusMessage = `Preparing the signed QueryNot ${updater.availableUpdate?.version ?? ''} update…`;
+      statusMessage = await updater.install(prepareForApplicationExit);
+    });
   }
 
   async function preserveDraftsAndCloseWindow() {
@@ -2729,7 +2745,7 @@
           : 'Offline'}
       </span>
       <button type="button" class="quiet" onclick={openSettings}
-        >Settings</button
+        >Settings{updater.availableUpdate ? ' · Update ready' : ''}</button
       >
     </div>
   </header>
@@ -4136,6 +4152,92 @@
                   >
                 </div>
               {/if}
+            </section>
+
+            <section class="updater-settings" aria-live="polite">
+              <div class="updater-heading">
+                <div>
+                  <h3>Signed application updates</h3>
+                  <p class="settings-note">
+                    Installed version {__APP_VERSION__}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy || updater.isChecking || updater.isInstalling}
+                  onclick={() => void updater.checkManually()}
+                >
+                  {updater.isChecking ? 'Checking…' : 'Check for updates'}
+                </button>
+              </div>
+
+              {#if !hasNativeRuntime()}
+                <p class="settings-note">
+                  Update checks are available in installed desktop builds.
+                </p>
+              {:else if updater.configured === false}
+                <p class="inline-warning" role="status">
+                  This development build has no compiled QueryNot update key.
+                  Release packaging fails closed until the dedicated signing
+                  identity is configured.
+                </p>
+              {:else if updater.availableUpdate}
+                <div class="update-available">
+                  <strong
+                    >QueryNot {updater.availableUpdate.version} is available</strong
+                  >
+                  {#if updater.availableUpdate.date}
+                    <span
+                      >{new Date(
+                        updater.availableUpdate.date
+                      ).toLocaleString()}</span
+                    >
+                  {/if}
+                  {#if updater.availableUpdate.body}
+                    <pre class="update-notes">{updater.availableUpdate
+                        .body}</pre>
+                  {/if}
+                  {#if updater.isInstalling}
+                    <progress
+                      max="100"
+                      value={updater.progressPercent ?? undefined}
+                      aria-label="Signed update download progress"
+                    ></progress>
+                    <span class="settings-note">
+                      {updater.progressLabel ?? 'Starting verified download…'}
+                    </span>
+                  {/if}
+                  <button
+                    type="button"
+                    class="primary"
+                    disabled={busy || updater.isInstalling}
+                    onclick={() => void installAvailableUpdate()}
+                  >
+                    {updater.isInstalling
+                      ? 'Installing…'
+                      : `Install QueryNot ${updater.availableUpdate.version}`}
+                  </button>
+                </div>
+              {:else if updater.configured === true && updater.lastCheckedAt}
+                <p class="settings-note">
+                  QueryNot is up to date. Last checked
+                  {new Date(updater.lastCheckedAt).toLocaleString()}.
+                </p>
+              {:else}
+                <p class="settings-note">
+                  QueryNot checks the signed stable GitHub release feed once at
+                  startup. No telemetry or database information is sent.
+                </p>
+              {/if}
+
+              {#if updater.errorText}
+                <p class="inline-warning" role="alert">{updater.errorText}</p>
+              {/if}
+              <p class="settings-note">
+                Installation is always explicit. QueryNot saves recovery drafts
+                and refuses the handoff while a connection setup, query,
+                transaction, or staged table edit is unresolved.
+              </p>
             </section>
           </div>
 

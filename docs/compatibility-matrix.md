@@ -3,6 +3,8 @@
 Status: QueryNot 0.1.0 release matrix; release evidence complete
 Selection date: 2026-08-14
 
+Version `0.1.1` is prepared against this unchanged Windows/database support matrix and adds signed updater artifacts under ADR 0011. It is not a published support row until the dedicated key is configured and the signed candidate/publication workflows pass. The reviewed artifact below remains the immutable `0.1.0` release record.
+
 Only the `windows-11-x64` row is supported and published for `0.1.0`. Phase 5 retains the exact Windows package, inspection, checksum, complete WSL2/browser automation, candidate CI, and applicable adapter conformance evidence. Native owner checks follow the release under ADR 0010 and are not represented as already performed.
 
 ## Application platforms

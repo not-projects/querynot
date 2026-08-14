@@ -2,9 +2,16 @@
 
 All notable changes to QueryNot will be documented in this file.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and releases will use [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once versioned application development begins.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and releases use [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.1] - 2026-08-14
+
+### Added
+
+- Added a signed Windows update channel with a silent startup check, manual Settings check, plain-text release details, explicit install action, progress feedback, and the existing draft/query/transaction/staged-edit close safeguards.
+- Added dedicated QueryNot updater-key boundaries and a fail-closed candidate/publication pipeline for the exact NSIS installer, signature, stable `latest.json`, and manual checksum without rebuilding reviewed bytes.
 
 ### Fixed
 

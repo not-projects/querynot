@@ -6,6 +6,7 @@ import {
   parseChecksumManifest,
   validatePublicationContract
 } from '../scripts/release-publication.mjs';
+import { validateUpdatePublicationContract } from '../scripts/release-update-publication.mjs';
 import {
   disallowedReleaseChanges,
   porcelainPaths,
@@ -132,7 +133,7 @@ describe('Phase 6 publication boundary', () => {
 
   it('publishes only by manual confirmation after a round-trip draft check', () => {
     const workflow = read('.github/workflows/release.yml');
-    const notes = read('docs/release/initial-release-notes.md');
+    const notes = read('docs/release/0.1.1-notes.md');
     const triage = read('docs/release/failure-triage.md');
 
     expect(workflow).toContain('workflow_dispatch:');
@@ -141,38 +142,90 @@ describe('Phase 6 publication boundary', () => {
     expect(workflow).toContain('contents: write');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).toContain('candidate_run_id');
-    expect(workflow).toContain('publish-v0.1.0');
+    expect(workflow).toContain('publish-v<package-version>');
     expect(workflow).toContain(
       'PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}'
     );
     expect(workflow).not.toContain('--confirm "${{ inputs.confirmation }}"');
-    expect(workflow).toContain('release:prepare-publication');
-    expect(workflow).toContain('gh release create v0.1.0');
+    expect(workflow).toContain('release:prepare-update-publication');
+    expect(workflow).toContain('gh release create "$RELEASE_TAG"');
     expect(workflow).toContain('--draft');
-    expect(workflow).toContain('evidence_commit="$(git rev-parse HEAD)"');
-    expect(workflow).toContain('--target "$evidence_commit"');
+    expect(workflow).toContain('--target "$RELEASE_SOURCE"');
     expect(workflow).toContain(
-      'gh release view v0.1.0 --json isDraft --jq .isDraft'
+      'gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft'
     );
     expect(workflow).toContain(
-      'gh release view v0.1.0 --json targetCommitish --jq .targetCommitish'
+      'gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish'
     );
-    expect(workflow).not.toContain('git fetch --force origin refs/tags/v0.1.0');
-    expect(workflow).toContain('gh release download v0.1.0');
-    expect(workflow).toContain('release:verify-publication');
-    expect(workflow).toContain('gh release edit v0.1.0 --draft=false');
+    expect(workflow).toContain('gh release download "$RELEASE_TAG"');
+    expect(workflow).toContain('release:verify-update-publication');
+    expect(workflow).toContain(
+      'gh release edit "$RELEASE_TAG" --draft=false --latest'
+    );
     expect(workflow).not.toContain('npm run build');
     expect(workflow).not.toContain('npm run package:');
-    expect(workflow).not.toContain('npm ci');
+    expect(workflow).toContain('npm ci');
     expect(workflow).not.toContain('--clobber');
-    expect(notes).toContain('unsupported roadmap');
+    expect(notes).toContain('In-application signed updates');
     expect(notes).toContain('SHA256SUMS');
-    expect(notes).toContain('has no self-updater');
+    expect(notes).toContain('must be upgraded to `0.1.1` manually');
     expect(triage.indexOf('Data safety and security')).toBeLessThan(
       triage.indexOf('Reliability')
     );
     expect(triage.indexOf('Reliability')).toBeLessThan(
       triage.indexOf('Workflow friction')
     );
+  });
+
+  it('accepts only the exact signed Windows updater assets and stable feed keys', () => {
+    const installer = {
+      name: 'QueryNot_0.1.1_x64-setup.exe',
+      bytes: 101,
+      sha256: sha('1'),
+      path: '/synthetic/QueryNot_0.1.1_x64-setup.exe',
+      content: Buffer.from('installer')
+    };
+    const signature = {
+      name: `${installer.name}.sig`,
+      bytes: 80,
+      sha256: sha('2'),
+      path: '/synthetic/QueryNot_0.1.1_x64-setup.exe.sig',
+      content: Buffer.from('A'.repeat(80))
+    };
+    const url = `https://github.com/not-projects/querynot/releases/download/v0.1.1/${installer.name}`;
+    const latest = {
+      version: '0.1.1',
+      notes: 'Release notes',
+      pub_date: '2026-08-14T00:00:00.000Z',
+      platforms: {
+        'windows-x86_64': { signature: 'A'.repeat(80), url },
+        'windows-x86_64-nsis': { signature: 'A'.repeat(80), url }
+      }
+    };
+
+    expect(
+      validateUpdatePublicationContract({
+        version: '0.1.1',
+        requestedTag: 'v0.1.1',
+        releaseNotes: 'Release notes',
+        installer,
+        signature,
+        latest,
+        checksumText: `${installer.sha256}  ${installer.name}\n`
+      }).status
+    ).toBe('pass');
+
+    latest.platforms['windows-x86_64'].signature = 'B'.repeat(80);
+    expect(() =>
+      validateUpdatePublicationContract({
+        version: '0.1.1',
+        requestedTag: 'v0.1.1',
+        releaseNotes: 'Release notes',
+        installer,
+        signature,
+        latest,
+        checksumText: `${installer.sha256}  ${installer.name}\n`
+      })
+    ).toThrow('signature does not match');
   });
 });

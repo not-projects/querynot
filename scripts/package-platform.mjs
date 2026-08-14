@@ -6,6 +6,7 @@ import {
   disallowedReleaseChanges,
   releaseChangeSummary
 } from './release-source-state.mjs';
+import { validateUpdaterSigningEnvironment } from './updater-signing-environment.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const platform = process.argv[2];
@@ -18,6 +19,10 @@ if (!bundles.has(platform)) {
   throw new Error(
     'usage: node scripts/package-platform.mjs <linux|windows|macos>'
   );
+}
+
+if (platform === 'windows') {
+  validateUpdaterSigningEnvironment(process.env);
 }
 
 const sourceStatus = spawnSync(

@@ -2,6 +2,7 @@
 
 mod phase1;
 mod phase2;
+mod updates;
 
 use querynot_core::generated::contracts::{ApplicationStatusResponse, CONTRACT_VERSION};
 use tauri::Manager;
@@ -38,6 +39,7 @@ pub fn run() {
     }
     let app = builder
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 let state = window.state::<phase1::AppRuntimeState>();
@@ -76,6 +78,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             application_status,
+            updates::check_for_updates,
+            updates::install_update,
             phase1::bootstrap_workspace,
             phase1::create_profile,
             phase1::update_profile,

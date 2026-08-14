@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.0 is the first Windows 11 x86-64 release.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.0 is the first Windows 11 x86-64 release; 0.1.1 is the signed-updater release candidate.
 
 > Query your data, not your patience.
 
@@ -36,7 +36,7 @@ Then inspect the actual repository state and current branch before proposing cha
 
 The repository contains the completed Phase 0–6 implementation and release evidence. The native surface uses one adapter contract for SQLite and the exact MySQL/MariaDB release matrix, with isolated metadata/tab sessions, fail-closed direct TLS and client identities, detected compatibility, progressive schema metadata/cache, dialect planning, transactions/implicit commits, confirmed cancellation, bounded acknowledged result streaming, multiple results, typed values, atomic received-row export, local history/workspace/file safety, deterministic table paging, bound filters, immutable mutation plans, optimistic conflict predicates, and atomic staged edits. The Svelte workbench uses CodeMirror and virtualized query/table grids.
 
-The approved `0.1.0` support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
+The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 adds the dedicated QueryNot signed update channel under ADR 0011; it is not publishable until its repository key variable, signing secret, signed candidate, and no-rebuild publication verification pass. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
 
 ## Verified Commands
 
@@ -60,16 +60,18 @@ The approved `0.1.0` support and publication envelope is Windows 11 x86-64 only.
 - `npm run verify:phase3` — clean-tree, commit-addressed Phase 3 conformance plus complete local regression, dependency, and desktop-build evidence generation; native Windows owner review remains a post-release non-claim.
 - `npm run test:conformance:phase4` — the same exact five-server fixture matrix plus deterministic paging, bound structured filters, typed staged mutations, generated-value refresh, optimistic conflicts, and atomic rollback.
 - `npm run verify:phase4` — clean-tree, commit-addressed Phase 4 conformance plus complete local regression, dependency review, and desktop-build evidence generation; native Windows owner review remains a post-release non-claim.
-- `npm run release:inspect -- --binary <path> --directory <path> --expect <formats> --report <path>` — inspect one platform's nonempty packages, binary material, CSP/capability boundary, version, commit, and updater state.
+- `npm run release:validate-updater-signing` — fail closed unless the dedicated QueryNot updater public/private key environment is present and structurally valid; it never prints key material.
+- `npm run release:inspect -- --binary <path> --directory <path> --expect <formats> --report <path>` — inspect one platform's nonempty packages, matching updater signature, binary material, CSP/capability boundary, version, and commit.
 - `npm run release:checksums -- --directory <path> --output <path> --manifest <path>` — generate commit/version-addressed SHA-256 text and JSON records for the exact candidate packages.
-- `npm run test:release-evidence` — final fail-closed revision-2 audit for the exact Windows artifact/checksum, complete WSL2/browser automation, all 121 verified traceability rows, product-owner scope record, and ready release manifest.
+- `npm run release:create-updater-manifest -- --directory <path> --output <latest.json> --report <report>` — generate the stable Windows updater manifest from exactly one signed NSIS candidate and the checked-in versioned release notes.
 - `npm run test:conformance:phase5` — exact five-server candidate rerun retained separately from earlier phase evidence.
-- `npm run verify:phase5:local` — clean-tree WSL2 regression, UI layout, dependency, and conformance gate; requires `cargo-deny 0.20.2` on `PATH` and does not replace the Windows package gate.
-- `npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report <report>` — after the complete Phase 5 gate only, verify and stage the exact reviewed Windows installer plus retained checksum.
-- `npm run release:verify-publication -- --directory <download-dir> --tag v0.1.0 --report <report>` — round-trip verify the draft release bytes before publication; this is run by the manual Phase 6 workflow.
+- `npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.1 --confirm publish-v0.1.1 --report <report>` — verify the candidate source and retained reports, then stage exactly the installer, signature, `latest.json`, and checksum.
+- `npm run release:verify-update-publication -- --directory <download-dir> --tag v0.1.1 --report <report>` — round-trip verify the four draft assets before publication; this is run by the manual signed-release workflow.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — canonical checksum-pinned Linux feasibility gate used by candidate CI; installs nothing, exercises all five exact targets on random loopback ports with verified TLS 1.2, and retains a redacted report.
 
 `npm run test:feasibility` is a supplemental three-image Docker smoke harness, not release evidence. A legacy image that cannot negotiate QueryNot's TLS floor must fail rather than weaken the adapter.
+
+The retained `npm run verify:phase5:local`, `npm run test:release-evidence`, and unsigned publication commands are historical `0.1.0` boundaries. They intentionally reject current post-release source and must not be rewritten to make the immutable initial-release evidence appear current.
 
 Do not invent additional build, test, packaging, or release commands. Derive changes from checked-in scripts and configuration, verify them, and update this guide.
 

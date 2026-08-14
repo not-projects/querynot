@@ -96,12 +96,41 @@ const artifacts = expected.map((format) => {
   const path = matches[0];
   const bytes = readFileSync(path);
   if (bytes.length === 0) throw new Error(`${format} artifact is empty`);
-  return {
+  const artifact = {
     format,
     name: basename(path),
     bytes: bytes.length,
     sha256: createHash('sha256').update(bytes).digest('hex')
   };
+  if (format === 'nsis') {
+    const signaturePath = `${path}.sig`;
+    const signatureMatches = files.filter((candidate) =>
+      candidate.endsWith('.exe.sig')
+    );
+    if (
+      signatureMatches.length !== 1 ||
+      signatureMatches[0] !== signaturePath
+    ) {
+      throw new Error(
+        'expected exactly one updater signature matching the NSIS artifact'
+      );
+    }
+    const signatureBytes = readFileSync(signaturePath);
+    const signature = signatureBytes.toString('utf8').trim();
+    if (
+      signatureBytes.length === 0 ||
+      signature.length <= 32 ||
+      /[\u0000-\u001f\u007f]/.test(signature)
+    ) {
+      throw new Error('NSIS updater signature is empty or invalid');
+    }
+    artifact.signature = {
+      name: basename(signaturePath),
+      bytes: signatureBytes.length,
+      sha256: createHash('sha256').update(signatureBytes).digest('hex')
+    };
+  }
+  return artifact;
 });
 
 const binary = readFileSync(binaryPath);
@@ -125,7 +154,7 @@ const capability = JSON.parse(
   readFileSync(resolve(root, 'src-tauri/capabilities/main.json'))
 );
 if (
-  config.bundle?.createUpdaterArtifacts !== false ||
+  config.bundle?.createUpdaterArtifacts !== true ||
   config.bundle?.active !== true ||
   !Array.isArray(config.bundle?.targets) ||
   config.bundle.targets.length !== 0 ||
@@ -180,7 +209,7 @@ const report = {
     forbidden_material_scan: 'pass'
   },
   artifacts,
-  updater_artifacts: false,
+  updater_artifacts: true,
   capability_and_csp_review: 'pass'
 };
 writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, {

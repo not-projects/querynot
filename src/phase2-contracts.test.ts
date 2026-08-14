@@ -45,7 +45,8 @@ describe('Phase 2 SQLite boundaries', () => {
     }
     expect(contract.events).toEqual({
       query_execution: 'ExecutionEventView',
-      querynot_open_files: 'PendingSqlFilesSignal'
+      querynot_open_files: 'PendingSqlFilesSignal',
+      update_download_progress: 'UpdateDownloadProgressView'
     });
     expect(commands).not.toContain('read_file');
     expect(commands).not.toContain('write_file');

@@ -5,6 +5,14 @@
       "request": null,
       "response": "ApplicationStatusResponse"
     },
+    "check_for_updates": {
+      "request": null,
+      "response": "UpdateCheckResponse"
+    },
+    "install_update": {
+      "request": "ConfirmedActionRequest",
+      "response": "FileActionResponse"
+    },
     "bootstrap_workspace": {
       "request": null,
       "response": "BootstrapWorkspaceResponse"
@@ -228,12 +236,28 @@
   },
   "events": {
     "query_execution": "ExecutionEventView",
-    "querynot_open_files": "PendingSqlFilesSignal"
+    "querynot_open_files": "PendingSqlFilesSignal",
+    "update_download_progress": "UpdateDownloadProgressView"
   },
   "types": {
     "ApplicationStatusResponse": {
       "contract_version": "u16",
       "phase": "string"
+    },
+    "AvailableUpdateView": {
+      "current_version": "string",
+      "version": "string",
+      "date": "string?",
+      "body": "string?"
+    },
+    "UpdateCheckResponse": {
+      "configured": "bool",
+      "update": "AvailableUpdateView?"
+    },
+    "UpdateDownloadProgressView": {
+      "downloaded_bytes": "u64",
+      "content_length": "u64?",
+      "finished": "bool"
     },
     "BootstrapWorkspaceResponse": {
       "contract_version": "u16",

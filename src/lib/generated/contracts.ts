@@ -6,6 +6,24 @@ export interface ApplicationStatusResponse {
   phase: string;
 }
 
+export interface AvailableUpdateView {
+  current_version: string;
+  version: string;
+  date: string | null;
+  body: string | null;
+}
+
+export interface UpdateCheckResponse {
+  configured: boolean;
+  update: AvailableUpdateView | null;
+}
+
+export interface UpdateDownloadProgressView {
+  downloaded_bytes: number;
+  content_length: number | null;
+  finished: boolean;
+}
+
 export interface BootstrapWorkspaceResponse {
   contract_version: number;
   phase: string;
@@ -638,6 +656,11 @@ export interface ExportResultResponse {
 
 export interface QueryNotCommands {
   application_status: { request: null; response: ApplicationStatusResponse };
+  check_for_updates: { request: null; response: UpdateCheckResponse };
+  install_update: {
+    request: ConfirmedActionRequest;
+    response: FileActionResponse;
+  };
   bootstrap_workspace: { request: null; response: BootstrapWorkspaceResponse };
   create_profile: { request: ProfileInput; response: ProfileView };
   update_profile: { request: UpdateProfileRequest; response: ProfileView };
@@ -797,4 +820,5 @@ export interface QueryNotCommands {
 export interface QueryNotEvents {
   query_execution: ExecutionEventView;
   querynot_open_files: PendingSqlFilesSignal;
+  update_download_progress: UpdateDownloadProgressView;
 }

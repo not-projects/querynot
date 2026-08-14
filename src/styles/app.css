@@ -1165,6 +1165,59 @@ footer {
   font-size: 0.68rem;
 }
 
+.settings-grid .updater-settings {
+  grid-column: 1 / -1;
+}
+
+.updater-heading,
+.update-available {
+  display: flex;
+  gap: 10px;
+}
+
+.updater-heading {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.updater-heading > div,
+.update-available {
+  display: grid;
+}
+
+.updater-heading > div,
+.update-available {
+  gap: 6px;
+}
+
+.update-available {
+  align-items: start;
+}
+
+.update-available > button {
+  justify-self: start;
+}
+
+.update-notes {
+  max-height: 160px;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+  color: var(--text);
+  background: var(--surface-inset);
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.update-available progress {
+  width: min(100%, 420px);
+  accent-color: var(--accent);
+}
+
 .settings-reset {
   margin-top: 13px;
 }

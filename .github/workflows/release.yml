@@ -1,21 +1,21 @@
-name: Publish reviewed initial release
+name: Publish reviewed signed release
 
 on:
   workflow_dispatch:
     inputs:
       candidate_run_id:
-        description: Successful CI run ID that produced the reviewed candidate artifacts
+        description: Successful master CI run ID that produced the reviewed signed candidate
         required: true
         type: string
       confirmation:
-        description: Type publish-v0.1.0 after the complete Phase 5 gate passes
+        description: Type publish-v<package-version> after reviewing the candidate
         required: true
         type: string
 
 permissions: {}
 
 concurrency:
-  group: querynot-initial-release-publication
+  group: querynot-signed-release-publication
   cancel-in-progress: false
 
 jobs:
@@ -25,13 +25,29 @@ jobs:
       actions: read
       contents: write
     steps:
+      - name: Resolve the exact successful CI candidate source
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+        run: |
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}")"
+          test "$(jq -r .name <<<"$run_json")" = "CI"
+          test "$(jq -r .event <<<"$run_json")" = "workflow_dispatch"
+          test "$(jq -r .head_branch <<<"$run_json")" = "master"
+          test "$(jq -r .conclusion <<<"$run_json")" = "success"
+          candidate_sha="$(jq -r .head_sha <<<"$run_json")"
+          test "${#candidate_sha}" = "40"
+          echo "sha=$candidate_sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: ${{ github.sha }}
+          ref: ${{ steps.candidate.outputs.sha }}
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: npm
+      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           name: querynot-windows-x64
@@ -39,41 +55,55 @@ jobs:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ inputs.candidate_run_id }}
-      - name: Recheck the complete release gate and stage only reviewed bytes
+      - name: Resolve and confirm the candidate version
+        id: release
+        env:
+          PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          test "$PUBLISH_CONFIRMATION" = "publish-${tag}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Verify and stage only the four signed release assets
         env:
           PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
         run: >-
-          npm run release:prepare-publication --
+          npm run release:prepare-update-publication --
           --directory artifacts/candidate
           --output artifacts/publication
-          --tag v0.1.0
+          --tag "${{ steps.release.outputs.tag }}"
           --confirm "$PUBLISH_CONFIRMATION"
           --report artifacts/publication-plan.json
-      - name: Create and verify an unpublished draft at the audited evidence commit
+      - name: Create and verify an unpublished draft at the candidate commit
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_SOURCE: ${{ steps.candidate.outputs.sha }}
         run: |
-          evidence_commit="$(git rev-parse HEAD)"
-          gh release create v0.1.0 artifacts/publication/* --draft --target "$evidence_commit" --title "QueryNot 0.1.0" --notes-file docs/release/initial-release-notes.md
-          test "$(gh release view v0.1.0 --json isDraft --jq .isDraft)" = "true"
-          test "$(gh release view v0.1.0 --json targetCommitish --jq .targetCommitish)" = "$evidence_commit"
+          gh release create "$RELEASE_TAG" artifacts/publication/* --draft --target "$RELEASE_SOURCE" --title "QueryNot $RELEASE_VERSION" --notes-file "docs/release/${RELEASE_VERSION}-notes.md"
+          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = "true"
+          test "$(gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish)" = "$RELEASE_SOURCE"
       - name: Round-trip the draft assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release download v0.1.0 --dir artifacts/release-roundtrip
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: gh release download "$RELEASE_TAG" --dir artifacts/release-roundtrip
       - name: Verify the draft bytes before publication
         run: >-
-          npm run release:verify-publication --
+          npm run release:verify-update-publication --
           --directory artifacts/release-roundtrip
-          --tag v0.1.0
+          --tag "${{ steps.release.outputs.tag }}"
           --report artifacts/publication-verification.json
-      - name: Publish the verified draft
+      - name: Publish the verified draft as the stable release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit v0.1.0 --draft=false --latest
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: gh release edit "$RELEASE_TAG" --draft=false --latest
       - uses: actions/upload-artifact@v4
         with:
-          name: querynot-v0.1.0-publication-evidence
+          name: querynot-${{ steps.release.outputs.tag }}-publication-evidence
           if-no-files-found: error
           path: |
             artifacts/publication-plan.json

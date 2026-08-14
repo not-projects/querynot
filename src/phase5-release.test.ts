@@ -10,17 +10,17 @@ import {
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Phase 5 Windows-first release boundary', () => {
-  it('keeps versions aligned, updater generation disabled, and Windows packaging constrained', () => {
+  it('keeps 0.1.1 versions aligned, updater generation enabled, and Windows packaging constrained', () => {
     const packageJson = JSON.parse(read('package.json'));
     const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
     const cargo = read('Cargo.toml');
 
-    expect(packageJson.version).toBe('0.1.0');
+    expect(packageJson.version).toBe('0.1.1');
     expect(tauri.version).toBe(packageJson.version);
     expect(cargo).toContain(`version = "${packageJson.version}"`);
     expect(tauri.bundle.active).toBe(true);
     expect(tauri.bundle.targets).toEqual([]);
-    expect(tauri.bundle.createUpdaterArtifacts).toBe(false);
+    expect(tauri.bundle.createUpdaterArtifacts).toBe(true);
     expect(tauri.bundle.icon).toContain('icons/icon.ico');
     expect(tauri.bundle.windows.webviewInstallMode.type).toBe('skip');
     expect(tauri.bundle.windows.nsis.installMode).toBe('currentUser');
@@ -41,6 +41,17 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(candidate).not.toContain('expected_formats: deb,appimage');
     expect(candidate).toContain('npm run release:inspect');
     expect(candidate).toContain('npm run release:checksums');
+    expect(candidate).toContain('npm run release:validate-updater-signing');
+    expect(candidate).toContain('npm run release:create-updater-manifest');
+    expect(candidate).toContain(
+      'QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}'
+    );
+    expect(candidate).toContain(
+      'TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}'
+    );
+    expect(candidate).toContain(
+      'target/release-candidate-*/release/bundle/**/*.exe.sig'
+    );
     expect(workflow).not.toContain('release-action');
     expect(workflow).not.toContain('create-release');
   });
@@ -84,6 +95,34 @@ describe('Phase 5 Windows-first release boundary', () => {
       'candidate packaging refuses uncommitted application or packaging inputs'
     );
     expect(attributes).toContain('*.toml text eol=lf');
+  });
+
+  it('keeps signed update checks and installation behind typed native commands', () => {
+    const contract = JSON.parse(read('contracts/querynot.v1.json'));
+    const native = read('src-tauri/src/updates.rs');
+    const runtime = read('src-tauri/src/lib.rs');
+    const cargo = read('src-tauri/Cargo.toml');
+    const build = read('src-tauri/build.rs');
+
+    expect(contract.commands.check_for_updates).toEqual({
+      request: null,
+      response: 'UpdateCheckResponse'
+    });
+    expect(contract.commands.install_update).toEqual({
+      request: 'ConfirmedActionRequest',
+      response: 'FileActionResponse'
+    });
+    expect(contract.events.update_download_progress).toBe(
+      'UpdateDownloadProgressView'
+    );
+    expect(native).toContain(
+      'https://github.com/not-projects/querynot/releases/latest/download/latest.json'
+    );
+    expect(native).toContain('option_env!("QUERYNOT_UPDATER_PUBLIC_KEY")');
+    expect(native).toContain('if !request.confirmed');
+    expect(runtime).toContain('tauri_plugin_updater::Builder::new().build()');
+    expect(cargo).toContain('tauri-plugin-updater = "=2.10.1"');
+    expect(build).toContain('QUERYNOT_UPDATER_PUBLIC_KEY');
   });
 
   it('makes disposable TLS mounts traversable and redacts failed-service diagnostics', () => {
@@ -130,7 +169,7 @@ describe('Phase 5 Windows-first release boundary', () => {
     );
   });
 
-  it('documents the unsigned Windows install and checksum flow without a global bypass', () => {
+  it('keeps the historical 0.1.0 unsigned install guidance immutable', () => {
     const installation = read('docs/release/unsigned-installation.md');
 
     expect(installation).toContain('Get-FileHash -Algorithm SHA256');

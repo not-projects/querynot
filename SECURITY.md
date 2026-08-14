@@ -2,12 +2,12 @@
 
 ## Supported Versions
 
-QueryNot is in pre-alpha development and has no public application release. Security fixes are applied on a best-effort basis to the current `master` branch.
+QueryNot has a Windows 11 x86-64 public release. Security fixes are applied on a best-effort basis to the current `master` branch and supported release line.
 
 | Version | Supported |
 | --- | --- |
 | `master` | Yes |
-| Releases | None yet |
+| `0.1.x` | Yes |
 
 ## Reporting a Vulnerability
 
@@ -40,7 +40,7 @@ Reports in these areas are especially important:
 - local persistence permissions and database-file exposure
 - import, export, and local-file handling
 - isolation of test fixtures from real databases
-- future release signing and updater trust
+- release signing, updater-key custody, manifest integrity, and update handoff
 
 ## Response and Disclosure
 

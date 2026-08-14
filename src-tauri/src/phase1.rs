@@ -66,6 +66,7 @@ pub(crate) struct AppRuntimeState {
     last_history_cleanup_ms: Mutex<i64>,
     data_dir: PathBuf,
     pub(crate) window_id: WindowId,
+    pub(crate) pending_update: Mutex<Option<tauri_plugin_updater::Update>>,
 }
 
 impl AppRuntimeState {
@@ -131,6 +132,7 @@ impl AppRuntimeState {
             last_history_cleanup_ms: Mutex::new(last_history_cleanup_ms),
             data_dir,
             window_id,
+            pending_update: Mutex::new(None),
         })
     }
 
@@ -147,6 +149,9 @@ impl AppRuntimeState {
         }
         if let Ok(mut pending) = self.pending_file_opens.lock() {
             pending.clear();
+        }
+        if let Ok(mut update) = self.pending_update.lock() {
+            *update = None;
         }
     }
 

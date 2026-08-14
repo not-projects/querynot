@@ -9,9 +9,9 @@ QueryNot is a local-first desktop SQL client focused on a fast, calm, and depend
 
 ## Project Status
 
-QueryNot 0.1.0 is the first public release. The repository contains the completed Phase 0–6 implementation, release evidence, and no-rebuild publication workflow. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB release matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Existing SQLite database files are opened directly through the native file chooser as SQLite connections; read-only and read-write profiles are supported.
+QueryNot 0.1.0 is the first public release, and 0.1.1 is the next Windows release candidate. The repository contains the completed Phase 0–6 implementation, release evidence, and no-rebuild publication workflow. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB release matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Existing SQLite database files are opened directly through the native file chooser as SQLite connections; read-only and read-write profiles are supported.
 
-The `0.1.0` release envelope is Windows 11 x86-64 only. WSL2 and Linux package builds are engineering evidence, not supported application platforms or public release artifacts. Native owner checks, five-day dogfood, and external beta follow the first release and remain explicitly unperformed until they occur.
+The support envelope remains Windows 11 x86-64 only. WSL2 and Linux package builds are engineering evidence, not supported application platforms or public release artifacts. Version 0.1.1 adds the dedicated QueryNot signed-updater channel; because 0.1.0 has no updater, 0.1.1 is installed manually once and later signed releases can be installed from Settings. Native owner checks, five-day dogfood, and external beta remain explicitly unperformed until they occur.
 
 The planned application stack is:
 
@@ -63,9 +63,9 @@ npm run benchmark:phase2
 npm run test:conformance:phase3
 npm run test:conformance:phase4
 npm run tauri -- build --no-bundle
-npm run test:release-evidence
-npm run verify:phase5:local
-npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report artifacts/publication-plan.json
+npm run release:validate-updater-signing
+npm run release:create-updater-manifest -- --directory <bundle-dir> --output artifacts/release-candidate/latest.json --report artifacts/release-candidate/updater-manifest-report.json
+npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.1 --confirm publish-v0.1.1 --report artifacts/publication-plan.json
 ```
 
 `npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for post-release native Windows vault and accessibility observation.
@@ -76,11 +76,11 @@ npm run release:prepare-publication -- --directory <candidate-dir> --output arti
 
 `npm run test:conformance:phase4` extends the same exact five-server matrix with deterministic table paging, bound structured filters, typed staged inserts/updates/deletes, generated-value refresh, optimistic conflicts, and atomic rollback. `npm run verify:phase4` runs the full Phase 4 regression, dependency review, conformance, and desktop-build gate from a clean commit and retains commit-addressed validation, table-conformance, and dependency reports.
 
-Phase 5 retained the unsigned Windows 11 x86-64 NSIS release artifact without updater material. WSL2 is the approved local automation environment, not a supported application platform or public package source. `npm run test:ui-layout` exercises large/narrow status-bar geometry, all PostNot-aligned theme names, and opaque dialog surfaces in Chromium. `npm run test:release-evidence` verifies that the Windows package, exact checksum, commit-addressed automation, 121 verified traceability rows, manifest, and product-owner scope record agree. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md).
+Phase 5 retained the historical unsigned Windows 11 x86-64 `0.1.0` NSIS artifact without updater material. WSL2 is the approved local automation environment, not a supported application platform or public package source. `npm run test:ui-layout` exercises large/narrow status-bar geometry, all PostNot-aligned theme names, and opaque dialog surfaces in Chromium. Follow the [unsigned installation guide](docs/release/unsigned-installation.md), [Phase 5 procedures](docs/release/phase5-manual-procedures.md), and [signed update procedure](docs/release/signed-updates.md).
 
-`npm run verify:phase5:local` reruns the complete WSL2 regression, automated UI layout gate, exact dependency gates, and five-server candidate conformance. The retained Windows NSIS construction and inspection are separate CI evidence. Native interaction, dogfood, and beta remain post-release owner validation under the approved revision-2 scope.
+The retained `npm run verify:phase5:local` and `npm run test:release-evidence` paths belong to the immutable `0.1.0` source/evidence boundary; current post-release source is expected to fail their exact-source comparison. Version 0.1.1 readiness uses the normal local gates above plus the signed Windows candidate job. Native interaction, dogfood, and beta remain post-release owner validation under the approved revision-2 scope.
 
-The Phase 6 publication command is intended for the manual release workflow after the Phase 5 gate. It reruns that gate, rejects substituted or extra artifacts, stages only the reviewed Windows installer and retained checksum file, and requires an exact release confirmation. The workflow creates and round-trip verifies a draft before publication; it never rebuilds or overwrites a candidate.
+The signed release workflow consumes one successful manually dispatched `CI` run on `master`. Candidate CI compiles the dedicated public key, signs the Windows updater artifact, and retains inspection, checksum, and manifest records. Publication receives no signing secret, rejects substituted or extra assets, stages only the installer, signature, `latest.json`, and `SHA256SUMS`, and round-trip verifies a draft before making it stable. It never rebuilds or overwrites the reviewed candidate.
 
 Release-candidate CI runs `npm run fixtures:fetch:native` and then `npm run test:feasibility:native`. This canonical Linux gate verifies the pinned archive checksums, installs nothing, exercises all five exact database targets over identity-verified TLS 1.2 on random loopback ports, and deletes the disposable servers and secrets after the run.
 
