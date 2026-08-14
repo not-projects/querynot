@@ -79,6 +79,15 @@ function sourceDate() {
   return new Date(value).toISOString();
 }
 
+/** @param {string} releaseNotes */
+export function normalizeReleaseNotes(releaseNotes) {
+  requireCondition(
+    typeof releaseNotes === 'string',
+    'release notes must be text'
+  );
+  return releaseNotes.replace(/\r\n?/g, '\n').trim();
+}
+
 /**
  * @param {string} path
  * @param {string} label
@@ -134,7 +143,7 @@ export function buildUpdaterManifest({
   const platform = { signature, url };
   return {
     version,
-    notes: releaseNotes,
+    notes: normalizeReleaseNotes(releaseNotes),
     pub_date: new Date(publishedAt).toISOString(),
     platforms: {
       'windows-x86_64-nsis': platform,
@@ -194,7 +203,7 @@ function main() {
     existsSync(notesPath),
     `release notes are missing for ${packageJson.version}`
   );
-  const releaseNotes = readFileSync(notesPath, 'utf8').trim();
+  const releaseNotes = normalizeReleaseNotes(readFileSync(notesPath, 'utf8'));
   requireCondition(releaseNotes.length > 0, 'release notes are empty');
   const manifest = buildUpdaterManifest({
     version: packageJson.version,

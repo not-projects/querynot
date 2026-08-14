@@ -215,6 +215,18 @@ describe('Phase 6 publication boundary', () => {
       }).status
     ).toBe('pass');
 
+    expect(() =>
+      validateUpdatePublicationContract({
+        version: '0.1.1',
+        requestedTag: 'v0.1.1',
+        releaseNotes: 'Release\nnotes',
+        installer,
+        signature,
+        latest: { ...latest, notes: 'Release\r\nnotes' },
+        checksumText: `${installer.sha256}  ${installer.name}\n`
+      })
+    ).toThrow('canonical LF text');
+
     latest.platforms['windows-x86_64'].signature = 'B'.repeat(80);
     expect(() =>
       validateUpdatePublicationContract({

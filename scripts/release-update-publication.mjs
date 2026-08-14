@@ -17,6 +17,7 @@ import {
   parseChecksumManifest,
   safeArtifactName
 } from './release-evidence-contract.mjs';
+import { normalizeReleaseNotes } from './create-updater-manifest.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const expectedPlatformKeys = ['windows-x86_64', 'windows-x86_64-nsis'];
@@ -203,9 +204,11 @@ export function validateUpdatePublicationContract({
     latest?.version === version,
     'latest.json version does not match'
   );
+  const expectedReleaseNotes = normalizeReleaseNotes(releaseNotes);
   requireCondition(
-    latest?.notes === releaseNotes,
-    'latest.json release notes do not match'
+    latest?.notes === expectedReleaseNotes &&
+      latest?.notes === normalizeReleaseNotes(latest.notes),
+    'latest.json release notes do not match canonical LF text'
   );
   requireCondition(
     JSON.stringify(Object.keys(latest ?? {}).sort()) ===
@@ -440,7 +443,7 @@ function main() {
     existsSync(notesPath),
     `release notes are missing for ${packageJson.version}`
   );
-  const releaseNotes = readFileSync(notesPath, 'utf8').trim();
+  const releaseNotes = normalizeReleaseNotes(readFileSync(notesPath, 'utf8'));
   const directory = resolve(root, values.directory);
   const assets = collectPublicAssets(directory);
   const latest = JSON.parse(assets.latest.content.toString('utf8'));

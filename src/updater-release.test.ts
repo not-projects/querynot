@@ -59,7 +59,7 @@ describe('updater release trust boundary', () => {
   it('creates only the two supported Windows feed keys from one signed installer', () => {
     const manifest = buildUpdaterManifest({
       version: '0.1.1',
-      releaseNotes: 'Release notes',
+      releaseNotes: 'Release\r\nnotes\r\n',
       publishedAt: '2026-08-14T00:00:00Z',
       installerName: 'QueryNot_0.1.1_x64-setup.exe',
       signature: 'A'.repeat(80)
@@ -75,5 +75,7 @@ describe('updater release trust boundary', () => {
     expect(manifest.platforms['windows-x86_64-nsis'].signature).toBe(
       'A'.repeat(80)
     );
+    expect(manifest.notes).toBe('Release\nnotes');
+    expect(manifest.notes).not.toContain('\r');
   });
 });
