@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildUpdaterManifest } from '../scripts/create-updater-manifest.mjs';
+import {
+  QUERYNOT_UPDATE_ENDPOINT,
+  updaterBuildConfig
+} from '../scripts/updater-build-config.mjs';
 import { validateUpdaterSigningEnvironment } from '../scripts/updater-signing-environment.mjs';
 
 function publicKeyDocument(): string {
@@ -35,6 +39,21 @@ describe('updater release trust boundary', () => {
         QUERYNOT_UPDATER_PUBLIC_KEY: publicKeyDocument()
       })
     ).toThrow('TAURI_SIGNING_PRIVATE_KEY');
+  });
+
+  it('injects the validated public key into the required Tauri updater configuration', () => {
+    const publicKey = publicKeyDocument();
+    expect(JSON.parse(updaterBuildConfig(publicKey))).toEqual({
+      plugins: {
+        updater: {
+          endpoints: [QUERYNOT_UPDATE_ENDPOINT],
+          pubkey: publicKey
+        }
+      }
+    });
+    expect(() => updaterBuildConfig(undefined)).toThrow(
+      'QUERYNOT_UPDATER_PUBLIC_KEY'
+    );
   });
 
   it('creates only the two supported Windows feed keys from one signed installer', () => {

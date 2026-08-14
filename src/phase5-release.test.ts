@@ -92,6 +92,10 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(packaging).toContain('process.execPath');
     expect(packaging).not.toContain('npm.cmd');
     expect(packaging).toContain(
+      "buildArguments.push('--config', updaterConfig)"
+    );
+    expect(packaging).toContain('updaterBuildConfig');
+    expect(packaging).toContain(
       'candidate packaging refuses uncommitted application or packaging inputs'
     );
     expect(attributes).toContain('*.toml text eol=lf');
@@ -103,6 +107,9 @@ describe('Phase 5 Windows-first release boundary', () => {
     const runtime = read('src-tauri/src/lib.rs');
     const cargo = read('src-tauri/Cargo.toml');
     const build = read('src-tauri/build.rs');
+    const nativeDependencies = cargo
+      .split('[dependencies]')[1]
+      .split('[dev-dependencies]')[0];
 
     expect(contract.commands.check_for_updates).toEqual({
       request: null,
@@ -122,6 +129,7 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(native).toContain('if !request.confirmed');
     expect(runtime).toContain('tauri_plugin_updater::Builder::new().build()');
     expect(cargo).toContain('tauri-plugin-updater = "=2.10.1"');
+    expect(nativeDependencies).toContain('serde_json.workspace = true');
     expect(build).toContain('QUERYNOT_UPDATER_PUBLIC_KEY');
   });
 

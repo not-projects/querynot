@@ -6,6 +6,7 @@ import {
   disallowedReleaseChanges,
   releaseChangeSummary
 } from './release-source-state.mjs';
+import { updaterBuildConfig } from './updater-build-config.mjs';
 import { validateUpdaterSigningEnvironment } from './updater-signing-environment.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -21,8 +22,10 @@ if (!bundles.has(platform)) {
   );
 }
 
+let updaterConfig;
 if (platform === 'windows') {
   validateUpdaterSigningEnvironment(process.env);
+  updaterConfig = updaterBuildConfig(process.env.QUERYNOT_UPDATER_PUBLIC_KEY);
 }
 
 const sourceStatus = spawnSync(
@@ -76,19 +79,20 @@ const tauriCli = resolve(
   'cli',
   'tauri.js'
 );
-const build = spawnSync(
-  process.execPath,
-  [tauriCli, 'build', '--bundles', bundles.get(platform)],
-  {
-    cwd: root,
-    env: {
-      ...process.env,
-      CARGO_TARGET_DIR: targetRoot,
-      ...(platform === 'linux' ? { XDG_CACHE_HOME: cacheRoot } : {})
-    },
-    stdio: 'inherit'
-  }
-);
+const buildArguments = [tauriCli, 'build', '--bundles', bundles.get(platform)];
+if (updaterConfig) {
+  buildArguments.push('--config', updaterConfig);
+}
+
+const build = spawnSync(process.execPath, buildArguments, {
+  cwd: root,
+  env: {
+    ...process.env,
+    CARGO_TARGET_DIR: targetRoot,
+    ...(platform === 'linux' ? { XDG_CACHE_HOME: cacheRoot } : {})
+  },
+  stdio: 'inherit'
+});
 if (build.error) throw build.error;
 if (build.status !== 0)
   throw new Error(`${platform} candidate packaging failed`);

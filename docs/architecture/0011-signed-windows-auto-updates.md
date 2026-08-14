@@ -29,6 +29,8 @@ The release candidate boundary requires all of the following:
 
 Candidate packaging fails closed when either required key is absent or malformed. Publication never receives signing secrets and never rebuilds. It resolves one successful manual `CI` run on `master`, checks out that exact source commit, downloads the candidate, stages only the installer, signature, `latest.json`, and `SHA256SUMS`, creates an unpublished draft, downloads those four assets again, verifies them, and only then publishes the stable release.
 
+The Windows packaging script supplies Tauri's required `plugins.updater` configuration as an ephemeral CLI overlay derived from `QUERYNOT_UPDATER_PUBLIC_KEY`. The same repository variable therefore configures both the compiled Rust updater and the bundler that creates signed updater artifacts; the public key is not duplicated in source, and a missing value fails before compilation.
+
 `0.1.0` cannot discover `0.1.1` because it has no updater. Users install `0.1.1` manually once; signed in-application updates begin with later releases.
 
 ## Consequences
