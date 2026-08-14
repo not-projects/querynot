@@ -4,6 +4,7 @@
   "source_commit": "e241ee0973f17906ead8b32d868f76a01685baba",
   "application_version": "0.1.0",
   "release_tag": "v0.1.0",
+  "publication_status": "published",
   "candidate_run_id": "31815252436",
   "candidate_run_url": "https://github.com/not-projects/querynot/actions/runs/31815252436",
   "release_platforms": ["windows-11-x64"],
@@ -37,6 +38,11 @@
   ],
   "accessibility_results": ["evidence/phase-5/ui-layout-report.json"],
   "packaging_results": ["evidence/phase-5/packaging-results.json"],
+  "publication_results": [
+    "evidence/release/publication-plan.json",
+    "evidence/release/publication-verification.json",
+    "evidence/release/public-release.json"
+  ],
   "benchmark_results": ["evidence/phase-2/benchmark-report.json"],
   "manual_safety_review": null,
   "dogfood_record": null,

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "release_tag": "v0.1.0",
+  "release_url": "https://github.com/not-projects/querynot/releases/tag/v0.1.0",
+  "source_commit": "e241ee0973f17906ead8b32d868f76a01685baba",
+  "evidence_commit": "19d05d70528aba491bd5560e679963218c927c58",
+  "workflow_run_id": "31816607434",
+  "workflow_run_url": "https://github.com/not-projects/querynot/actions/runs/31816607434",
+  "published_at": "2026-08-14T15:52:34Z",
+  "draft": false,
+  "prerelease": false,
+  "tag_target": "19d05d70528aba491bd5560e679963218c927c58",
+  "assets": [
+    {
+      "name": "QueryNot_0.1.0_x64-setup.exe",
+      "bytes": 3120243,
+      "sha256": "80753f765bcae143750b2de1b765405b710ad858fb637c1cfb80c9a06090058c"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 95,
+      "sha256": "cf60f441282043c7b902a6894011142c1d9743c87e686eed69f0c2b4267cbfbd"
+    }
+  ],
+  "round_trip_verification": "pass",
+  "public_download_verification": "pass"
+}

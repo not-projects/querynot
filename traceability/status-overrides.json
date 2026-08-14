@@ -886,7 +886,10 @@
         "evidence/phase-5/local-validation-report.json",
         "evidence/phase-5/windows-artifact-inspection.json",
         "evidence/phase-5/windows-checksums.json",
-        "evidence/phase-5/packaging-results.json"
+        "evidence/phase-5/packaging-results.json",
+        "evidence/release/publication-plan.json",
+        "evidence/release/publication-verification.json",
+        "evidence/release/public-release.json"
       ],
       "automated_test_ids": [
         "P5-AUTO-RELEASE-CONTRACTS",
@@ -940,7 +943,10 @@
         "evidence/phase-5/adapter-conformance-report.json",
         "evidence/phase-5/windows-artifact-inspection.json",
         "evidence/phase-5/windows-checksums.json",
-        "evidence/phase-5/packaging-results.json"
+        "evidence/phase-5/packaging-results.json",
+        "evidence/release/publication-plan.json",
+        "evidence/release/publication-verification.json",
+        "evidence/release/public-release.json"
       ],
       "automated_test_ids": [
         "P5-AUTO-RELEASE-EVIDENCE",

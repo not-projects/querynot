@@ -3463,6 +3463,9 @@
         "evidence/phase-5/windows-artifact-inspection.json",
         "evidence/phase-5/windows-checksums.json",
         "evidence/phase-5/packaging-results.json",
+        "evidence/release/publication-plan.json",
+        "evidence/release/publication-verification.json",
+        "evidence/release/public-release.json",
         "evidence/phase-5/product-owner-scope.json"
       ]
     },
@@ -3708,6 +3711,9 @@
         "evidence/phase-5/windows-artifact-inspection.json",
         "evidence/phase-5/windows-checksums.json",
         "evidence/phase-5/packaging-results.json",
+        "evidence/release/publication-plan.json",
+        "evidence/release/publication-verification.json",
+        "evidence/release/public-release.json",
         "evidence/phase-5/product-owner-scope.json"
       ]
     }
