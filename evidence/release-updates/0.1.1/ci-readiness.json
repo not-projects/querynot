@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "application_version": "0.1.1",
+  "source_commit": "f1f942c77374043a2cc3892ee9c4b5b25d38e46c",
+  "workflow": "CI",
+  "run_id": 31837674824,
+  "run_url": "https://github.com/not-projects/querynot/actions/runs/31837674824",
+  "event": "push",
+  "created_at": "2026-08-14T20:23:22Z",
+  "completed_at": "2026-08-14T20:29:20Z",
+  "status": "pass",
+  "checks": [
+    {
+      "id": "frontend-and-policy",
+      "status": "pass"
+    },
+    {
+      "id": "native-dependency-review",
+      "status": "pass"
+    },
+    {
+      "id": "native-core",
+      "status": "pass",
+      "runners": [
+        "ubuntu-22.04",
+        "ubuntu-24.04",
+        "windows-2022",
+        "macos-15",
+        "macos-15-intel"
+      ]
+    },
+    {
+      "id": "desktop-compile",
+      "status": "pass",
+      "runners": [
+        "ubuntu-22.04",
+        "ubuntu-24.04",
+        "windows-2022",
+        "macos-15",
+        "macos-15-intel"
+      ]
+    }
+  ],
+  "manual_dispatch_jobs": [
+    {
+      "id": "checksum-pinned-feasibility",
+      "status": "not_run",
+      "reason": "Push run; workflow_dispatch only."
+    },
+    {
+      "id": "release-candidate-packages",
+      "status": "not_run",
+      "reason": "Push run; workflow_dispatch and dedicated updater signing configuration required."
+    }
+  ],
+  "claims": {
+    "windows_updater_code_compiled": true,
+    "signed_windows_candidate_verified": false,
+    "automatic_update_publication_verified": false,
+    "unperformed_checks_represented_as_pass": false
+  }
+}
