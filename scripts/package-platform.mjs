@@ -44,10 +44,16 @@ if (platform === 'linux') {
 }
 
 const cacheRoot = resolve(root, '.tmp', 'release-tool-cache');
-const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const tauriCli = resolve(
+  root,
+  'node_modules',
+  '@tauri-apps',
+  'cli',
+  'tauri.js'
+);
 const build = spawnSync(
-  npmExecutable,
-  ['run', 'tauri', '--', 'build', '--bundles', bundles.get(platform)],
+  process.execPath,
+  [tauriCli, 'build', '--bundles', bundles.get(platform)],
   {
     cwd: root,
     env: {

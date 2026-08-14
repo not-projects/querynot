@@ -69,18 +69,21 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(ci.match(/key: \$\{\{ matrix\.runner \}\}/g)).toHaveLength(4);
   });
 
-  it('uses the Windows npm shim for candidate packaging', () => {
+  it('invokes the pinned Tauri CLI without a platform shell shim', () => {
     const packaging = read('scripts/package-platform.mjs');
 
-    expect(packaging).toContain(
-      "process.platform === 'win32' ? 'npm.cmd' : 'npm'"
-    );
+    expect(packaging).toContain("'@tauri-apps',\n  'cli',\n  'tauri.js'");
+    expect(packaging).toContain('process.execPath');
+    expect(packaging).not.toContain('npm.cmd');
   });
 
   it('makes disposable TLS mounts traversable and redacts failed-service diagnostics', () => {
     const feasibility = read('scripts/run-feasibility.mjs');
 
     expect(feasibility).toContain('mkdirSync(tlsDirectory, { mode: 0o755 })');
+    expect(feasibility).toContain(
+      "writeFileSync(initSqlPath, initSql(), { encoding: 'utf8', mode: 0o644 })"
+    );
     expect(feasibility).toContain(".replaceAll(password, '[REDACTED]')");
     expect(feasibility).toContain(
       "['logs', '--no-color', '--timestamps', '--tail', '200']"

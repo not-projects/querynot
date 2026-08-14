@@ -227,7 +227,10 @@ function target(
 }
 
 try {
-  writeFileSync(initSqlPath, initSql(), { encoding: 'utf8', mode: 0o600 });
+  // Official MySQL and MariaDB entrypoints execute initialization files after
+  // dropping privileges. This synthetic fixture contains no credential, so it
+  // is safe and necessary for the bind-mounted SQL file to be world-readable.
+  writeFileSync(initSqlPath, initSql(), { encoding: 'utf8', mode: 0o644 });
   const caCertificate = generateCertificates();
   try {
     compose(['up', '--detach', '--wait', '--quiet-pull']);
