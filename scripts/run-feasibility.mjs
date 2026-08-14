@@ -115,12 +115,30 @@ function portFor(service) {
   return Number(match[1]);
 }
 
+function emitComposeDiagnostics() {
+  try {
+    const diagnostics = compose(
+      ['logs', '--no-color', '--timestamps', '--tail', '200'],
+      true
+    )
+      .replaceAll(password, '[REDACTED]')
+      .replaceAll(runtimeDirectory, '[TEMP]');
+    if (diagnostics) process.stderr.write(`${diagnostics}\n`);
+  } catch {
+    process.stderr.write(
+      `warning: Docker diagnostics for ${composeProject} were unavailable\n`
+    );
+  }
+}
+
 function initSql() {
   const sequenceRows = Array.from(
     { length: 1_024 },
     (_, index) => `(${index + 1})`
   ).join(',\n');
   return `CREATE DATABASE querynot_fixture CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'querynot'@'%' IDENTIFIED BY '${password}' REQUIRE SSL;
+GRANT ALL PRIVILEGES ON querynot_fixture.* TO 'querynot'@'%';
 USE querynot_fixture;
 CREATE TABLE __querynot_fixture_marker (marker_token VARCHAR(128) NOT NULL);
 INSERT INTO __querynot_fixture_marker VALUES ('${markerToken}');
@@ -264,7 +282,7 @@ function target(
     expected_product: product,
     expected_version_prefix: version,
     expected_authentication_plugin: authenticationPlugin,
-    connection_url: `mysql://root:${encodedPassword}@127.0.0.1:${port}/querynot_fixture?${query}`,
+    connection_url: `mysql://querynot:${encodedPassword}@127.0.0.1:${port}/querynot_fixture?${query}`,
     require_tls_version: 'TLSv1.2',
     require_verified_tls: true
   };
@@ -279,17 +297,7 @@ try {
   try {
     compose(['up', '--detach', '--wait', '--quiet-pull']);
   } catch (error) {
-    try {
-      const diagnostics = compose(
-        ['logs', '--no-color', '--timestamps', '--tail', '200'],
-        true
-      ).replaceAll(password, '[REDACTED]');
-      if (diagnostics) process.stderr.write(`${diagnostics}\n`);
-    } catch {
-      process.stderr.write(
-        `warning: Docker diagnostics for ${composeProject} were unavailable\n`
-      );
-    }
+    emitComposeDiagnostics();
     throw error;
   }
 
@@ -329,20 +337,26 @@ try {
   });
   chmodSync(manifestPath, 0o600);
 
-  const reportJson = command(
-    'cargo',
-    [
-      'run',
-      '--locked',
-      '--quiet',
-      '-p',
-      'querynot-fixture-harness',
-      '--',
-      '--manifest',
-      manifestPath
-    ],
-    { capture: true }
-  );
+  let reportJson;
+  try {
+    reportJson = command(
+      'cargo',
+      [
+        'run',
+        '--locked',
+        '--quiet',
+        '-p',
+        'querynot-fixture-harness',
+        '--',
+        '--manifest',
+        manifestPath
+      ],
+      { capture: true }
+    );
+  } catch (error) {
+    emitComposeDiagnostics();
+    throw error;
+  }
   const harnessReport = JSON.parse(reportJson);
   const evidence = {
     schema_version: 1,

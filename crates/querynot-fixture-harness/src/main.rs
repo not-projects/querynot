@@ -1108,7 +1108,17 @@ fn safe_sqlx(error: &sqlx::Error) -> String {
                 database.code().as_deref().unwrap_or("unknown")
             )
         }
-        sqlx::Error::Io(_) => "connectivity".to_owned(),
+        sqlx::Error::Io(error) => {
+            let kind = match error.kind() {
+                std::io::ErrorKind::ConnectionRefused => "refused",
+                std::io::ErrorKind::ConnectionReset => "reset",
+                std::io::ErrorKind::ConnectionAborted => "aborted",
+                std::io::ErrorKind::TimedOut => "timeout",
+                std::io::ErrorKind::UnexpectedEof => "eof",
+                _ => "other",
+            };
+            format!("connectivity:{kind}")
+        }
         sqlx::Error::Tls(_) => "tls".to_owned(),
         sqlx::Error::Protocol(_) => "protocol".to_owned(),
         sqlx::Error::RowNotFound => "row_not_found".to_owned(),
