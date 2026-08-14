@@ -35,11 +35,11 @@ The retained Phase 4 reports cover the full Phase 3 contract plus deterministic 
 
 ## Reviewed Windows artifact
 
-- Candidate run: `31812585873`
-- Source commit: `3da341d9f83619d96c17ec54ea20331301bb9346`
+- Candidate run: `31815252436`
+- Source commit: `e241ee0973f17906ead8b32d868f76a01685baba`
 - Installer: `QueryNot_0.1.0_x64-setup.exe`
-- Size: 3,120,800 bytes
-- SHA-256: `3a0b5cf5eecd74ccba7668f0ad6ed59a5de8b927b78d2943dc3dabd7f286b84d`
+- Size: 3,120,243 bytes
+- SHA-256: `80753f765bcae143750b2de1b765405b710ad858fb637c1cfb80c9a06090058c`
 - Updater artifacts: none
 
 WSL2 Debian and AppImage packages are development evidence only and are excluded from publication. Cross-platform CI compilation is likewise portability evidence, not a support claim.

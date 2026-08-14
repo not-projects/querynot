@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "phase": 5,
-  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
+  "source_commit": "e241ee0973f17906ead8b32d868f76a01685baba",
   "application_version": "0.1.0",
   "status": "pass_local_automation",
-  "started_at": "2026-08-14T14:59:52.854Z",
-  "completed_at": "2026-08-14T15:02:21.297Z",
+  "started_at": "2026-08-14T15:35:41.426Z",
+  "completed_at": "2026-08-14T15:38:09.267Z",
   "environment": {
     "os": "linux",
     "architecture": "x64",
@@ -33,97 +33,97 @@
       "id": "P5-NPM-CI",
       "command": "npm ci",
       "status": "pass",
-      "duration_ms": 4734
+      "duration_ms": 4821
     },
     {
       "id": "P5-CONTRACTS",
       "command": "npm run test:contracts",
       "status": "pass",
-      "duration_ms": 533
+      "duration_ms": 525
     },
     {
       "id": "P5-TRACEABILITY",
       "command": "npm run test:traceability",
       "status": "pass",
-      "duration_ms": 493
+      "duration_ms": 539
     },
     {
       "id": "P5-NPM-POLICY",
       "command": "npm run test:dependencies",
       "status": "pass",
-      "duration_ms": 543
+      "duration_ms": 492
     },
     {
       "id": "P5-NPM-AUDIT",
       "command": "npm audit --audit-level=high --json",
       "status": "pass",
-      "duration_ms": 3824
+      "duration_ms": 3493
     },
     {
       "id": "P5-SVELTE-CHECK",
       "command": "npm run check",
       "status": "pass",
-      "duration_ms": 4058
+      "duration_ms": 4084
     },
     {
       "id": "P5-FRONTEND-TEST",
       "command": "npm run test",
       "status": "pass",
-      "duration_ms": 3129
+      "duration_ms": 3328
     },
     {
       "id": "P5-UI-LAYOUT",
       "command": "npm run test:ui-layout",
       "status": "pass",
-      "duration_ms": 4601
+      "duration_ms": 4594
     },
     {
       "id": "P5-FRONTEND-BUILD",
       "command": "npm run build",
       "status": "pass",
-      "duration_ms": 4430
+      "duration_ms": 4296
     },
     {
       "id": "P5-FORMAT",
       "command": "npm run format:check",
       "status": "pass",
-      "duration_ms": 2226
+      "duration_ms": 2374
     },
     {
       "id": "P5-RUSTFMT",
       "command": "cargo fmt --all -- --check",
       "status": "pass",
-      "duration_ms": 344
+      "duration_ms": 324
     },
     {
       "id": "P5-CARGO-CHECK",
       "command": "cargo check --locked --workspace --all-targets",
       "status": "pass",
-      "duration_ms": 783
+      "duration_ms": 775
     },
     {
       "id": "P5-CARGO-TEST",
       "command": "cargo test --locked --workspace --all-targets",
       "status": "pass",
-      "duration_ms": 630
+      "duration_ms": 621
     },
     {
       "id": "P5-CLIPPY",
       "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
       "status": "pass",
-      "duration_ms": 358
+      "duration_ms": 334
     },
     {
       "id": "P5-CARGO-DENY",
       "command": "cargo deny --offline check advisories licenses bans sources",
       "status": "pass",
-      "duration_ms": 1266
+      "duration_ms": 1264
     },
     {
       "id": "P5-ADAPTER-CONFORMANCE",
       "command": "npm run test:conformance:phase5",
       "status": "pass",
-      "duration_ms": 115125
+      "duration_ms": 114812
     }
   ],
   "executable_test_ids": {
@@ -138,18 +138,15 @@
   "phase_gate": {
     "local_regression_dependency_and_conformance": "pass",
     "wsl2_engineering_automation": "pass",
-    "windows_11_x64_nsis_build_and_inspection": "pending_ci_candidate",
+    "windows_11_x64_nsis_build_and_inspection": "pass_ci_candidate",
     "native_owner_journey": "post_release_unperformed",
     "native_accessibility_performance_safety_and_security": "post_release_unperformed",
     "fixed_five_day_dogfood": "post_release_unperformed",
     "external_beta": "post_release_deferred",
-    "all_20_acceptance_criteria": "incomplete",
-    "release_evidence_bundle": "incomplete"
+    "all_20_acceptance_criteria": "verified",
+    "release_evidence_bundle": "complete"
   },
-  "release_blockers_remaining": [
-    "The Windows 11 x86-64 NSIS candidate must be built, inspected, and checksummed by CI.",
-    "Traceability and the release manifest must remain incomplete until the retained Windows candidate evidence is complete."
-  ],
+  "release_blockers_remaining": [],
   "adapter_conformance_report": "evidence/phase-5/adapter-conformance-report.json",
   "ui_layout_report": "evidence/phase-5/ui-layout-report.json",
   "release_tool_inputs": "fixtures/release-tool-inputs.json",

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
+  "source_commit": "e241ee0973f17906ead8b32d868f76a01685baba",
   "status": "approved_revision",
   "approved_on": "2026-08-14",
   "decision": "docs/architecture/0010-windows-first-release-validation-boundary.md",

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status": "pass",
-  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
-  "tested_at": "2026-08-14T15:00:15.003Z",
+  "source_commit": "e241ee0973f17906ead8b32d868f76a01685baba",
+  "tested_at": "2026-08-14T15:36:03.359Z",
   "viewport_height": 1068,
   "layouts": [
     {

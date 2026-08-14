@@ -1,19 +1,19 @@
 {
   "schema_version": 1,
   "release_status": "ready_to_publish",
-  "source_commit": "3da341d9f83619d96c17ec54ea20331301bb9346",
+  "source_commit": "e241ee0973f17906ead8b32d868f76a01685baba",
   "application_version": "0.1.0",
   "release_tag": "v0.1.0",
-  "candidate_run_id": "31812585873",
-  "candidate_run_url": "https://github.com/not-projects/querynot/actions/runs/31812585873",
+  "candidate_run_id": "31815252436",
+  "candidate_run_url": "https://github.com/not-projects/querynot/actions/runs/31815252436",
   "release_platforms": ["windows-11-x64"],
   "product_owner_scope": "evidence/phase-5/product-owner-scope.json",
   "reviewed_artifacts": [
     {
       "id": "windows-nsis-x64",
       "name": "QueryNot_0.1.0_x64-setup.exe",
-      "bytes": 3120800,
-      "sha256": "3a0b5cf5eecd74ccba7668f0ad6ed59a5de8b927b78d2943dc3dabd7f286b84d"
+      "bytes": 3120243,
+      "sha256": "80753f765bcae143750b2de1b765405b710ad858fb637c1cfb80c9a06090058c"
     }
   ],
   "checksums": ["evidence/phase-5/SHA256SUMS"],

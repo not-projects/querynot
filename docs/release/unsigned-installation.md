@@ -8,7 +8,7 @@ QueryNot's initial Windows package is intentionally unsigned. Verify the SHA-256
 
 Use the filename and digest from the release's `SHA256SUMS` file. A mismatch means the package must not be installed.
 
-The reviewed `0.1.0` installer is `QueryNot_0.1.0_x64-setup.exe`, 3,120,800 bytes, with SHA-256 `3a0b5cf5eecd74ccba7668f0ad6ed59a5de8b927b78d2943dc3dabd7f286b84d`.
+The reviewed `0.1.0` installer is `QueryNot_0.1.0_x64-setup.exe`, 3,120,243 bytes, with SHA-256 `80753f765bcae143750b2de1b765405b710ad858fb637c1cfb80c9a06090058c`.
 
 ### Windows PowerShell
 
