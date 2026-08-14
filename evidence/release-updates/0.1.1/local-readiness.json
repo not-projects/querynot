@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "application_version": "0.1.1",
+  "source_commit": "870177a6e7e4705eea45bd5189d069999085a31d",
+  "completed_at": "2026-08-14T20:21:10Z",
+  "environment": {
+    "os": "Linux 6.18.33.2-microsoft-standard-WSL2 x86_64",
+    "node": "22.22.1",
+    "npm": "10.9.4",
+    "rustc": "1.97.0",
+    "cargo": "1.97.0",
+    "cargo_deny": "0.20.2"
+  },
+  "local_status": "pass",
+  "source_tree_clean_before_verification": true,
+  "checks": [
+    {
+      "command": "npm run check",
+      "status": "pass",
+      "summary": "0 Svelte or TypeScript errors and 0 warnings"
+    },
+    {
+      "command": "npm run test:unit",
+      "status": "pass",
+      "summary": "14 files and 78 tests passed, including updater UI, trust-boundary, contract, and publication tests"
+    },
+    {
+      "command": "npm run test:ui-layout",
+      "status": "pass",
+      "summary": "2048, 1280, 960, and 720 pixel layouts passed in system, light, dark, and forest themes"
+    },
+    {
+      "command": "npm run test:contracts",
+      "status": "pass",
+      "summary": "generated Rust and TypeScript command and event bindings match contract version 1"
+    },
+    {
+      "command": "npm run test:traceability",
+      "status": "pass",
+      "summary": "101 numbered requirements and all 20 acceptance criteria remain current"
+    },
+    {
+      "command": "npm run test:dependencies && npm audit --audit-level=high",
+      "status": "pass",
+      "summary": "173 exact npm packages passed source, integrity, pin, license, and high-severity audit policy with 0 vulnerabilities"
+    },
+    {
+      "command": "npm run build && npm run format:check",
+      "status": "pass",
+      "summary": "production frontend and repository formatting passed; the existing nonblocking Vite chunk-size advisory remains visible"
+    },
+    {
+      "command": "cargo fmt --all -- --check && cargo check --locked --workspace --all-targets",
+      "status": "pass",
+      "summary": "Rust formatting and the complete local workspace compile gate passed"
+    },
+    {
+      "command": "cargo test --locked --workspace",
+      "status": "pass",
+      "summary": "71 Rust unit, feasibility, and vertical-slice tests passed"
+    },
+    {
+      "command": "cargo clippy --locked --workspace --all-targets -- -D warnings",
+      "status": "pass",
+      "summary": "workspace lint gate passed with warnings denied"
+    },
+    {
+      "command": "cargo deny check advisories licenses bans sources",
+      "status": "pass",
+      "summary": "advisories, licenses, bans, and sources passed"
+    },
+    {
+      "command": "npm run tauri -- build --no-bundle",
+      "status": "pass",
+      "summary": "optimized desktop application built successfully without release packaging"
+    }
+  ],
+  "release_candidate": {
+    "status": "pending_external_configuration",
+    "release_blocking": true,
+    "required_environment": [
+      "QUERYNOT_UPDATER_PUBLIC_KEY repository variable",
+      "TAURI_SIGNING_PRIVATE_KEY repository secret",
+      "TAURI_SIGNING_PRIVATE_KEY_PASSWORD repository secret when the key is protected"
+    ],
+    "required_evidence": [
+      "successful manually dispatched CI run on master",
+      "Windows x86-64 NSIS installer and matching .exe.sig",
+      "passing candidate inspection, checksum, and updater-manifest reports",
+      "successful draft round-trip and stable publication report"
+    ]
+  },
+  "claims": {
+    "signed_windows_candidate_verified": false,
+    "automatic_update_publication_verified": false,
+    "unperformed_checks_represented_as_pass": false
+  }
+}
