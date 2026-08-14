@@ -184,6 +184,46 @@ try {
     status: 'pass_expected_incomplete',
     duration_ms: 0
   });
+  const publicationGate = spawnSync(
+    'npm',
+    [
+      'run',
+      'release:prepare-publication',
+      '--',
+      '--directory',
+      'artifacts/candidate',
+      '--output',
+      'artifacts/publication',
+      '--tag',
+      'v0.1.0',
+      '--confirm',
+      'publish-v0.1.0',
+      '--report',
+      'artifacts/publication-plan.json'
+    ],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'pipe']
+    }
+  );
+  if (
+    publicationGate.status === 0 ||
+    !`${publicationGate.stderr ?? ''}${publicationGate.stdout ?? ''}`.includes(
+      'Phase 5 release evidence gate did not pass; publication is forbidden'
+    )
+  ) {
+    throw new Error(
+      'incomplete Phase 5 evidence did not block Phase 6 publication'
+    );
+  }
+  checks.push({
+    id: 'P6-PUBLICATION-FAIL-CLOSED',
+    command: 'npm run release:prepare-publication',
+    status: 'pass_expected_incomplete',
+    duration_ms: 0
+  });
   run('P5-NPM-CI', 'npm ci', 'npm', ['ci']);
   run('P5-CONTRACTS', 'npm run test:contracts', 'npm', [
     'run',
@@ -382,7 +422,9 @@ const report = {
     'P5-AUTO-ADAPTER-CONFORMANCE':
       'querynot-fixture-harness across the exact five-server release candidate matrix',
     'P5-AUTO-RELEASE-EVIDENCE':
-      'scripts/audit-release-evidence.mjs > fail-closed 101-requirement and 20-criterion release gate'
+      'scripts/audit-release-evidence.mjs > fail-closed 101-requirement and 20-criterion release gate',
+    'P6-AUTO-PUBLICATION-GUARD':
+      'src/phase6-release.test.ts and scripts/release-publication.mjs > exact reviewed artifact, checksum, tag, confirmation, and Phase 5 prerequisite boundary'
   },
   phase_gate: {
     local_regression_dependency_and_conformance: failure
