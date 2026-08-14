@@ -2,19 +2,175 @@
   "schema_version": 1,
   "source_commit": null,
   "status": "not_run",
-  "platform_matrix_ids": [],
-  "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
-  "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
-  "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
-  "checks": {
-    "wcag_2_2_aa": "not_run",
-    "keyboard_all_functions": "not_run",
-    "visible_focus": "not_run",
-    "tablist_tree_dialog_patterns": "not_run",
-    "not_color_only": "not_run",
-    "reduced_motion": "not_run",
-    "no_page_horizontal_scroll": "not_run"
-  },
   "reviewer": null,
-  "evidence_links": []
+  "results": [
+    {
+      "id": "windows-10-22h2-x64",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "windows-11-x64",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "macos-13-intel",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "macos-13-apple",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "macos-current-intel",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "macos-current-apple",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "ubuntu-22.04-x64",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "ubuntu-24.04-x64",
+      "reviewed_at": null,
+      "assistive_technology": null,
+      "themes": { "light": "not_run", "dark": "not_run", "forest": "not_run" },
+      "viewport_widths": { "1280": "not_run", "960": "not_run", "720": "not_run" },
+      "ui_scales": { "80": "not_run", "100": "not_run", "200": "not_run" },
+      "combinations_reviewed": 0,
+      "checks": {
+        "wcag_2_2_aa": "not_run",
+        "keyboard_all_functions": "not_run",
+        "visible_and_restored_focus": "not_run",
+        "tablist_tree_dialog_patterns": "not_run",
+        "native_dialogs_and_close_blockers": "not_run",
+        "not_color_only": "not_run",
+        "reduced_motion": "not_run",
+        "bounded_editor_and_grid_scrolling": "not_run",
+        "no_page_horizontal_scroll": "not_run"
+      },
+      "evidence_links": []
+    }
+  ]
 }

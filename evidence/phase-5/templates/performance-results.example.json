@@ -6,21 +6,35 @@
     "native": false,
     "os": null,
     "cpu": null,
+    "physical_cpu_cores": 0,
     "memory_gib": 0,
+    "storage": null,
     "ssd": false,
     "power_mode": null,
     "display_scale": null,
-    "webview_runtime": null
+    "webview_runtime": null,
+    "commands": []
+  },
+  "fixtures": {
+    "ordinary_result": {
+      "rows": 10000,
+      "columns": 12,
+      "approx_encoded_bytes_per_row": 1024,
+      "nulls": true,
+      "unicode": true,
+      "variable_width_text": true
+    },
+    "large_schema": { "namespaces": 100, "objects": 10000 }
   },
   "discarded_setup_runs": 1,
   "measurements": {
-    "cold_launch_p95_ms": { "samples": 0, "value": null, "raw_evidence_link": null },
-    "local_response_p95_ms": { "samples": 0, "value": null, "raw_evidence_link": null },
-    "first_visible_batch_p95_ms": { "samples": 0, "value": null, "raw_evidence_link": null },
-    "editor_typing_fps_p95": { "samples": 0, "value": null, "raw_evidence_link": null },
-    "result_scroll_fps_p95": { "samples": 0, "value": null, "raw_evidence_link": null },
-    "idle_resident_memory_mib": { "samples": 0, "value": null, "raw_evidence_link": null },
-    "cleanup_ratio_after_10s": { "samples": 0, "value": null, "raw_evidence_link": null }
+    "cold_launch_p95_ms": { "samples": 0, "value": null, "aggregation": "nearest_rank_p95", "raw_evidence_link": null },
+    "local_response_p95_ms": { "samples": 0, "value": null, "aggregation": "nearest_rank_p95", "raw_evidence_link": null },
+    "first_visible_batch_p95_ms": { "samples": 0, "value": null, "aggregation": "nearest_rank_p95", "raw_evidence_link": null },
+    "editor_typing_fps_p95": { "samples": 0, "value": null, "aggregation": "nearest_rank_p95", "raw_evidence_link": null },
+    "result_scroll_fps_p95": { "samples": 0, "value": null, "aggregation": "nearest_rank_p95", "raw_evidence_link": null },
+    "idle_resident_memory_mib": { "samples": 0, "value": null, "aggregation": "maximum", "raw_evidence_link": null },
+    "cleanup_ratio_after_10s": { "samples": 0, "value": null, "aggregation": "maximum", "raw_evidence_link": null }
   },
   "large_schema_progressive": "not_run",
   "rendered_rows_bounded": "not_run"

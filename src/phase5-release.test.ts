@@ -2,6 +2,15 @@ import { readFileSync, readdirSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import {
+  accessibilityChecks,
+  aggregateSamples,
+  coreJourneyChecks,
+  familyNetworkChecks,
+  osMatrix,
+  performanceMeasurements
+} from '../scripts/release-evidence-contract.mjs';
+
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Phase 5 release-candidate boundaries', () => {
@@ -90,13 +99,71 @@ describe('Phase 5 release-candidate boundaries', () => {
       name.endsWith('.example.json')
     );
 
-    expect(templates).toHaveLength(8);
+    expect(templates).toHaveLength(9);
     for (const name of templates) {
       const record = JSON.parse(read(`evidence/phase-5/templates/${name}`));
       expect(record.schema_version).toBe(1);
       expect(record.source_commit).toBeNull();
       expect(record.status).toBe('not_run');
     }
+  });
+
+  it('pre-expands the native and accessibility evidence to the exact release matrix', () => {
+    const operatingSystems = JSON.parse(
+      read('evidence/phase-5/templates/operating-system-results.example.json')
+    );
+    const accessibility = JSON.parse(
+      read('evidence/phase-5/templates/accessibility-results.example.json')
+    );
+
+    expect(
+      operatingSystems.results.map(({ id }: { id: string }) => id)
+    ).toEqual(osMatrix);
+    for (const result of operatingSystems.results) {
+      for (const packageJourney of result.packages) {
+        expect(Object.keys(packageJourney.journey_checks)).toEqual(
+          coreJourneyChecks
+        );
+      }
+    }
+    expect(
+      operatingSystems.family_network_journeys.map(
+        ({ id }: { id: string }) => id
+      )
+    ).toEqual(['windows', 'macos', 'linux']);
+    for (const journey of operatingSystems.family_network_journeys) {
+      expect(Object.keys(journey.checks)).toEqual(familyNetworkChecks);
+    }
+
+    expect(accessibility.results.map(({ id }: { id: string }) => id)).toEqual(
+      osMatrix
+    );
+    for (const result of accessibility.results) {
+      expect(Object.keys(result.checks)).toEqual(accessibilityChecks);
+      expect(result.combinations_reviewed).toBe(0);
+    }
+  });
+
+  it('defines recomputable statistics for every native performance measurement', () => {
+    const summary = JSON.parse(
+      read('evidence/phase-5/templates/performance-results.example.json')
+    );
+    const raw = JSON.parse(
+      read('evidence/phase-5/templates/performance-raw.example.json')
+    );
+
+    expect(Object.keys(summary.measurements)).toEqual([
+      ...performanceMeasurements.keys()
+    ]);
+    expect(Object.keys(raw.measurements)).toEqual([
+      ...performanceMeasurements.keys()
+    ]);
+    for (const [name, contract] of performanceMeasurements) {
+      expect(summary.measurements[name].aggregation).toBe(contract.aggregation);
+      expect(raw.measurements[name].aggregation).toBe(contract.aggregation);
+    }
+    expect(aggregateSamples([1, 2, 3, 4, 5], 'nearest_rank_p95')).toBe(5);
+    expect(aggregateSamples([1, 2, 3, 4, 5], 'maximum')).toBe(5);
   });
 
   it('fails closed on all external release evidence and traceability gates', () => {
@@ -126,10 +193,13 @@ describe('Phase 5 release-candidate boundaries', () => {
       'ubuntu-22.04-x64',
       'ubuntu-24.04-x64'
     ]) {
-      expect(audit).toContain(id);
+      expect(osMatrix).toContain(id);
     }
     expect(audit).toContain('days.length === 5');
     expect(audit).toContain('participants.length >= 5');
+    expect(audit).toContain('raw sample set is incomplete');
+    expect(audit).toContain('family_network_journeys');
+    expect(audit).toContain('templates/');
     expect(audit).toContain("record.priority === 'must'");
     expect(audit).toContain(
       "releaseManifest?.release_status === 'ready_to_publish'"

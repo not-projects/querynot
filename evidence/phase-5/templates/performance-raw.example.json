@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "source_commit": null,
+  "status": "not_run",
+  "measurements": {
+    "cold_launch_p95_ms": { "aggregation": "nearest_rank_p95", "samples": [] },
+    "local_response_p95_ms": { "aggregation": "nearest_rank_p95", "samples": [] },
+    "first_visible_batch_p95_ms": { "aggregation": "nearest_rank_p95", "samples": [] },
+    "editor_typing_fps_p95": { "aggregation": "nearest_rank_p95", "samples": [] },
+    "result_scroll_fps_p95": { "aggregation": "nearest_rank_p95", "samples": [] },
+    "idle_resident_memory_mib": { "aggregation": "maximum", "samples": [] },
+    "cleanup_ratio_after_10s": { "aggregation": "maximum", "samples": [] }
+  }
+}

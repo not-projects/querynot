@@ -2,6 +2,20 @@ import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import {
+  accessibilityChecks,
+  aggregateSamples,
+  coreJourneyChecks,
+  expectedArtifacts,
+  familyNetworkChecks,
+  osArchitectures,
+  osArtifacts,
+  osFamilies,
+  osMatrix,
+  parseChecksumManifest,
+  performanceMeasurements
+} from './release-evidence-contract.mjs';
+
 const root = resolve(import.meta.dirname, '..');
 const evidenceRoot = resolve(root, 'evidence', 'phase-5');
 const failures = [];
@@ -15,6 +29,9 @@ const requiredFiles = {
   dogfood: 'dogfood-record.json',
   beta: 'beta-record.json'
 };
+const finalRecordEvidenceLinks = new Set(
+  Object.values(requiredFiles).map((file) => `evidence/phase-5/${file}`)
+);
 
 function readJson(path, label) {
   try {
@@ -42,7 +59,10 @@ function validEvidenceLink(value) {
   if (
     !nonemptyText(value) ||
     !value.startsWith('evidence/phase-5/') ||
-    value.includes('..')
+    value.includes('..') ||
+    value.startsWith('evidence/phase-5/templates/') ||
+    value.endsWith('.example.json') ||
+    finalRecordEvidenceLinks.has(value)
   ) {
     return false;
   }
@@ -60,6 +80,23 @@ function validEvidenceLink(value) {
 }
 function requireEvidenceLink(value, message) {
   requireCondition(validEvidenceLink(value), message);
+}
+function requireExactPassChecks(checks, expected, label) {
+  const keys =
+    checks && typeof checks === 'object' && !Array.isArray(checks)
+      ? Object.keys(checks)
+      : [];
+  requireCondition(
+    keys.length === expected.length &&
+      expected.every((id) => keys.includes(id)),
+    `${label} does not contain exactly the required checks`
+  );
+  for (const id of expected) {
+    requireCondition(
+      checks?.[id] === 'pass',
+      `${label} check ${id} did not pass`
+    );
+  }
 }
 function median(values) {
   const sorted = [...values].sort((left, right) => left - right);
@@ -246,33 +283,6 @@ requireCondition(
   'Phase 5 dependency review used the wrong cargo-deny version'
 );
 
-const osMatrix = [
-  'windows-10-22h2-x64',
-  'windows-11-x64',
-  'macos-13-intel',
-  'macos-13-apple',
-  'macos-current-intel',
-  'macos-current-apple',
-  'ubuntu-22.04-x64',
-  'ubuntu-24.04-x64'
-];
-const expectedArtifacts = new Map([
-  ['windows-nsis-x64', 'nsis'],
-  ['macos-dmg-intel', 'dmg'],
-  ['macos-dmg-apple', 'dmg'],
-  ['linux-appimage-x64', 'appimage'],
-  ['linux-deb-x64', 'deb']
-]);
-const osArtifacts = new Map([
-  ['windows-10-22h2-x64', ['windows-nsis-x64']],
-  ['windows-11-x64', ['windows-nsis-x64']],
-  ['macos-13-intel', ['macos-dmg-intel']],
-  ['macos-13-apple', ['macos-dmg-apple']],
-  ['macos-current-intel', ['macos-dmg-intel']],
-  ['macos-current-apple', ['macos-dmg-apple']],
-  ['ubuntu-22.04-x64', ['linux-appimage-x64', 'linux-deb-x64']],
-  ['ubuntu-24.04-x64', ['linux-appimage-x64', 'linux-deb-x64']]
-]);
 const osResults = recordsById(evidence.os?.results);
 requireCondition(
   osResults.size === osMatrix.length,
@@ -294,8 +304,8 @@ for (const id of osMatrix) {
     `${id} has no exact WebView runtime version`
   );
   requireCondition(
-    nonemptyText(result?.architecture),
-    `${id} has no architecture`
+    result?.architecture === osArchitectures.get(id),
+    `${id} does not record the required ${osArchitectures.get(id)} architecture`
   );
   const requiredPackages = osArtifacts.get(id);
   const testedPackages = recordsById(result?.packages);
@@ -319,6 +329,11 @@ for (const id of osMatrix) {
       tested?.core_journey === 'pass',
       `${id} ${artifactId} core journey did not pass`
     );
+    requireExactPassChecks(
+      tested?.journey_checks,
+      coreJourneyChecks,
+      `${id} ${artifactId} core journey`
+    );
     requireCondition(
       tested?.uninstall === 'pass',
       `${id} ${artifactId} uninstall did not pass`
@@ -341,6 +356,36 @@ for (const id of osMatrix) {
         link,
         `${id} ${artifactId} has an invalid retained evidence link`
       );
+  }
+}
+
+const familyNetworkJourneys = recordsById(evidence.os?.family_network_journeys);
+requireCondition(
+  familyNetworkJourneys.size === osFamilies.size &&
+    Array.isArray(evidence.os?.family_network_journeys) &&
+    unique(evidence.os.family_network_journeys.map((record) => record.id)),
+  'operating-system evidence must contain exactly one network journey per OS family'
+);
+for (const [family, matrixIds] of osFamilies) {
+  const journey = familyNetworkJourneys.get(family);
+  requireCondition(
+    matrixIds.includes(journey?.platform_matrix_id),
+    `${family} network journey does not identify a matching platform row`
+  );
+  requireExactPassChecks(
+    journey?.checks,
+    familyNetworkChecks,
+    `${family} network journey`
+  );
+  requireCondition(
+    Array.isArray(journey?.evidence_links) && journey.evidence_links.length > 0,
+    `${family} network journey has no retained evidence`
+  );
+  for (const link of journey?.evidence_links ?? []) {
+    requireEvidenceLink(
+      link,
+      `${family} network journey has an invalid retained evidence link`
+    );
   }
 }
 
@@ -401,6 +446,31 @@ requireEvidenceLink(
   evidence.packaging?.checksum_manifest,
   'packaging evidence has no valid retained checksum manifest'
 );
+requireCondition(
+  evidence.packaging?.checksum_manifest === 'evidence/phase-5/SHA256SUMS',
+  'packaging evidence must retain the checksum manifest as evidence/phase-5/SHA256SUMS'
+);
+let retainedChecksums = new Map();
+if (validEvidenceLink(evidence.packaging?.checksum_manifest)) {
+  try {
+    retainedChecksums = parseChecksumManifest(
+      readFileSync(resolve(root, evidence.packaging.checksum_manifest), 'utf8')
+    );
+  } catch {
+    requireCondition(false, 'retained SHA256SUMS is invalid');
+  }
+}
+requireCondition(
+  retainedChecksums.size === expectedArtifacts.size,
+  'retained SHA256SUMS must contain exactly the five reviewed artifacts'
+);
+for (const [id] of expectedArtifacts) {
+  const artifact = artifacts.get(id);
+  requireCondition(
+    retainedChecksums.get(artifact?.name) === artifact?.sha256,
+    `retained SHA256SUMS does not match reviewed artifact ${id}`
+  );
+}
 
 const reviewedArtifacts = recordsById(releaseManifest?.reviewed_artifacts);
 requireCondition(
@@ -426,65 +496,88 @@ requireCondition(
 );
 
 const accessibility = evidence.accessibility ?? {};
-for (const theme of ['light', 'dark', 'forest']) {
-  requireCondition(
-    accessibility.themes?.[theme] === 'pass',
-    `${theme} theme accessibility did not pass`
-  );
-}
-for (const width of ['1280', '960', '720']) {
-  requireCondition(
-    accessibility.viewport_widths?.[width] === 'pass',
-    `${width}px viewport review did not pass`
-  );
-}
-for (const scale of ['80', '100', '200']) {
-  requireCondition(
-    accessibility.ui_scales?.[scale] === 'pass',
-    `${scale}% UI scale review did not pass`
-  );
-}
-for (const check of [
-  'wcag_2_2_aa',
-  'keyboard_all_functions',
-  'visible_focus',
-  'tablist_tree_dialog_patterns',
-  'not_color_only',
-  'reduced_motion',
-  'no_page_horizontal_scroll'
-]) {
-  requireCondition(
-    accessibility.checks?.[check] === 'pass',
-    `accessibility check ${check} did not pass`
-  );
-}
-requireCondition(
-  Array.isArray(accessibility.platform_matrix_ids) &&
-    accessibility.platform_matrix_ids.length === osMatrix.length &&
-    unique(accessibility.platform_matrix_ids) &&
-    osMatrix.every((id) => accessibility.platform_matrix_ids.includes(id)),
-  'accessibility evidence does not cover every operating-system matrix row'
-);
 requireCondition(
   nonemptyText(accessibility.reviewer),
   'accessibility evidence has no reviewer'
 );
+const accessibilityResults = recordsById(accessibility.results);
 requireCondition(
-  Array.isArray(accessibility.evidence_links) &&
-    accessibility.evidence_links.length > 0,
-  'accessibility evidence has no retained evidence'
+  accessibilityResults.size === osMatrix.length &&
+    Array.isArray(accessibility.results) &&
+    unique(accessibility.results.map((record) => record.id)),
+  'accessibility evidence must contain exactly eight operating-system rows'
 );
-for (const link of accessibility.evidence_links ?? [])
-  requireEvidenceLink(
-    link,
-    'accessibility evidence contains an invalid retained link'
+for (const id of osMatrix) {
+  const result = accessibilityResults.get(id);
+  requireCondition(
+    nonemptyText(result?.reviewed_at),
+    `${id} accessibility evidence has no review date`
   );
+  requireCondition(
+    nonemptyText(result?.assistive_technology),
+    `${id} accessibility evidence has no assistive technology and version`
+  );
+  for (const theme of ['light', 'dark', 'forest']) {
+    requireCondition(
+      result?.themes?.[theme] === 'pass',
+      `${id} ${theme} theme accessibility did not pass`
+    );
+  }
+  for (const width of ['1280', '960', '720']) {
+    requireCondition(
+      result?.viewport_widths?.[width] === 'pass',
+      `${id} ${width}px viewport review did not pass`
+    );
+  }
+  for (const scale of ['80', '100', '200']) {
+    requireCondition(
+      result?.ui_scales?.[scale] === 'pass',
+      `${id} ${scale}% UI scale review did not pass`
+    );
+  }
+  requireCondition(
+    result?.combinations_reviewed === 27,
+    `${id} accessibility evidence did not review all 27 theme, width, and scale combinations`
+  );
+  requireExactPassChecks(
+    result?.checks,
+    accessibilityChecks,
+    `${id} accessibility`
+  );
+  requireCondition(
+    Array.isArray(result?.evidence_links) && result.evidence_links.length > 0,
+    `${id} accessibility evidence has no retained evidence`
+  );
+  for (const link of result?.evidence_links ?? []) {
+    requireEvidenceLink(
+      link,
+      `${id} accessibility evidence contains an invalid retained link`
+    );
+  }
+}
 
 const performance = evidence.performance ?? {};
 requireCondition(
   performance.environment?.native === true,
   'performance evidence is not from a native machine'
 );
+requireCondition(
+  performance.environment?.physical_cpu_cores >= 4,
+  'performance environment has fewer than four physical CPU cores'
+);
+for (const field of [
+  'os',
+  'cpu',
+  'storage',
+  'power_mode',
+  'display_scale',
+  'webview_runtime'
+]) {
+  requireCondition(
+    nonemptyText(performance.environment?.[field]),
+    `performance environment has no exact ${field}`
+  );
+}
 requireCondition(
   performance.environment?.ssd === true,
   'performance environment does not record SSD storage'
@@ -494,44 +587,87 @@ requireCondition(
   'performance environment has less than 16 GiB memory'
 );
 requireCondition(
+  Array.isArray(performance.environment?.commands) &&
+    performance.environment.commands.length > 0 &&
+    performance.environment.commands.every(nonemptyText),
+  'performance environment has no exact benchmark commands'
+);
+requireCondition(
+  performance.fixtures?.ordinary_result?.rows === 10_000 &&
+    performance.fixtures.ordinary_result.columns === 12 &&
+    performance.fixtures.ordinary_result.approx_encoded_bytes_per_row ===
+      1024 &&
+    performance.fixtures.ordinary_result.nulls === true &&
+    performance.fixtures.ordinary_result.unicode === true &&
+    performance.fixtures.ordinary_result.variable_width_text === true,
+  'performance evidence does not identify the required ordinary-result fixture'
+);
+requireCondition(
+  performance.fixtures?.large_schema?.namespaces >= 100 &&
+    performance.fixtures.large_schema.objects >= 10_000,
+  'performance evidence does not identify the required large-schema fixture'
+);
+requireCondition(
   performance.discarded_setup_runs === 1,
   'performance evidence must record exactly one discarded setup run'
 );
-for (const [name, maximum] of [
-  ['cold_launch_p95_ms', 3000],
-  ['local_response_p95_ms', 100],
-  ['first_visible_batch_p95_ms', 100],
-  ['idle_resident_memory_mib', 250],
-  ['cleanup_ratio_after_10s', 1.15]
-]) {
+const rawPerformanceFiles = new Map();
+for (const [name, contract] of performanceMeasurements) {
   const measurement = performance.measurements?.[name];
   requireCondition(
-    measurement?.samples >= 30,
+    Number.isInteger(measurement?.samples) && measurement.samples >= 30,
     `${name} has fewer than 30 retained samples`
   );
   requireCondition(
-    Number.isFinite(measurement?.value) && measurement.value <= maximum,
-    `${name} exceeds ${maximum} or is not a finite measurement`
+    measurement?.aggregation === contract.aggregation,
+    `${name} uses the wrong aggregation`
   );
   requireEvidenceLink(
     measurement?.raw_evidence_link,
     `${name} has no valid raw evidence link`
   );
-}
-for (const name of ['editor_typing_fps_p95', 'result_scroll_fps_p95']) {
-  const measurement = performance.measurements?.[name];
+  let raw = rawPerformanceFiles.get(measurement?.raw_evidence_link);
+  if (!raw && validEvidenceLink(measurement?.raw_evidence_link)) {
+    raw = readJson(
+      resolve(root, measurement.raw_evidence_link),
+      `${name} raw performance evidence`
+    );
+    rawPerformanceFiles.set(measurement.raw_evidence_link, raw);
+  }
   requireCondition(
-    measurement?.samples >= 30,
-    `${name} has fewer than 30 retained samples`
+    raw?.schema_version === 1 &&
+      raw?.status === 'pass' &&
+      raw?.source_commit === sourceCommit,
+    `${name} raw performance evidence is not a passing version 1 record for the release source`
   );
+  const rawMeasurement = raw?.measurements?.[name];
+  const samples = rawMeasurement?.samples;
   requireCondition(
-    Number.isFinite(measurement?.value) && measurement.value >= 55,
-    `${name} is below 55 FPS or is not a finite measurement`
+    rawMeasurement?.aggregation === contract.aggregation &&
+      Array.isArray(samples) &&
+      samples.length === measurement?.samples &&
+      samples.length >= 30 &&
+      samples.every((value) => Number.isFinite(value) && value >= 0),
+    `${name} raw sample set is incomplete or uses the wrong aggregation`
   );
-  requireEvidenceLink(
-    measurement?.raw_evidence_link,
-    `${name} has no valid raw evidence link`
+  const calculated = aggregateSamples(samples, contract.aggregation);
+  requireCondition(
+    Number.isFinite(measurement?.value) &&
+      Number.isFinite(calculated) &&
+      Math.abs(measurement.value - calculated) <= 1e-9,
+    `${name} declared value does not match its retained raw samples`
   );
+  if ('limit' in contract) {
+    requireCondition(
+      calculated <= contract.limit,
+      `${name} exceeds ${contract.limit} or is not a finite measurement`
+    );
+  } else {
+    requireCondition(
+      calculated >= contract.minimum,
+      `${name} is below ${contract.minimum} or is not a finite measurement`
+    );
+  }
 }
 requireCondition(
   performance.large_schema_progressive === 'pass',
@@ -578,11 +714,19 @@ requireCondition(
   nonemptyText(evidence.safety?.reviewer),
   'manual safety review has no reviewer'
 );
+requireCondition(
+  nonemptyText(evidence.safety?.reviewed_at),
+  'manual safety review has no review date'
+);
 
 const security = evidence.security ?? {};
 requireCondition(
   nonemptyText(security.reviewer),
   'security review has no reviewer'
+);
+requireCondition(
+  nonemptyText(security.reviewed_at),
+  'security review has no review date'
 );
 requireCondition(
   security.known_critical === 0,
@@ -616,6 +760,18 @@ for (const link of security.evidence_links ?? [])
     link,
     'security review contains an invalid retained link'
   );
+for (const finding of security.findings ?? []) {
+  requireCondition(
+    nonemptyText(finding?.id) &&
+      ['low', 'medium'].includes(finding?.severity) &&
+      finding?.status === 'resolved',
+    'security review contains an unresolved, unclassified, or release-blocking finding'
+  );
+  requireEvidenceLink(
+    finding?.evidence_link,
+    `security finding ${finding?.id ?? 'unknown'} lacks valid resolution evidence`
+  );
+}
 
 function nextWorkingDay(dateText) {
   const date = new Date(`${dateText}T00:00:00Z`);
@@ -829,14 +985,25 @@ const traceability = readJson(
   resolve(root, 'traceability', 'requirements.json'),
   'traceability matrix'
 );
-const uncovered = (traceability?.records ?? []).filter(
+const traceabilityRecords = traceability?.records ?? [];
+requireCondition(
+  traceabilityRecords.length === 121 &&
+    traceabilityRecords.filter((record) => record.kind === 'requirement')
+      .length === 101 &&
+    traceabilityRecords.filter(
+      (record) => record.kind === 'acceptance_criterion'
+    ).length === 20 &&
+    unique(traceabilityRecords.map((record) => record.id)),
+  'traceability must contain exactly 101 unique requirements and 20 unique acceptance criteria'
+);
+const uncovered = traceabilityRecords.filter(
   (record) => record.priority === 'must' && record.status !== 'verified'
 );
 requireCondition(
   uncovered.length === 0,
   `traceability contains ${uncovered.length} unverified must rows`
 );
-const staleVerificationIds = (traceability?.records ?? []).filter((record) =>
+const staleVerificationIds = traceabilityRecords.filter((record) =>
   [
     ...(record.automated_test_ids ?? []),
     ...(record.manual_procedure_ids ?? [])
@@ -846,7 +1013,7 @@ requireCondition(
   staleVerificationIds.length === 0,
   `traceability contains ${staleVerificationIds.length} planned or pending verification IDs`
 );
-const missingCandidateEvidence = (traceability?.records ?? []).filter(
+const missingCandidateEvidence = traceabilityRecords.filter(
   (record) =>
     record.priority === 'must' &&
     !(record.evidence_links ?? []).some((path) =>

@@ -4,22 +4,319 @@
   "status": "not_run",
   "results": [
     {
-      "id": "replace-with-one-exact-compatibility-matrix-id",
-      "os_version": "exact patch",
-      "runtime_version": "exact WebView runtime",
-      "architecture": "exact architecture",
+      "id": "windows-10-22h2-x64",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "x86_64",
       "packages": [
         {
-          "id": "one applicable artifact ID from packaging-results.json",
-          "name": "reviewed artifact filename",
+          "id": "windows-nsis-x64",
+          "name": null,
           "sha256": null,
           "install": "not_run",
           "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
           "uninstall": "not_run",
           "unsigned_warning_observed": false,
           "evidence_links": []
         }
       ]
+    },
+    {
+      "id": "windows-11-x64",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "x86_64",
+      "packages": [
+        {
+          "id": "windows-nsis-x64",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    },
+    {
+      "id": "macos-13-intel",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "x86_64",
+      "packages": [
+        {
+          "id": "macos-dmg-intel",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    },
+    {
+      "id": "macos-13-apple",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "aarch64",
+      "packages": [
+        {
+          "id": "macos-dmg-apple",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    },
+    {
+      "id": "macos-current-intel",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "x86_64",
+      "packages": [
+        {
+          "id": "macos-dmg-intel",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    },
+    {
+      "id": "macos-current-apple",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "aarch64",
+      "packages": [
+        {
+          "id": "macos-dmg-apple",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-22.04-x64",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "x86_64",
+      "packages": [
+        {
+          "id": "linux-appimage-x64",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        },
+        {
+          "id": "linux-deb-x64",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    },
+    {
+      "id": "ubuntu-24.04-x64",
+      "os_version": null,
+      "runtime_version": null,
+      "architecture": "x86_64",
+      "packages": [
+        {
+          "id": "linux-appimage-x64",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        },
+        {
+          "id": "linux-deb-x64",
+          "name": null,
+          "sha256": null,
+          "install": "not_run",
+          "core_journey": "not_run",
+          "journey_checks": {
+            "first_run_shell_offline": "not_run",
+            "sqlite_profile_schema_context": "not_run",
+            "query_targets_values_results_cancellation": "not_run",
+            "copy_sort_filter_load_more_export": "not_run",
+            "table_browse_edit_conflict_rollback": "not_run",
+            "destructive_confirmation_invalidation": "not_run",
+            "history_drafts_files_tabs_close_decisions": "not_run",
+            "connection_loss_reload_relaunch_restore": "not_run",
+            "uninstall_data_handling": "not_run"
+          },
+          "uninstall": "not_run",
+          "unsigned_warning_observed": false,
+          "evidence_links": []
+        }
+      ]
+    }
+  ],
+  "family_network_journeys": [
+    {
+      "id": "windows",
+      "platform_matrix_id": null,
+      "checks": {
+        "profile_vault_and_session_credentials": "not_run",
+        "tls_modes": "not_run",
+        "mariadb_identity": "not_run",
+        "mysql_legacy_indicator": "not_run",
+        "simultaneous_connections_and_tabs": "not_run",
+        "profile_vault_cache_deletion": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "macos",
+      "platform_matrix_id": null,
+      "checks": {
+        "profile_vault_and_session_credentials": "not_run",
+        "tls_modes": "not_run",
+        "mariadb_identity": "not_run",
+        "mysql_legacy_indicator": "not_run",
+        "simultaneous_connections_and_tabs": "not_run",
+        "profile_vault_cache_deletion": "not_run"
+      },
+      "evidence_links": []
+    },
+    {
+      "id": "linux",
+      "platform_matrix_id": null,
+      "checks": {
+        "profile_vault_and_session_credentials": "not_run",
+        "tls_modes": "not_run",
+        "mariadb_identity": "not_run",
+        "mysql_legacy_indicator": "not_run",
+        "simultaneous_connections_and_tabs": "not_run",
+        "profile_vault_cache_deletion": "not_run"
+      },
+      "evidence_links": []
     }
   ]
 }

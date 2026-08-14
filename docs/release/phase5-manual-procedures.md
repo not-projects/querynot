@@ -12,7 +12,7 @@ Before any run:
 2. Run the complete local gate with `npm run verify:phase5:local` and retain its reports.
 3. Produce the four platform builds from a single manually dispatched `release-candidate-packages` CI run. Download the packages, inspection reports, and aggregate checksum manifest without renaming files.
 4. Record every package in `evidence/phase-5/packaging-results.json`, including the exact byte count, SHA-256 digest, unsigned state, and inspection evidence link.
-5. Copy each remaining `.example.json` template from `evidence/phase-5/templates/`, remove `.example`, and replace every placeholder. A reviewer may set `status` to `pass` only after every check in that record passes.
+5. Copy each `.example.json` template from `evidence/phase-5/templates/`, remove `.example`, and replace every placeholder. The supporting `performance-raw.json` is referenced by `performance-results.json`; a reviewer may set `status` to `pass` only after every check in that record passes.
 
 Raw evidence must live under `evidence/phase-5/`, be nonempty and nonsymlinked, and be referenced by repository-relative path. Screenshots must be cropped or redacted before they enter Git. Each rerun replaces the entire candidate evidence set; do not combine results from different source commits.
 
@@ -35,11 +35,11 @@ For each row and each package format applicable to that row:
 9. On each OS family, repeat profile/vault/session-only credential ownership, TLS modes, MariaDB identity, MySQL legacy indicator, multiple simultaneous connections/tabs, and clean profile/vault/cache deletion with an explicitly provisioned network fixture. The exact five database versions remain governed by the Phase 5 adapter-conformance report.
 10. Close QueryNot, relaunch to inspect restoration, uninstall it through the documented OS path, and record the uninstall result. Verify user data is handled according to the explicit delete/reset actions exercised; an uninstaller must not silently destroy unrelated user files. Repeat the complete journey for both the AppImage and Debian package on each Ubuntu row; a passing journey for one format cannot cover the other.
 
-Record the row in `operating-system-results.json`. Any unplanned privilege escalation, undocumented prompt bypass, crash, cross-profile leakage, secret disclosure, unintended mutation, failed rollback, corrupted restore, or fixture escape fails the row.
+Record every structured package-journey check in the pre-expanded row in `operating-system-results.json`, using canonical architecture values `x86_64` and `aarch64`. Record step 9 once for each OS family in `family_network_journeys`, tied to the exact matrix row used. Any unplanned privilege escalation, undocumented prompt bypass, crash, cross-profile leakage, secret disclosure, unintended mutation, failed rollback, corrupted restore, or fixture escape fails the row.
 
 ## P5-MAN-A11Y — accessibility and visual review
 
-On every OS matrix row, inspect light, dark, and forest themes at 1280px, 960px, and 720px workspace widths and at 80%, 100%, and 200% UI scale. Exercise the entire P5-MAN-OS-CORE journey by keyboard, including tablist arrow/Home/End behavior, schema tree navigation, editor escape paths, grids, drawers, native file dialogs, confirmations, destructive dialogs, table preview, and close blockers.
+On every OS matrix row, inspect all 27 combinations of light, dark, and forest themes at 1280px, 960px, and 720px workspace widths and at 80%, 100%, and 200% UI scale. Exercise the entire P5-MAN-OS-CORE journey by keyboard, including tablist arrow/Home/End behavior, schema tree navigation, editor escape paths, grids, drawers, native file dialogs, confirmations, destructive dialogs, table preview, and close blockers.
 
 The named reviewer records WCAG 2.2 AA results, visible and restored focus, roles/names/states for tabs/tree/dialogs, non-color status cues, reduced-motion behavior, bounded editor/grid scrolling, and absence of page-level horizontal scrolling. Retain redacted screen-reader output and representative screenshots or recordings in `accessibility-results.json`; an automated semantic check alone cannot pass this procedure.
 
@@ -47,7 +47,7 @@ The named reviewer records WCAG 2.2 AA results, visible and restored focus, role
 
 Use an otherwise idle native machine with at least four modern CPU cores, 16 GiB RAM, and SSD storage. Record OS/runtime, CPU, memory, storage, power mode, display scale, build commit, and commands. Use the PRD ordinary 10,000-row/12-column fixture and large 100-namespace/10,000-object schema fixture.
 
-Discard one setup run, then retain at least 30 independent samples for each measurement. Measure cold launch to interactive restored shell, local typing/tab/tree response, first-driver-row to first-visible-batch overhead, editor typing FPS, result-scroll FPS, settled idle resident memory, and the ratio between pre-query memory and memory ten seconds after closing the ordinary result. Confirm progressive cancellable schema loading and the documented rendered-row bound. Record raw samples and calculation method in files referenced by `performance-results.json`.
+Discard one setup run, then retain at least 30 independent samples for each measurement. Measure cold launch to interactive restored shell, local typing/tab/tree response, first-driver-row to first-visible-batch overhead, editor typing FPS, result-scroll FPS, settled idle resident memory, and the ratio between pre-query memory and memory ten seconds after closing the ordinary result. Confirm progressive cancellable schema loading and the documented rendered-row bound. Record the exact environment, fixture dimensions, commands, and every raw sample in `performance-raw.json`; reference it from `performance-results.json`. The auditor recomputes nearest-rank p95 values and the maximum memory/cleanup values from those samples.
 
 The limits are strict: cold launch p95 at most 3000ms; local response and first-visible-batch p95 at most 100ms; typing and scrolling p95 at least 55 FPS; idle memory below 250 MiB; cleanup ratio at most 1.15; progressive schema and bounded rendered rows must pass.
 

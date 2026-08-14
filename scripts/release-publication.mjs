@@ -13,16 +13,16 @@ import { basename, dirname, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
+import {
+  expectedArtifacts,
+  parseChecksumManifest,
+  safeArtifactName
+} from './release-evidence-contract.mjs';
+
 const root = resolve(import.meta.dirname, '..');
 const phase5Root = resolve(root, 'evidence', 'phase-5');
 const artifactExtensions = ['.AppImage', '.deb', '.dmg', '.exe'];
-const expectedArtifactFormats = new Map([
-  ['windows-nsis-x64', 'nsis'],
-  ['macos-dmg-intel', 'dmg'],
-  ['macos-dmg-apple', 'dmg'],
-  ['linux-appimage-x64', 'appimage'],
-  ['linux-deb-x64', 'deb']
-]);
+const expectedArtifactFormats = expectedArtifacts;
 
 /**
  * @param {unknown} condition
@@ -70,43 +70,7 @@ function recordsBy(records, key, label) {
   return mapped;
 }
 
-/** @param {unknown} name */
-function safeArtifactName(name) {
-  return (
-    typeof name === 'string' &&
-    /^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(name) &&
-    basename(name) === name &&
-    !name.includes('/') &&
-    !name.includes('\\') &&
-    !/[\u0000-\u001f\u007f]/.test(name)
-  );
-}
-
-/**
- * @param {string} text
- * @returns {Map<string, string>}
- */
-export function parseChecksumManifest(text) {
-  requireCondition(typeof text === 'string', 'checksum manifest is not text');
-  const lines = text.trimEnd().split('\n');
-  requireCondition(
-    lines.length > 0 && lines[0] !== '',
-    'checksum manifest is empty'
-  );
-  const records = new Map();
-  for (const line of lines) {
-    const match = /^([a-f0-9]{64})  ([^/\\]+)$/.exec(line);
-    requireCondition(match, 'checksum manifest contains an invalid line');
-    const [, sha256, name] = match;
-    requireCondition(
-      safeArtifactName(name),
-      'checksum manifest contains an unsafe name'
-    );
-    requireCondition(!records.has(name), `checksum manifest repeats ${name}`);
-    records.set(name, sha256);
-  }
-  return records;
-}
+export { parseChecksumManifest } from './release-evidence-contract.mjs';
 
 /**
  * @param {{

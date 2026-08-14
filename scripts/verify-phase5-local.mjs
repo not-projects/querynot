@@ -422,7 +422,7 @@ const report = {
     'P5-AUTO-ADAPTER-CONFORMANCE':
       'querynot-fixture-harness across the exact five-server release candidate matrix',
     'P5-AUTO-RELEASE-EVIDENCE':
-      'scripts/audit-release-evidence.mjs > fail-closed 101-requirement and 20-criterion release gate',
+      'src/release-evidence-audit.test.ts and scripts/audit-release-evidence.mjs > positive and fail-closed exact 101-requirement, 20-criterion, native-matrix, checksum, and raw-performance release gate',
     'P6-AUTO-PUBLICATION-GUARD':
       'src/phase6-release.test.ts and scripts/release-publication.mjs > exact reviewed artifact, checksum, tag, confirmation, and Phase 5 prerequisite boundary'
   },
