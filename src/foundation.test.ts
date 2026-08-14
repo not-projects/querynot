@@ -29,6 +29,7 @@ describe('desktop security foundation', () => {
     ).toBe(false);
     expect(permissions).toEqual([
       'core:default',
+      'core:window:allow-destroy',
       'dialog:allow-open',
       'dialog:allow-save',
       'dialog:allow-message'

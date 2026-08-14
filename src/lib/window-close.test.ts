@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -35,5 +37,14 @@ describe('native window close decision', () => {
         [field]: typeof cleanWindow[field] === 'boolean' ? true : 1
       })
     ).toBe(true);
+  });
+
+  it('grants only the explicit destroy command used after safety checks', () => {
+    const capability = JSON.parse(
+      readFileSync('src-tauri/capabilities/main.json', 'utf8')
+    ) as { permissions: string[] };
+
+    expect(capability.permissions).toContain('core:window:allow-destroy');
+    expect(capability.permissions).not.toContain('core:window:default');
   });
 });

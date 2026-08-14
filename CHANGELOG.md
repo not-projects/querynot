@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Kept successful connection, deletion, settings, tab-close, and diagnostics actions from leaving completed dialogs open.
+- Made terminal query timers stop, docked returned result sets in the visible workbench, and granted the narrowly scoped window-destroy capability used after explicit close safety checks.
+- Prevented connection actions and schema controls from overflowing the sidebar, made native dropdown choices readable in every theme, and applied UI scale to the complete application and dialog viewports.
+
+### Changed
+
+- Schema starter queries now open a dedicated query-tab session on an already connected profile, while local history is compact and positioned below the schema explorer.
+- Removed unused direct frontend test/editor declarations and unused direct Rust core declarations; required Tauri, OS-vault, database-driver, and CodeMirror transitive dependencies remain lockfile-pinned.
+
 ## [0.1.0] - 2026-08-14
 
 ### Fixed

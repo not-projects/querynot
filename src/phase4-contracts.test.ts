@@ -216,6 +216,27 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
     expect(mysql).toContain('MAX_METADATA_BYTES');
   });
 
+  it('opens schema starter queries on the existing connection and keeps compact history below schema', () => {
+    const app = read('src/App.svelte');
+    const css = read('src/styles/app.css');
+    const starter = app.slice(
+      app.indexOf('async function startQueryForObject'),
+      app.indexOf('function handleEditorChange')
+    );
+
+    expect(starter).toContain('connections[profileId]');
+    expect(starter).toContain(
+      'openConnectedTabSession(tab, profileId, object.namespace)'
+    );
+    expect(starter).toContain("invokeCommand('open_tab_session'");
+    expect(app.indexOf('id="schema-heading"')).toBeLessThan(
+      app.indexOf('id="history-heading"')
+    );
+    expect(css).toMatch(
+      /\.history-main\s*\{[^}]*min-height:\s*0;[^}]*background:\s*transparent;/s
+    );
+  });
+
   it('runs daily history maintenance and tests the Phase 4 migration rollback boundary', () => {
     const entry = read('src-tauri/src/lib.rs');
     const runtime = read('src-tauri/src/phase1.rs');

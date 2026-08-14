@@ -105,9 +105,19 @@ try {
     const dialog = await page.locator('.modal-card').evaluate((element) => {
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
+      const select = element.querySelector('select');
+      const option = select?.querySelector('option');
+      if (!select || !option)
+        throw new Error('settings theme select is missing');
+      const selectStyle = getComputedStyle(select);
+      const optionStyle = getComputedStyle(option);
       return {
         background_color: style.backgroundColor,
         color: style.color,
+        select_background_color: selectStyle.backgroundColor,
+        select_color: selectStyle.color,
+        option_background_color: optionStyle.backgroundColor,
+        option_color: optionStyle.color,
         inside_theme_context: Boolean(element.closest('.theme-context')),
         width: rect.width,
         height: rect.height
@@ -121,8 +131,110 @@ try {
       !['rgba(0, 0, 0, 0)', 'transparent'].includes(dialog.background_color),
       `${theme} dialog background is transparent`
     );
+    assert(
+      dialog.select_background_color !== dialog.select_color,
+      `${theme} select foreground and background are indistinguishable`
+    );
+    assert(
+      dialog.option_background_color !== dialog.option_color,
+      `${theme} option foreground and background are indistinguishable`
+    );
     dialogThemes.push({ theme, ...dialog });
   }
+
+  const baselineScale = await page.evaluate(() => ({
+    topbar_height:
+      document.querySelector('.topbar')?.getBoundingClientRect().height ?? 0,
+    submit_height:
+      document
+        .querySelector('.modal-card button[type="submit"]')
+        ?.getBoundingClientRect().height ?? 0
+  }));
+  await page
+    .locator('.modal-card input[type="range"]')
+    .first()
+    .evaluate((element) => {
+      element.value = '150';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      )
+  );
+  const scalePreview = await page.evaluate(() => ({
+    input_value:
+      document.querySelector('.modal-card input[type="range"]')?.value ?? '',
+    app_scale: getComputedStyle(
+      document.querySelector('.app-shell') ?? document.body
+    ).getPropertyValue('--ui-scale'),
+    app_style:
+      document.querySelector('.app-shell')?.getAttribute('style') ?? '',
+    app_transform: getComputedStyle(
+      document.querySelector('.app-shell') ?? document.body
+    ).transform,
+    dialog_transform: getComputedStyle(
+      document.querySelector('.modal-backdrop') ?? document.body
+    ).transform,
+    topbar_height:
+      document.querySelector('.topbar')?.getBoundingClientRect().height ?? 0,
+    submit_height:
+      document
+        .querySelector('.modal-card button[type="submit"]')
+        ?.getBoundingClientRect().height ?? 0
+  }));
+  assert(
+    scalePreview.app_transform.startsWith('matrix(1.5'),
+    `150% preview did not configure the complete application viewport (${scalePreview.app_transform}; variable ${scalePreview.app_scale}; input ${scalePreview.input_value}; style ${scalePreview.app_style})`
+  );
+  assert(
+    scalePreview.dialog_transform.startsWith('matrix(1.5'),
+    `150% preview did not configure the complete dialog viewport (${scalePreview.dialog_transform})`
+  );
+  assert(
+    scalePreview.topbar_height >= baselineScale.topbar_height * 1.45,
+    `150% preview did not scale the application chrome (${baselineScale.topbar_height} -> ${scalePreview.topbar_height})`
+  );
+  assert(
+    scalePreview.submit_height >= baselineScale.submit_height * 1.45,
+    `150% preview did not scale dialog controls (${baselineScale.submit_height} -> ${scalePreview.submit_height})`
+  );
+  await page
+    .locator('.modal-card input[type="range"]')
+    .first()
+    .evaluate((element) => {
+      element.value = '100';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+  const sidebarOverflow = await page.evaluate(() => {
+    const aside = document.querySelector('aside');
+    if (!aside) throw new Error('sidebar is missing');
+    const list = document.createElement('ul');
+    list.className = 'profile-list';
+    list.innerHTML = `<li><button class="profile-main"><span class="engine-mark">SQ</span><span><strong>Very long synthetic connection name that must be clipped</strong><small>very-long-synthetic-database-file-name.sqlite3</small></span><span class="status-dot"></span></button><div class="profile-actions"><button>Test</button><button>Disconnect</button><button>Edit</button><button>Duplicate</button><button>Delete</button></div></li>`;
+    aside.append(list);
+    const result = {
+      aside_client_width: aside.clientWidth,
+      aside_scroll_width: aside.scrollWidth,
+      actions_client_width:
+        list.querySelector('.profile-actions')?.clientWidth ?? 0,
+      actions_scroll_width:
+        list.querySelector('.profile-actions')?.scrollWidth ?? 0
+    };
+    list.remove();
+    return result;
+  });
+  assert(
+    sidebarOverflow.aside_scroll_width <= sidebarOverflow.aside_client_width,
+    'connection content overflows the sidebar'
+  );
+  assert(
+    sidebarOverflow.actions_scroll_width <=
+      sidebarOverflow.actions_client_width,
+    'connection actions overflow their profile card'
+  );
 
   mkdirSync(dirname(reportPath), { recursive: true });
   await page.screenshot({ path: screenshotPath, fullPage: true });
@@ -134,6 +246,8 @@ try {
     viewport_height: 1068,
     layouts,
     dialog_themes: dialogThemes,
+    scale_preview: { baseline: baselineScale, scaled: scalePreview },
+    sidebar_overflow: sidebarOverflow,
     theme_labels: options,
     screenshot: 'artifacts/ui-layout-settings.png'
   };

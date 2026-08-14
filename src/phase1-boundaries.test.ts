@@ -48,6 +48,23 @@ describe('Phase 1 native boundaries', () => {
     expect(css).toContain('grid-template-rows: auto auto minmax(0, 1fr) auto;');
   });
 
+  it('scales the complete viewport and keeps native selects themed and sidebar content bounded', () => {
+    const app = read('src/App.svelte');
+    const css = read('src/styles/app.css');
+
+    expect(app).toContain(
+      'style:--ui-scale={displayedSettings.ui_scale_percent / 100}'
+    );
+    expect(css).toMatch(
+      /\.app-shell\s*\{[^}]*width:\s*calc\(100% \/ var\(--ui-scale\)\);[^}]*transform:\s*scale\(var\(--ui-scale\)\);/s
+    );
+    expect(css).toMatch(/select option\s*\{[^}]*background-color:/s);
+    expect(css).toMatch(
+      /aside\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/s
+    );
+    expect(css).toMatch(/\.profile-actions\s*\{[^}]*flex-wrap:\s*wrap;/s);
+  });
+
   it('keeps query execution behind explicit native commands and grants no frontend filesystem or network capability', () => {
     const contract = JSON.parse(read('contracts/querynot.v1.json')) as {
       commands: Record<string, unknown>;

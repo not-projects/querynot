@@ -156,6 +156,22 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(editor).toContain("key: 'Shift-Alt-f'");
   });
 
+  it('freezes terminal elapsed time and docks returned rows in the visible workbench', () => {
+    const app = read('src/App.svelte');
+    const lifecycle = read('src/lib/execution-ui.ts');
+    const css = read('src/styles/app.css');
+
+    expect(app).toContain('executionElapsedMs(activeExecution, nowMs)');
+    expect(app).toContain("setExecutionState(execution, 'succeeded')");
+    expect(lifecycle).toContain('execution.completedAt ?? now');
+    expect(css).toMatch(
+      /main\.has-query-results\s*\{[^}]*grid-template-rows:[^}]*minmax\(12rem, 2fr\)/s
+    );
+    expect(css).toMatch(
+      /\.results-workspace\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*auto;/s
+    );
+  });
+
   it('quotes structural TSV characters and opens only one large value on demand', async () => {
     let copied = '';
     Object.defineProperty(navigator, 'clipboard', {

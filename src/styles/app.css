@@ -78,15 +78,24 @@ button:disabled {
   --danger: #a13a30;
   --shadow: 0 18px 55px rgb(23 58 51 / 20%);
   color: var(--text);
+  color-scheme: light;
 }
 
 .app-shell {
   display: grid;
-  height: 100vh;
-  min-height: 100vh;
-  max-height: 100vh;
+  width: calc(100% / var(--ui-scale));
+  height: calc(100vh / var(--ui-scale));
+  min-height: calc(100vh / var(--ui-scale));
+  max-height: calc(100vh / var(--ui-scale));
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   background: var(--surface);
+  transform: scale(var(--ui-scale));
+  transform-origin: top left;
+}
+
+.app-shell[data-theme='light'],
+.theme-context[data-theme='light'] {
+  color-scheme: light;
 }
 
 .app-shell[data-theme='dark'],
@@ -104,6 +113,7 @@ button:disabled {
   --warning: #efad71;
   --danger: #f19086;
   --shadow: 0 20px 65px rgb(0 0 0 / 48%);
+  color-scheme: dark;
 }
 
 .app-shell[data-theme='forest'],
@@ -121,6 +131,7 @@ button:disabled {
   --warning: #ffc18d;
   --danger: #ffaaa0;
   --shadow: 0 20px 65px rgb(0 0 0 / 42%);
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -139,6 +150,7 @@ button:disabled {
     --warning: #efad71;
     --danger: #f19086;
     --shadow: 0 20px 65px rgb(0 0 0 / 48%);
+    color-scheme: dark;
   }
 }
 
@@ -229,6 +241,11 @@ textarea {
   background: var(--surface-raised);
 }
 
+select option {
+  color: var(--text);
+  background-color: var(--surface-raised);
+}
+
 button {
   min-height: 34px;
   padding: 6px 10px;
@@ -284,10 +301,12 @@ button:hover:not(:disabled) {
 
 aside {
   display: flex;
+  min-width: 0;
   min-height: 0;
   flex-direction: column;
   padding: 14px 12px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-right: 1px solid var(--divider);
   background: var(--surface-subtle);
 }
@@ -315,6 +334,7 @@ aside {
 
 .profile-list {
   display: grid;
+  min-width: 0;
   margin: 14px 0;
   padding: 0;
   gap: 6px;
@@ -322,6 +342,8 @@ aside {
 }
 
 .profile-list li {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid transparent;
   border-radius: 6px;
   background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
@@ -391,7 +413,9 @@ aside {
 
 .profile-actions {
   display: flex;
-  padding: 0 6px 6px 42px;
+  min-width: 0;
+  flex-wrap: wrap;
+  padding: 0 6px 6px;
   gap: 4px;
 }
 
@@ -454,14 +478,27 @@ aside {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 4px;
+  padding: 4px 0;
+  gap: 3px;
+  border-bottom: 1px solid var(--divider);
 }
 
 .history-main {
   display: grid;
   min-width: 0;
+  min-height: 0;
+  padding: 5px 6px;
   gap: 3px;
+  border: 0;
   text-align: left;
+  background: transparent;
+}
+
+.history-main strong {
+  overflow: hidden;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .history-main code,
@@ -473,12 +510,26 @@ aside {
   white-space: nowrap;
 }
 
+.history-delete {
+  width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+}
+
 main {
   display: grid;
   min-width: 0;
   min-height: 0;
   grid-template-rows: auto auto minmax(18rem, 1fr) auto;
   overflow: auto;
+}
+
+main.has-query-results {
+  grid-template-rows: auto auto minmax(14rem, 3fr) minmax(12rem, 2fr);
+  overflow: hidden;
 }
 
 .context-bar {
@@ -682,8 +733,10 @@ main {
 
 .schema-tree {
   display: grid;
+  min-width: 0;
   max-height: 280px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-size: 0.7rem;
 }
 
@@ -727,6 +780,7 @@ main {
 
 .schema-tree li {
   display: grid;
+  min-width: 0;
   grid-template-columns: minmax(0, 1fr) repeat(3, auto);
   align-items: center;
 }
@@ -819,8 +873,10 @@ main {
 .results-workspace {
   display: grid;
   min-width: 0;
+  min-height: 0;
   padding: 14px;
   gap: 10px;
+  overflow: auto;
   border-top: 1px solid var(--divider);
   background: var(--surface-raised);
 }
@@ -920,10 +976,14 @@ footer {
   position: fixed;
   z-index: 100;
   display: grid;
-  inset: 0;
+  inset: 0 auto auto 0;
+  width: calc(100% / var(--ui-scale));
+  height: calc(100vh / var(--ui-scale));
   place-items: center;
   padding: 20px;
   background: rgb(10 24 20 / 62%);
+  transform: scale(var(--ui-scale));
+  transform-origin: top left;
 }
 
 .modal-card {
@@ -1237,7 +1297,7 @@ footer {
   *::before,
   *::after {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0s !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }

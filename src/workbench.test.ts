@@ -68,4 +68,17 @@ describe('Phase 1 workbench', () => {
     );
     expect(button('Save settings').disabled).toBe(false);
   });
+
+  it('dismisses a dialog after its successful submit action', async () => {
+    await renderWorkbench();
+    button('Settings').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flushSync();
+
+    button('Save settings').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flushSync();
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
 });

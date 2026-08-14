@@ -43,9 +43,8 @@
   },
   "dependencies": {
     "@codemirror/autocomplete": "6.20.3",
-    "@codemirror/commands": "6.10.4",
-    "@codemirror/language": "6.12.4",
     "@codemirror/lang-sql": "6.10.0",
+    "@codemirror/language": "6.12.4",
     "@codemirror/lint": "6.9.7",
     "@codemirror/search": "6.7.1",
     "@codemirror/state": "6.7.1",
@@ -58,7 +57,6 @@
     "@sveltejs/vite-plugin-svelte": "7.3.0",
     "@tauri-apps/cli": "2.11.4",
     "@types/node": "22.20.1",
-    "@vitest/browser": "4.1.10",
     "jsdom": "29.1.1",
     "playwright": "1.62.1",
     "prettier": "3.9.6",

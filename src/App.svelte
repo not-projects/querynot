@@ -40,6 +40,12 @@
     type SqlEditorApi
   } from './lib/components/SqlEditor.svelte';
   import { hasNativeRuntime, invokeCommand } from './lib/native';
+  import {
+    executionElapsedMs,
+    isExecutionActive,
+    setExecutionState,
+    type ExecutionUi
+  } from './lib/execution-ui';
   import { requiresWindowCloseDecision } from './lib/window-close';
   import {
     localMutationErrors,
@@ -58,16 +64,6 @@
     | 'close-window'
     | 'destructive'
     | null;
-
-  type ExecutionUi = {
-    id: string;
-    tabId: string;
-    state: string;
-    startedAt: number;
-    statementsCompleted: number;
-    receivedRows: number;
-    error: string | null;
-  };
 
   type ResultUi = {
     id: string;
@@ -330,10 +326,7 @@
               ).length,
               sessionCount: Object.keys(sessions).length,
               activeExecutionCount: Object.values(executions).filter(
-                (execution) =>
-                  ['queued', 'running', 'paused', 'cancelling'].includes(
-                    execution.state
-                  )
+                (execution) => isExecutionActive(execution.state)
               ).length,
               workspaceSavePending: workspaceRecoveryWarning !== null
             })
@@ -619,6 +612,14 @@
 
   async function closeModal() {
     if (busy) return;
+    await dismissModal();
+  }
+
+  async function closeCompletedModal() {
+    await dismissModal();
+  }
+
+  async function dismissModal() {
     if (modal === 'destructive') pendingExecution = null;
     if (modal === 'file-review') fileReview = null;
     modal = null;
@@ -848,7 +849,7 @@
     if (!hasNativeRuntime()) {
       statusMessage =
         'Profile persistence is available in the desktop runtime.';
-      await closeModal();
+      await closeCompletedModal();
       return;
     }
     await runAction(async () => {
@@ -908,7 +909,7 @@
         }
       }
       statusMessage = `${message} No connection was started.`;
-      await closeModal();
+      await closeCompletedModal();
     });
     profileForm.password = '';
     profileForm.client_key_passphrase = '';
@@ -1061,7 +1062,7 @@
           workspace.active_tab_id = workspace.tabs[0]?.id ?? null;
         }
         selectedSchemaObject = null;
-        await closeModal();
+        await closeCompletedModal();
       }
     });
   }
@@ -1077,14 +1078,8 @@
         profile_id: profileId
       });
       tab.position = workspace.tabs.length;
-      workspace.tabs.push(tab);
-      workspace.active_tab_id = tab.id;
       if (profileId && connections[profileId]) {
-        sessions[tab.id] = await invokeCommand('open_tab_session', {
-          profile_id: profileId,
-          tab_id: tab.id
-        });
-        tab.context_label = sessions[tab.id].context;
+        await openConnectedTabSession(tab, profileId);
         statusMessage =
           'Opened a query tab with its own dedicated native database session.';
       } else {
@@ -1092,6 +1087,8 @@
           ? 'Opened a profile-bound offline draft. Connect the profile to create a dedicated session.'
           : 'Opened an offline draft.';
       }
+      workspace.tabs.push(tab);
+      workspace.active_tab_id = tab.id;
       await saveWorkspaceNow();
       await tick();
       document.getElementById('sql-editor')?.focus();
@@ -1710,11 +1707,48 @@
       tab.dirty = true;
       tab.context_label = object.namespace;
       tab.position = workspace.tabs.length;
+      if (connections[profileId]) {
+        await openConnectedTabSession(tab, profileId, object.namespace);
+      }
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
-      statusMessage = starter.message;
+      statusMessage = connections[profileId]
+        ? `${starter.message} Opened with a dedicated session on the existing connection.`
+        : starter.message;
       await saveWorkspaceNow();
     });
+  }
+
+  async function openConnectedTabSession(
+    tab: WorkspaceTabView,
+    profileId: string,
+    context: string | null = null
+  ) {
+    const session = await invokeCommand('open_tab_session', {
+      profile_id: profileId,
+      tab_id: tab.id
+    });
+    sessions[tab.id] = session;
+    try {
+      if (context && session.context !== context) {
+        const changed = await invokeCommand('change_tab_context', {
+          profile_id: profileId,
+          tab_id: tab.id,
+          session_id: session.session_id,
+          context
+        });
+        session.context = changed.context;
+      }
+      tab.context_label = session.context;
+    } catch (error) {
+      await invokeCommand('close_tab_session', {
+        profile_id: profileId,
+        tab_id: tab.id,
+        session_id: session.session_id
+      }).catch(() => undefined);
+      delete sessions[tab.id];
+      throw error;
+    }
   }
 
   function handleEditorChange(value: string) {
@@ -1968,6 +2002,7 @@
           tabId: targetTab.id,
           state: 'queued',
           startedAt: Date.now(),
+          completedAt: null,
           statementsCompleted: 0,
           receivedRows: 0,
           error: null
@@ -1996,7 +2031,7 @@
     const result = await invokeCommand('cancel_execution', {
       execution_id: activeExecution.id
     });
-    activeExecution.state = 'cancelling';
+    setExecutionState(activeExecution, 'cancelling');
     statusMessage = result.message;
   }
 
@@ -2013,6 +2048,7 @@
         tabId: event.tab_id,
         state: event.event_type,
         startedAt: Date.now(),
+        completedAt: null,
         statementsCompleted: 0,
         receivedRows: 0,
         error: null
@@ -2047,7 +2083,7 @@
         event.sequence !== result.nextSequence ||
         (result.nextSequence === 0 && event.columns.length === 0)
       ) {
-        execution.state = 'failed';
+        setExecutionState(execution, 'failed');
         execution.error =
           'A duplicate, late, unknown, or out-of-order result event was rejected.';
         statusMessage = execution.error;
@@ -2062,7 +2098,7 @@
       result.retainedBytes += event.retained_bytes;
       result.nextSequence += 1;
       execution.receivedRows += event.rows.length;
-      execution.state = 'running';
+      setExecutionState(execution, 'running');
       try {
         await invokeCommand('ack_result_batch', {
           execution_id: event.execution_id,
@@ -2084,7 +2120,7 @@
       )
         return;
       result.paused = true;
-      execution.state = 'paused';
+      setExecutionState(execution, 'paused');
     } else if (event.event_type === 'result_terminal' && event.result_set_id) {
       const result = results[event.tab_id]?.find(
         (candidate) => candidate.id === event.result_set_id
@@ -2112,7 +2148,7 @@
       }
       statusMessage = `Statement ${Number(event.statement_index ?? 0) + 1} affected ${event.rows_affected ?? 0} row(s).`;
     } else if (event.event_type === 'finished') {
-      execution.state = 'succeeded';
+      setExecutionState(execution, 'succeeded');
       execution.statementsCompleted = event.statements_completed ?? 0;
       execution.receivedRows = event.received_rows;
       if (event.transaction && sessions[event.tab_id]) {
@@ -2120,7 +2156,7 @@
       }
       statusMessage = `Execution succeeded: ${execution.statementsCompleted} statement(s), ${execution.receivedRows} received row(s).`;
     } else if (event.event_type === 'failed') {
-      execution.state = 'failed';
+      setExecutionState(execution, 'failed');
       execution.error = event.error;
       if (event.transaction && sessions[event.tab_id]) {
         sessions[event.tab_id].transaction = event.transaction;
@@ -2133,7 +2169,10 @@
           : '';
       statusMessage = `${event.error ?? 'Database execution failed safely.'}${range}${event.retryable ? ' Retry is available after resolving the cause.' : ''}`;
     } else if (event.event_type === 'cancelled') {
-      execution.state = event.cancel_confirmed ? 'cancelled' : 'cancelling';
+      setExecutionState(
+        execution,
+        event.cancel_confirmed ? 'cancelled' : 'cancelling'
+      );
       if (event.transaction && sessions[event.tab_id]) {
         sessions[event.tab_id].transaction = event.transaction;
       }
@@ -2141,7 +2180,7 @@
         ? 'The database confirmed cancellation; the dedicated session remains available.'
         : 'Cancellation was requested but server confirmation is still pending.';
     } else if (event.event_type === 'started') {
-      execution.state = 'running';
+      setExecutionState(execution, 'running');
     }
   }
 
@@ -2341,7 +2380,7 @@
       await saveWorkspaceNow();
       statusMessage =
         'Tab and its native database resources were closed explicitly.';
-      await closeModal();
+      await closeCompletedModal();
     });
   }
 
@@ -2351,7 +2390,7 @@
     const response = await invokeCommand('cancel_execution', {
       execution_id: execution.id
     });
-    execution.state = 'cancelling';
+    setExecutionState(execution, 'cancelling');
     statusMessage = `${response.message} The tab remains open until the database adapter reports a terminal state.`;
     await closeModal();
   }
@@ -2387,7 +2426,7 @@
       );
     }
     const activeJob = Object.values(executions).find((execution) =>
-      ['queued', 'running', 'paused', 'cancelling'].includes(execution.state)
+      isExecutionActive(execution.state)
     );
     if (activeJob) {
       throw new Error(
@@ -2535,7 +2574,7 @@
     if (!hasNativeRuntime()) {
       settings = structuredClone($state.snapshot(settingsDraft));
       statusMessage = 'Theme preview applied for this desktop preview.';
-      await closeModal();
+      await closeCompletedModal();
       return;
     }
     await runAction(async () => {
@@ -2544,7 +2583,7 @@
         structuredClone($state.snapshot(settingsDraft))
       );
       statusMessage = 'Settings saved and safe immediate changes were applied.';
-      await closeModal();
+      await closeCompletedModal();
     });
   }
 
@@ -2605,7 +2644,7 @@
         structuredClone($state.snapshot(diagnostics!))
       );
       statusMessage = result.message;
-      if (result.completed) await closeModal();
+      if (result.completed) await closeCompletedModal();
     });
   }
 
@@ -2674,7 +2713,7 @@
 <div
   class="app-shell"
   data-theme={displayedSettings.theme}
-  style:font-size={`${displayedSettings.ui_scale_percent}%`}
+  style:--ui-scale={displayedSettings.ui_scale_percent / 100}
   aria-busy={busy}
 >
   <header class="topbar">
@@ -2836,90 +2875,6 @@
         Profiles and drafts stay on this device. Credentials use the OS vault or
         native session memory.
       </p>
-
-      <section class="history-panel" aria-labelledby="history-heading">
-        <div class="pane-heading compact">
-          <div>
-            <p class="eyebrow">Local execution record</p>
-            <h2 id="history-heading">History</h2>
-          </div>
-          <button type="button" onclick={toggleHistory}>
-            {historyOpen ? 'Hide' : 'Open'}
-          </button>
-        </div>
-        {#if historyOpen}
-          <form
-            class="history-search"
-            onsubmit={(event) => {
-              event.preventDefault();
-              void loadHistory();
-            }}
-          >
-            <label>
-              <span class="sr-only">Search local query history</span>
-              <input
-                type="search"
-                placeholder="Search SQL or metadata"
-                bind:value={historySearch}
-              />
-            </label>
-            <button type="submit">Search</button>
-          </form>
-          {#if historyWarning}<p class="schema-state">{historyWarning}</p>{/if}
-          <ul class="history-list">
-            {#each historyEntries as entry (entry.id)}
-              <li>
-                <button
-                  type="button"
-                  class="history-main"
-                  onclick={() => void reopenHistoryEntry(entry)}
-                >
-                  <strong>{entry.status} · {entry.profile_label}</strong>
-                  <code>{entry.sql.slice(0, 160)}</code>
-                  <small>
-                    {new Date(entry.timestamp_ms).toLocaleString()} · {entry.duration_ms}
-                    ms ·
-                    {entry.received_rows} rows
-                  </small>
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Delete history entry from ${new Date(entry.timestamp_ms).toLocaleString()}`}
-                  onclick={() => void deleteHistoryItem(entry)}>Delete</button
-                >
-              </li>
-            {/each}
-          </ul>
-          {#if historyEntries.length === 0}
-            <p class="schema-state">No matching local history entries.</p>
-          {/if}
-          {#if clearHistoryConfirmation}
-            <div class="confirm-strip" role="alert">
-              <span>Clear all active local history entries?</span>
-              <button
-                type="button"
-                onclick={() => (clearHistoryConfirmation = false)}>Keep</button
-              >
-              <button type="button" onclick={() => void clearAllHistory()}
-                >Clear</button
-              >
-            </div>
-          {:else}
-            <button
-              type="button"
-              class="quiet"
-              onclick={() => (clearHistoryConfirmation = true)}
-            >
-              Clear all history…
-            </button>
-          {/if}
-          <p class="sidebar-note">
-            History never stores result rows, credentials, certificate contents,
-            staged edits, or raw driver logs. Backup and storage-forensics
-            deletion is outside QueryNot’s guarantee.
-          </p>
-        {/if}
-      </section>
 
       {#if activeProfile}
         <section class="schema-explorer" aria-labelledby="schema-heading">
@@ -3144,9 +3099,99 @@
           {/if}
         </section>
       {/if}
+
+      <section class="history-panel" aria-labelledby="history-heading">
+        <div class="pane-heading compact">
+          <div>
+            <p class="eyebrow">Local execution record</p>
+            <h2 id="history-heading">History</h2>
+          </div>
+          <button type="button" onclick={toggleHistory}>
+            {historyOpen ? 'Hide' : 'Open'}
+          </button>
+        </div>
+        {#if historyOpen}
+          <form
+            class="history-search"
+            onsubmit={(event) => {
+              event.preventDefault();
+              void loadHistory();
+            }}
+          >
+            <label>
+              <span class="sr-only">Search local query history</span>
+              <input
+                type="search"
+                placeholder="Search SQL or metadata"
+                bind:value={historySearch}
+              />
+            </label>
+            <button type="submit">Search</button>
+          </form>
+          {#if historyWarning}<p class="schema-state">{historyWarning}</p>{/if}
+          <ul class="history-list">
+            {#each historyEntries as entry (entry.id)}
+              <li>
+                <button
+                  type="button"
+                  class="history-main"
+                  onclick={() => void reopenHistoryEntry(entry)}
+                >
+                  <strong>{entry.status} · {entry.profile_label}</strong>
+                  <code>{entry.sql.slice(0, 160)}</code>
+                  <small>
+                    {new Date(entry.timestamp_ms).toLocaleString()} · {entry.duration_ms}
+                    ms ·
+                    {entry.received_rows} rows
+                  </small>
+                </button>
+                <button
+                  type="button"
+                  class="history-delete"
+                  aria-label={`Delete history entry from ${new Date(entry.timestamp_ms).toLocaleString()}`}
+                  onclick={() => void deleteHistoryItem(entry)}>×</button
+                >
+              </li>
+            {/each}
+          </ul>
+          {#if historyEntries.length === 0}
+            <p class="schema-state">No matching local history entries.</p>
+          {/if}
+          {#if clearHistoryConfirmation}
+            <div class="confirm-strip" role="alert">
+              <span>Clear all active local history entries?</span>
+              <button
+                type="button"
+                onclick={() => (clearHistoryConfirmation = false)}>Keep</button
+              >
+              <button type="button" onclick={() => void clearAllHistory()}
+                >Clear</button
+              >
+            </div>
+          {:else}
+            <button
+              type="button"
+              class="quiet"
+              onclick={() => (clearHistoryConfirmation = true)}
+            >
+              Clear all history…
+            </button>
+          {/if}
+          <p class="sidebar-note">
+            History never stores result rows, credentials, certificate contents,
+            staged edits, or raw driver logs. Backup and storage-forensics
+            deletion is outside QueryNot’s guarantee.
+          </p>
+        {/if}
+      </section>
     </aside>
 
-    <main>
+    <main
+      class:has-query-results={Boolean(
+        activeTab?.kind === 'query' &&
+        (activeResults.length || activeExecution?.error)
+      )}
+    >
       <div class="context-bar" aria-label="Active query context">
         <span class="context-state" class:online={Boolean(activeSession)}>
           {activeSession ? 'Online' : 'Offline'}
@@ -3478,7 +3523,7 @@
               <span>{activeTab?.profile_label ?? 'Unbound offline file'}</span>
               <span>
                 {activeExecution
-                  ? `${activeExecution.state} · ${activeExecution.statementsCompleted} statements · ${activeExecution.receivedRows} rows · ${Math.max(0, nowMs - activeExecution.startedAt)} ms`
+                  ? `${activeExecution.state} · ${activeExecution.statementsCompleted} statements · ${activeExecution.receivedRows} rows · ${executionElapsedMs(activeExecution, nowMs)} ms`
                   : 'Idle · Mod+Enter run · Mod+Shift+Enter run all'}
               </span>
             </div>
@@ -3581,7 +3626,7 @@
   <div
     class="modal-backdrop theme-context"
     data-theme={displayedSettings.theme}
-    style:font-size={`${displayedSettings.ui_scale_percent}%`}
+    style:--ui-scale={displayedSettings.ui_scale_percent / 100}
   >
     <div
       class="modal-card"
