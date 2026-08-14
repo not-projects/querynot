@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "source_prd_commit": "ea9cfd482408dff10b2d5af409ba7992b47a8403",
+  "source_prd_commit": "9c5b5948cacccfe80a80dfe6720e5f95903e3d64",
   "records": {
     "CON-1": {
       "status": "implemented",
@@ -882,11 +882,7 @@
     },
     "AC-12": {
       "status": "in_progress",
-      "evidence_links": [
-        "evidence/phase-5/local-validation-report.json",
-        "evidence/phase-5/linux-artifact-inspection.json",
-        "evidence/phase-5/linux-checksums.json"
-      ],
+      "evidence_links": ["evidence/phase-5/local-validation-report.json"],
       "automated_test_ids": [
         "P5-AUTO-RELEASE-CONTRACTS",
         "P5-AUTO-ARTIFACT-INSPECTION",
@@ -912,8 +908,7 @@
       "evidence_links": [
         "evidence/phase-5/local-validation-report.json",
         "evidence/phase-5/dependency-review.json",
-        "evidence/phase-5/adapter-conformance-report.json",
-        "evidence/phase-5/linux-artifact-inspection.json"
+        "evidence/phase-5/adapter-conformance-report.json"
       ],
       "automated_test_ids": [
         "P1-AUTO-SECRET-EXCLUSION",

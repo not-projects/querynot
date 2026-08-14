@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { arch, platform } from 'node:os';
 import { resolve } from 'node:path';
 
@@ -9,11 +9,11 @@ const conformancePath = resolve(
   evidenceDirectory,
   'adapter-conformance-report.json'
 );
-const inspectionPath = resolve(
+const uiLayoutPath = resolve(root, 'artifacts', 'ui-layout-report.json');
+const retainedUiLayoutPath = resolve(
   evidenceDirectory,
-  'linux-artifact-inspection.json'
+  'ui-layout-report.json'
 );
-const checksumsPath = resolve(evidenceDirectory, 'linux-checksums.json');
 
 function output(program, args, options = {}) {
   const result = spawnSync(program, args, {
@@ -110,48 +110,6 @@ function assertConformance(report) {
   }
   if (expected.size !== 0)
     throw new Error('a Phase 5 database target is missing');
-}
-
-function assertLinuxArtifacts(inspection, checksums) {
-  if (
-    inspection?.status !== 'pass' ||
-    inspection?.source_commit !== sourceCommit ||
-    inspection?.application_version !== '0.1.0' ||
-    inspection?.updater_artifacts !== false ||
-    inspection?.capability_and_csp_review !== 'pass'
-  ) {
-    throw new Error('Linux artifact inspection is incomplete or stale');
-  }
-  const formats = new Set(
-    inspection.artifacts?.map((artifact) => artifact.format)
-  );
-  if (formats.size !== 2 || !formats.has('deb') || !formats.has('appimage')) {
-    throw new Error(
-      'Linux artifact inspection does not contain exactly Debian and AppImage packages'
-    );
-  }
-  if (
-    checksums?.schema_version !== 1 ||
-    checksums?.algorithm !== 'sha256' ||
-    checksums?.source_commit !== sourceCommit ||
-    checksums?.application_version !== '0.1.0' ||
-    checksums?.artifacts?.length !== 2
-  ) {
-    throw new Error('Linux checksum manifest is incomplete or stale');
-  }
-  for (const artifact of inspection.artifacts) {
-    const checksum = checksums.artifacts.find(
-      (record) => record.name === artifact.name
-    );
-    if (
-      checksum?.sha256 !== artifact.sha256 ||
-      checksum?.bytes !== artifact.bytes
-    ) {
-      throw new Error(
-        `checksum manifest does not match inspected artifact ${artifact.name}`
-      );
-    }
-  }
 }
 
 const denyEnvironment = {
@@ -252,6 +210,16 @@ try {
     'run',
     'test:ui-layout'
   ]);
+  const uiLayout = JSON.parse(readFileSync(uiLayoutPath, 'utf8'));
+  if (
+    uiLayout?.status !== 'pass' ||
+    uiLayout?.source_commit !== sourceCommit ||
+    uiLayout?.layouts?.length !== 4 ||
+    uiLayout?.dialog_themes?.length !== 4
+  ) {
+    throw new Error('UI layout evidence is incomplete or stale');
+  }
+  copyFileSync(uiLayoutPath, retainedUiLayoutPath);
   run('P5-FRONTEND-BUILD', 'npm run build', 'npm', ['run', 'build']);
   run('P5-FORMAT', 'npm run format:check', 'npm', ['run', 'format:check']);
   run('P5-RUSTFMT', 'cargo fmt --all -- --check', 'cargo', [
@@ -301,48 +269,6 @@ try {
     { capture: true }
   );
   assertConformance(JSON.parse(readFileSync(conformancePath, 'utf8')));
-  run('P5-LINUX-PACKAGES', 'npm run package:linux', 'npm', [
-    'run',
-    'package:linux'
-  ]);
-  run(
-    'P5-LINUX-ARTIFACT-INSPECTION',
-    'npm run release:inspect -- --binary target/release-candidate-linux/release/querynot --directory target/release-candidate-linux/release/bundle --expect deb,appimage --report evidence/phase-5/linux-artifact-inspection.json',
-    'npm',
-    [
-      'run',
-      'release:inspect',
-      '--',
-      '--binary',
-      'target/release-candidate-linux/release/querynot',
-      '--directory',
-      'target/release-candidate-linux/release/bundle',
-      '--expect',
-      'deb,appimage',
-      '--report',
-      'evidence/phase-5/linux-artifact-inspection.json'
-    ]
-  );
-  run(
-    'P5-LINUX-CHECKSUMS',
-    'npm run release:checksums -- --directory target/release-candidate-linux/release/bundle --output evidence/phase-5/SHA256SUMS.linux --manifest evidence/phase-5/linux-checksums.json',
-    'npm',
-    [
-      'run',
-      'release:checksums',
-      '--',
-      '--directory',
-      'target/release-candidate-linux/release/bundle',
-      '--output',
-      'evidence/phase-5/SHA256SUMS.linux',
-      '--manifest',
-      'evidence/phase-5/linux-checksums.json'
-    ]
-  );
-  assertLinuxArtifacts(
-    JSON.parse(readFileSync(inspectionPath, 'utf8')),
-    JSON.parse(readFileSync(checksumsPath, 'utf8'))
-  );
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error);
 }
@@ -436,29 +362,23 @@ const report = {
     local_regression_dependency_and_conformance: failure
       ? 'see checks'
       : 'pass',
-    linux_x86_64_debian_and_appimage_build_inspection: failure
-      ? 'see checks'
-      : 'pass_local',
-    windows_macos_and_exact_native_os_journeys:
-      'pending manual-dispatch builds and P5-MAN-OS-CORE',
-    accessibility_performance_safety_and_security:
-      'pending named native reviews',
-    fixed_five_day_dogfood: 'unperformed',
-    five_person_opt_in_beta: 'unperformed',
+    wsl2_engineering_automation: failure ? 'see checks' : 'pass',
+    windows_11_x64_nsis_build_and_inspection: 'pending_ci_candidate',
+    native_owner_journey: 'post_release_unperformed',
+    native_accessibility_performance_safety_and_security:
+      'post_release_unperformed',
+    fixed_five_day_dogfood: 'post_release_unperformed',
+    external_beta: 'post_release_deferred',
     all_20_acceptance_criteria: 'incomplete',
     release_evidence_bundle: 'incomplete'
   },
   release_blockers_remaining: [
-    'The eight-row native operating-system installation and core-journey matrix has not passed.',
-    'Native accessibility, performance, manual safety, and security reviews have not passed.',
-    'The fixed five-consecutive-working-day dogfood checklist has not been performed.',
-    'The five-person opt-in beta has not been performed.',
-    'Traceability and the release manifest must remain incomplete until all external evidence passes.'
+    'The Windows 11 x86-64 NSIS candidate must be built, inspected, and checksummed by CI.',
+    'Traceability and the release manifest must remain incomplete until the retained Windows candidate evidence is complete.'
   ],
   adapter_conformance_report:
     'evidence/phase-5/adapter-conformance-report.json',
-  linux_artifact_inspection: 'evidence/phase-5/linux-artifact-inspection.json',
-  linux_checksums: 'evidence/phase-5/linux-checksums.json',
+  ui_layout_report: 'evidence/phase-5/ui-layout-report.json',
   release_tool_inputs: 'fixtures/release-tool-inputs.json',
   dependency_review: 'evidence/phase-5/dependency-review.json',
   failure
@@ -470,5 +390,5 @@ writeFileSync(
 
 if (failure) throw new Error(failure);
 process.stdout.write(
-  `Phase 5 local automation passed for ${sourceCommit}; external release gates remain incomplete\n`
+  `Phase 5 WSL2 automation passed for ${sourceCommit}; Windows candidate and final evidence gates remain incomplete\n`
 );

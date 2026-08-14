@@ -23,6 +23,10 @@ const root = resolve(import.meta.dirname, '..');
 const phase5Root = resolve(root, 'evidence', 'phase-5');
 const artifactExtensions = ['.AppImage', '.deb', '.dmg', '.exe'];
 const expectedArtifactFormats = expectedArtifacts;
+const expectedArtifactCount = expectedArtifactFormats.size;
+const expectedArtifactLabel = `${expectedArtifactCount} artifact${
+  expectedArtifactCount === 1 ? '' : 's'
+}`;
 
 /**
  * @param {unknown} condition
@@ -158,21 +162,21 @@ export function validatePublicationContract({
   );
   requireCondition(
     packagingArtifacts.size === expectedArtifactFormats.size,
-    'packaging evidence does not contain exactly five artifacts'
+    `packaging evidence does not contain exactly ${expectedArtifactLabel}`
   );
   requireCondition(
     reviewedArtifacts.size === expectedArtifactFormats.size,
-    'release manifest does not contain exactly five reviewed artifacts'
+    `release manifest does not contain exactly ${expectedArtifactLabel}`
   );
   requireCondition(
     downloadedArtifacts.size === expectedArtifactFormats.size,
-    'publication input does not contain exactly five artifacts'
+    `publication input does not contain exactly ${expectedArtifactLabel}`
   );
 
   const checksumRecords = parseChecksumManifest(checksumText);
   requireCondition(
     checksumRecords.size === expectedArtifactFormats.size,
-    'SHA256SUMS does not contain exactly five artifacts'
+    `SHA256SUMS does not contain exactly ${expectedArtifactLabel}`
   );
 
   const publicationArtifacts = [];

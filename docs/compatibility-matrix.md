@@ -9,7 +9,7 @@ Only the `windows-11-x64` row is eligible for the `0.1.0` support claim. It beco
 
 | Matrix ID | Operating system | Architecture | Web runtime/package | Current status |
 | --- | --- | --- | --- | --- |
-| `windows-11-x64` | Windows 11 25H2, build 26200.8655 | x86-64 | Microsoft Edge WebView2 151.0.4129.78, unsigned NSIS | Selected `0.1.0` row; package and final audit pending |
+| `windows-11-x64` | Windows 11 25H2, build 26200.8655 | x86-64 | Microsoft Edge WebView2 151.0.4129.78, unsigned NSIS | Sole supported and published 0.1.0 row after the package and final audit pass |
 | `windows-10-22h2-x64` | Windows 10 22H2 | x86-64 | WebView2, NSIS | Deferred; no `0.1.0` support or artifact claim |
 | `macos-13-intel` | macOS 13 | Intel | System WebKit, DMG | Deferred; no `0.1.0` support or artifact claim |
 | `macos-13-apple` | macOS 13 | Apple silicon | System WebKit, DMG | Deferred; no `0.1.0` support or artifact claim |

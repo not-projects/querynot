@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 import { createServer } from 'vite';
 
@@ -14,6 +15,15 @@ const reportPath = resolve(root, 'artifacts', 'ui-layout-report.json');
 const screenshotPath = resolve(root, 'artifacts', 'ui-layout-settings.png');
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
+
+const git = spawnSync('git', ['rev-parse', 'HEAD'], {
+  cwd: root,
+  encoding: 'utf8'
+});
+if (git.status !== 0 || !/^[a-f0-9]{40}\n?$/.test(git.stdout)) {
+  throw new Error('UI layout evidence requires an exact source commit');
+}
+const sourceCommit = git.stdout.trim();
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -119,6 +129,7 @@ try {
   const report = {
     schema_version: 1,
     status: 'pass',
+    source_commit: sourceCommit,
     tested_at: new Date().toISOString(),
     viewport_height: 1068,
     layouts,

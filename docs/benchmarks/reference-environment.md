@@ -12,7 +12,7 @@ Recorded: 2026-08-13
 | Memory | 15.48 GiB visible to WSL |
 | Storage | Host-backed development filesystem; production SSD benchmark still required |
 | Node/npm | Node 22.22.1, npm 10.9.4 |
-| Rust | rustc 1.94.0, cargo 1.94.0 |
+| Rust | rustc 1.97.0, cargo 1.97.0 |
 | GTK/WebKitGTK | GTK 3.24.33, WebKitGTK 2.50.4 |
 | Display/power | Not controlled in WSL; Phase 5 native record required |
 

@@ -7,11 +7,11 @@ These procedures use only synthetic SQLite files and explicitly provisioned disp
 ## Release-blocking candidate lock
 
 1. Select one clean 40-character source commit.
-2. Run `npm run verify:phase5:local` in the approved WSL2 environment. Retain the resulting local validation, dependency, five-server conformance, UI-layout, Linux engineering-package, and checksum reports. Linux package bytes are not public artifacts.
+2. Run `npm run verify:phase5:local` in the approved WSL2 environment. Retain the resulting local validation, dependency, five-server conformance, and UI-layout reports. WSL2 does not produce a release artifact.
 3. Produce one Windows x86-64 NSIS package from that source with the manually dispatched `release-candidate-packages` CI job. Do not build macOS or public Linux artifacts for `0.1.0`.
 4. Download the Windows artifact without renaming it. Inspect its package/binary material and generate the sole release `SHA256SUMS` record.
 5. Freeze the exact Windows 11 patch, WebView2 version, package name, byte count, and digest in the compatibility matrix and release manifest.
-6. Retain `evidence/phase-5/product-owner-scope.json`. It must identify Windows 11 x86-64 as the only release row and list every native interaction, manual, dogfood, and beta procedure below with status `post_release`, never `pass`.
+6. Retain `evidence/phase-5/product-owner-scope.json`. It must identify Windows 11 x86-64 as the only release row and list every native interaction, manual, dogfood, and beta procedure below as unperformed or deferred post-release work, never `pass`.
 7. Set every traceability row to `verified` only when its revised release-blocking automated mappings passed against the source commit and retained evidence exists.
 8. From a clean evidence commit, run `npm run test:release-evidence`. Missing or substituted Windows bytes, extra packages, stale commits, incomplete automated gates, unsupported platform claims, fabricated manual results, or an incomplete traceability row fail closed.
 

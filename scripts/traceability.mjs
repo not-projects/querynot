@@ -106,7 +106,7 @@ function matrixScope(id) {
       'mariadb-11.4-lts'
     ];
   }
-  return ['windows-x86_64', 'macos-aarch64', 'macos-x86_64', 'linux-x86_64'];
+  return ['windows-11-x86_64'];
 }
 
 function parseRequirements(prd) {
@@ -150,7 +150,7 @@ function parseAcceptanceCriteria(prd) {
       implementation_issues: [`PHASE-${phase}`],
       automated_test_ids: [`PLANNED-AUTO-${id}`],
       manual_procedure_ids: [`PLANNED-MAN-${id}`],
-      supported_matrix_entries: ['all_applicable_release_matrix_entries'],
+      supported_matrix_entries: ['windows-11-x86_64'],
       status: 'planned',
       evidence_links: []
     });
@@ -175,31 +175,38 @@ function applyOverrides(records, overrideFile) {
 
 function phaseFiveProcedure(id) {
   const label = id.replace(/^PENDING-P[345]-/, '');
-  if (/PERFORMANCE|FPS|MEMORY/.test(label)) return `P5-MAN-PERF:${label}`;
+  if (/PERFORMANCE|FPS|MEMORY/.test(label)) return `POST-RELEASE-PERF:${label}`;
   if (
     /ACCESSIBILITY|A11Y|KEYBOARD|THEME|INTERACTION|UX|FOCUS|GRID|WIDTH|SCALE|SHORTCUT/.test(
       label
     )
   ) {
-    return `P5-MAN-A11Y:${label}`;
+    return `POST-RELEASE-A11Y:${label}`;
   }
   if (
     /VAULT|TLS|SECRET|DIAGNOSTIC|LOGGING|DESTRUCTIVE|TRANSACTION|EXPORT|FILE|FIXTURE|DISCOVERY|NATIVE-BOUNDARY|ARTIFACT-NETWORK|PARSER-FUZZ|PERMISSION|STORAGE-FAILURE|DISK-FULL/.test(
       label
     )
   ) {
-    return `P5-MAN-SAFETY:${label}`;
+    return `POST-RELEASE-SAFETY:${label}`;
   }
-  return `P5-MAN-OS-CORE:${label}`;
+  return `POST-RELEASE-OWNER-JOURNEY:${label}`;
 }
 
 function resolvePhaseFiveProcedures(records) {
   for (const record of records) {
     record.manual_procedure_ids = [
       ...new Set(
-        record.manual_procedure_ids.map((id) =>
-          /^PENDING-P[345]-/.test(id) ? phaseFiveProcedure(id) : id
-        )
+        record.manual_procedure_ids.map((id) => {
+          if (/^PENDING-P[345]-/.test(id)) return phaseFiveProcedure(id);
+          if (id.startsWith('P5-MAN-EVIDENCE'))
+            return id.replace('P5-MAN-EVIDENCE', 'PRODUCT-OWNER-SCOPE-REV2');
+          if (id.startsWith('P5-MAN-OS-CORE'))
+            return id.replace('P5-MAN-OS-CORE', 'POST-RELEASE-OWNER-JOURNEY');
+          if (id.startsWith('P5-MAN-'))
+            return id.replace('P5-MAN-', 'POST-RELEASE-');
+          return id;
+        })
       )
     ];
   }
@@ -276,34 +283,14 @@ function attachGeneratedEvidence(records) {
       record.evidence_links.push('evidence/phase-2/benchmark-report.json');
     }
     if (record.status === 'verified') {
-      const phaseFiveEvidence = new Set();
-      if (record.automated_test_ids.some((id) => id.startsWith('P5-'))) {
-        phaseFiveEvidence.add('evidence/phase-5/local-validation-report.json');
-      }
+      const phaseFiveEvidence = new Set([
+        'evidence/phase-5/local-validation-report.json',
+        'evidence/phase-5/product-owner-scope.json'
+      ]);
       if (record.automated_test_ids.includes('P5-AUTO-ADAPTER-CONFORMANCE')) {
         phaseFiveEvidence.add(
           'evidence/phase-5/adapter-conformance-report.json'
         );
-      }
-      for (const id of record.manual_procedure_ids) {
-        if (id.startsWith('P5-MAN-OS-CORE'))
-          phaseFiveEvidence.add(
-            'evidence/phase-5/operating-system-results.json'
-          );
-        if (id.startsWith('P5-MAN-A11Y'))
-          phaseFiveEvidence.add('evidence/phase-5/accessibility-results.json');
-        if (id.startsWith('P5-MAN-PERF'))
-          phaseFiveEvidence.add('evidence/phase-5/performance-results.json');
-        if (id.startsWith('P5-MAN-SAFETY'))
-          phaseFiveEvidence.add('evidence/phase-5/manual-safety-review.json');
-        if (id.startsWith('P5-MAN-SECURITY'))
-          phaseFiveEvidence.add('evidence/phase-5/security-review.json');
-        if (id.startsWith('P5-MAN-DOGFOOD'))
-          phaseFiveEvidence.add('evidence/phase-5/dogfood-record.json');
-        if (id.startsWith('P5-MAN-BETA'))
-          phaseFiveEvidence.add('evidence/phase-5/beta-record.json');
-        if (id.startsWith('P5-MAN-EVIDENCE'))
-          phaseFiveEvidence.add('evidence/phase-5/packaging-results.json');
       }
       for (const path of phaseFiveEvidence) {
         if (!record.evidence_links.includes(path))

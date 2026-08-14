@@ -21,3 +21,5 @@ Run `npm run traceability:sync` after the PRD or an evidence mapping changes. CI
 - `excepted`: the product owner approved a time-bounded exception with an expiry.
 
 `PLANNED-AUTO-*` and `PLANNED-MAN-*` are reservations, not evidence. A row cannot become `verified` until those placeholders are replaced by executable test and procedure identifiers and the evidence links point to passing artifacts under `evidence/`.
+
+Revision 2 narrows the 0.1.0 release platform to Windows 11 x86-64. `POST-RELEASE-*` identifiers are explicit follow-up checks, not claims that a manual procedure passed. Their release-boundary evidence is the retained product-owner scope decision; automation and the Windows package records remain the release-blocking verification. Expanding supported operating systems or beta participation requires a later approved revision and new evidence.

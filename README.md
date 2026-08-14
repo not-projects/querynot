@@ -9,7 +9,7 @@ QueryNot is a local-first desktop SQL client focused on a fast, calm, and depend
 
 ## Project Status
 
-QueryNot is in pre-release development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, Phase 4 productivity and safe-data-editing, and Phase 5–6 validation/publication tooling. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations.
+QueryNot is in pre-release development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, Phase 4 productivity and safe-data-editing, and Phase 5–6 validation/publication tooling. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Existing SQLite database files are opened directly through the native file chooser as SQLite connections; read-only and read-write profiles are supported.
 
 The approved `0.1.0` release envelope is Windows 11 x86-64 only. WSL2 and Linux package builds are engineering evidence, not supported application platforms or public release artifacts. Native owner checks, five-day dogfood, and external beta follow the first release and remain explicitly unperformed until they occur.
 
@@ -63,7 +63,6 @@ npm run benchmark:phase2
 npm run test:conformance:phase3
 npm run test:conformance:phase4
 npm run tauri -- build --no-bundle
-npm run package:linux
 npm run test:release-evidence
 npm run verify:phase5:local
 npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report artifacts/publication-plan.json
@@ -77,9 +76,9 @@ npm run release:prepare-publication -- --directory <candidate-dir> --output arti
 
 `npm run test:conformance:phase4` extends the same exact five-server matrix with deterministic table paging, bound structured filters, typed staged inserts/updates/deletes, generated-value refresh, optimistic conflicts, and atomic rollback. `npm run verify:phase4` runs the full Phase 4 regression, dependency review, conformance, and desktop-build gate from a clean commit and retains commit-addressed validation, table-conformance, and dependency reports.
 
-Phase 5 prepares the unsigned Windows 11 x86-64 NSIS release artifact without updater material. `npm run package:linux` has also produced and inspected two WSL2 engineering formats, but they are not published or supported in `0.1.0`. `npm run test:ui-layout` exercises large/narrow status-bar geometry, all PostNot-aligned theme names, and opaque dialog surfaces in Chromium. `npm run test:release-evidence` remains fail-closed until the Windows package, exact checksum, commit-addressed automation, revised traceability, manifest, and product-owner scope record agree. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md).
+Phase 5 prepares the unsigned Windows 11 x86-64 NSIS release artifact without updater material. WSL2 is the approved local automation environment, not a supported application platform or public package source. `npm run test:ui-layout` exercises large/narrow status-bar geometry, all PostNot-aligned theme names, and opaque dialog surfaces in Chromium. `npm run test:release-evidence` remains fail-closed until the Windows package, exact checksum, commit-addressed automation, revised traceability, manifest, and product-owner scope record agree. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md).
 
-`npm run verify:phase5:local` reruns the complete local regression, automated UI layout gate, exact dependency gates, five-server candidate conformance, and isolated Linux engineering package/inspection/checksum path. It does not substitute for the required Windows NSIS construction and inspection. Native interaction, dogfood, and beta remain post-release owner validation under the approved revision-2 scope.
+`npm run verify:phase5:local` reruns the complete WSL2 regression, automated UI layout gate, exact dependency gates, and five-server candidate conformance. It does not substitute for the required Windows NSIS construction and inspection. Native interaction, dogfood, and beta remain post-release owner validation under the approved revision-2 scope.
 
 The Phase 6 publication command is intended for the manual release workflow after the Phase 5 gate. It reruns that gate, rejects substituted or extra artifacts, stages only the reviewed Windows installer and retained checksum file, and requires an exact release confirmation. The workflow creates and round-trip verifies a draft before publication; it never rebuilds or overwrites a candidate.
 

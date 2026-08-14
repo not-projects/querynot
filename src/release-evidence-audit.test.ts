@@ -1,434 +1,299 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
-  rmSync,
+  readFileSync,
   writeFileSync
 } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import {
-  accessibilityChecks,
-  aggregateSamples,
-  coreJourneyChecks,
-  expectedArtifacts,
-  familyNetworkChecks,
-  osArchitectures,
-  osArtifacts,
-  osFamilies,
-  osMatrix,
-  performanceMeasurements
-} from '../scripts/release-evidence-contract.mjs';
+const root = resolve('.');
 
-const temporaryDirectories: string[] = [];
-
-function directory(path: string) {
-  mkdirSync(path, { recursive: true });
+function write(path: string, value: unknown) {
+  mkdirSync(resolve(path, '..'), { recursive: true });
+  writeFileSync(
+    path,
+    typeof value === 'string' ? value : `${JSON.stringify(value, null, 2)}\n`
+  );
 }
 
-function text(path: string, contents: string) {
-  directory(join(path, '..'));
-  writeFileSync(path, contents, 'utf8');
+function git(directory: string, ...args: string[]) {
+  const result = spawnSync('git', args, {
+    cwd: directory,
+    encoding: 'utf8'
+  });
+  if (result.status !== 0) throw new Error(result.stderr || result.stdout);
+  return result.stdout.trim();
 }
 
-function json(path: string, value: unknown) {
-  text(path, `${JSON.stringify(value, null, 2)}\n`);
+function commit(directory: string, message: string) {
+  git(directory, 'add', '.');
+  git(directory, 'commit', '-m', message);
 }
 
-function git(root: string, ...args: string[]) {
-  return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
-}
+function createSyntheticEvidence() {
+  mkdirSync(resolve(root, '.tmp'), { recursive: true });
+  const directory = mkdtempSync(resolve(root, '.tmp', 'release-audit-'));
+  mkdirSync(resolve(directory, 'scripts'), { recursive: true });
+  copyFileSync(
+    resolve(root, 'scripts/audit-release-evidence.mjs'),
+    resolve(directory, 'scripts/audit-release-evidence.mjs')
+  );
+  copyFileSync(
+    resolve(root, 'scripts/release-evidence-contract.mjs'),
+    resolve(directory, 'scripts/release-evidence-contract.mjs')
+  );
+  write(resolve(directory, 'package.json'), {
+    name: 'querynot-synthetic',
+    version: '0.1.0',
+    type: 'module'
+  });
+  write(
+    resolve(directory, 'docs/compatibility-matrix.md'),
+    'Windows 11 25H2 | Sole supported and published 0.1.0 row\nOther platforms | Deferred; no `0.1.0` support or artifact claim\n'
+  );
+  git(directory, 'init');
+  git(directory, 'config', 'user.name', 'QueryNot Test');
+  git(directory, 'config', 'user.email', 'querynot@example.invalid');
+  commit(directory, 'source');
+  const sourceCommit = git(directory, 'rev-parse', 'HEAD');
+  const sha256 = createHash('sha256').update('synthetic-nsis').digest('hex');
+  const artifact = {
+    id: 'windows-nsis-x64',
+    format: 'nsis',
+    name: 'QueryNot_0.1.0_x64-setup.exe',
+    bytes: 14,
+    sha256,
+    unsigned: true,
+    evidence_link: 'evidence/phase-5/windows-artifact-inspection.json'
+  };
+  const sourceRecord = { schema_version: 1, source_commit: sourceCommit };
 
-const passChecks = (ids: string[]) =>
-  Object.fromEntries(ids.map((id) => [id, 'pass']));
-
-afterEach(() => {
-  for (const path of temporaryDirectories.splice(0)) {
-    rmSync(path, { recursive: true, force: true });
-  }
-});
-
-describe('complete Phase 5 evidence audit', () => {
-  it('accepts one exact internally consistent synthetic contract fixture', () => {
-    const root = mkdtempSync(join(tmpdir(), 'querynot-release-audit-'));
-    temporaryDirectories.push(root);
-    directory(join(root, 'scripts'));
-    copyFileSync(
-      'scripts/audit-release-evidence.mjs',
-      join(root, 'scripts/audit-release-evidence.mjs')
-    );
-    copyFileSync(
-      'scripts/release-evidence-contract.mjs',
-      join(root, 'scripts/release-evidence-contract.mjs')
-    );
-    json(join(root, 'package.json'), { name: 'querynot', version: '0.1.0' });
-    text(
-      join(root, 'application-source.txt'),
-      'synthetic application source\n'
-    );
-
-    git(root, 'init', '--quiet');
-    git(root, 'config', 'user.name', 'QueryNot contract test');
-    git(root, 'config', 'user.email', 'querynot-contract@example.invalid');
-    git(root, 'add', '.');
-    git(root, 'commit', '--quiet', '-m', 'source');
-    const sourceCommit = git(root, 'rev-parse', 'HEAD');
-
-    const phase5 = join(root, 'evidence', 'phase-5');
-    const supportLink = 'evidence/phase-5/supporting-evidence.txt';
-    text(
-      join(root, supportLink),
-      'synthetic supporting material for the gate contract test\n'
-    );
-
-    const artifactNames = new Map([
-      ['windows-nsis-x64', 'QueryNot_0.1.0_x64-setup.exe'],
-      ['macos-dmg-intel', 'QueryNot_0.1.0_x64.dmg'],
-      ['macos-dmg-apple', 'QueryNot_0.1.0_aarch64.dmg'],
-      ['linux-appimage-x64', 'QueryNot_0.1.0_amd64.AppImage'],
-      ['linux-deb-x64', 'QueryNot_0.1.0_amd64.deb']
-    ]);
-    const artifacts = [...expectedArtifacts].map(([id, format], index) => ({
-      id,
-      format,
-      name: artifactNames.get(id),
-      bytes: 100 + index,
-      sha256: String(index + 1).repeat(64),
-      unsigned: true,
-      evidence_link: supportLink
-    }));
-    const artifactById = new Map(
-      artifacts.map((artifact) => [artifact.id, artifact])
-    );
-    text(
-      join(phase5, 'SHA256SUMS'),
-      `${artifacts
-        .map((artifact) => `${artifact.sha256}  ${artifact.name}`)
-        .join('\n')}\n`
-    );
-
-    const osResults = osMatrix.map((id) => ({
-      id,
-      os_version: `${id}-exact-patch`,
-      runtime_version: `${id}-exact-runtime`,
-      architecture: osArchitectures.get(id),
-      packages: osArtifacts.get(id)?.map((artifactId) => {
-        const artifact = artifactById.get(artifactId);
-        return {
-          id: artifactId,
-          name: artifact?.name,
-          sha256: artifact?.sha256,
-          install: 'pass',
-          core_journey: 'pass',
-          journey_checks: passChecks(coreJourneyChecks),
-          uninstall: 'pass',
-          unsigned_warning_observed: true,
-          evidence_links: [supportLink]
-        };
-      })
-    }));
-    json(join(phase5, 'operating-system-results.json'), {
+  write(resolve(directory, 'evidence/phase-5/local-validation-report.json'), {
+    ...sourceRecord,
+    phase: 5,
+    status: 'pass_local_automation',
+    checks: [{ id: 'P5-SYNTHETIC', status: 'pass' }]
+  });
+  write(resolve(directory, 'evidence/phase-5/dependency-review.json'), {
+    ...sourceRecord,
+    status: 'pass',
+    npm: { audit_vulnerabilities: { high: 0, critical: 0 } },
+    rust: {
+      new_advisories: 0,
+      cargo_deny_version: 'cargo-deny 0.20.2'
+    }
+  });
+  const tableEditing = {
+    deterministic_keyset_paging: true,
+    bound_structured_filters: true,
+    typed_validation: true,
+    insert_update_delete: true,
+    generated_value_refresh: true,
+    optimistic_conflict_atomic_rollback: true
+  };
+  write(
+    resolve(directory, 'evidence/phase-5/adapter-conformance-report.json'),
+    {
       schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      results: osResults,
-      family_network_journeys: [...osFamilies].map(([id, matrixIds]) => ({
-        id,
-        platform_matrix_id: matrixIds[0],
-        checks: passChecks(familyNetworkChecks),
-        evidence_links: [supportLink]
-      }))
-    });
-
-    json(join(phase5, 'packaging-results.json'), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      updater_artifacts: false,
-      checksum_verification: 'pass',
-      artifacts,
-      checksum_manifest: 'evidence/phase-5/SHA256SUMS'
-    });
-
-    json(join(phase5, 'accessibility-results.json'), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      reviewer: 'synthetic-reviewer',
-      results: osMatrix.map((id) => ({
-        id,
-        reviewed_at: '2026-08-14',
-        assistive_technology: 'synthetic-screen-reader 1.0',
-        themes: { light: 'pass', dark: 'pass', forest: 'pass' },
-        viewport_widths: { 1280: 'pass', 960: 'pass', 720: 'pass' },
-        ui_scales: { 80: 'pass', 100: 'pass', 200: 'pass' },
-        combinations_reviewed: 27,
-        checks: passChecks(accessibilityChecks),
-        evidence_links: [supportLink]
-      }))
-    });
-
-    const rawSamples = Object.fromEntries(
-      [...performanceMeasurements].map(([name, contract]) => {
-        const sample = name.includes('fps')
-          ? 60
-          : name === 'cleanup_ratio_after_10s'
-            ? 1
-            : 50;
-        return [
-          name,
-          { aggregation: contract.aggregation, samples: Array(30).fill(sample) }
-        ];
-      })
-    );
-    const rawLink = 'evidence/phase-5/performance-raw.json';
-    json(join(root, rawLink), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      measurements: rawSamples
-    });
-    json(join(phase5, 'performance-results.json'), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      environment: {
-        native: true,
-        os: 'synthetic-os exact-patch',
-        cpu: 'synthetic four-core CPU',
-        physical_cpu_cores: 4,
-        memory_gib: 16,
-        storage: 'synthetic SSD',
-        ssd: true,
-        power_mode: 'balanced',
-        display_scale: '100%',
-        webview_runtime: 'synthetic-runtime 1.0',
-        commands: ['synthetic benchmark command']
-      },
-      fixtures: {
-        ordinary_result: {
-          rows: 10000,
-          columns: 12,
-          approx_encoded_bytes_per_row: 1024,
-          nulls: true,
-          unicode: true,
-          variable_width_text: true
-        },
-        large_schema: { namespaces: 100, objects: 10000 }
-      },
-      discarded_setup_runs: 1,
-      measurements: Object.fromEntries(
-        [...performanceMeasurements].map(([name, contract]) => [
-          name,
-          {
-            samples: rawSamples[name].samples.length,
-            value: aggregateSamples(
-              rawSamples[name].samples,
-              contract.aggregation as 'nearest_rank_p95' | 'maximum'
-            ),
-            aggregation: contract.aggregation,
-            raw_evidence_link: rawLink
-          }
-        ])
-      ),
-      large_schema_progressive: 'pass',
-      rendered_rows_bounded: 'pass'
-    });
-
-    const safetyIds = [
-      'credential_persistence',
-      'tls_modes',
-      'diagnostic_redaction',
-      'history_clear',
-      'destructive_confirmations',
-      'transaction_close',
-      'export_overwrite',
-      'unsigned_installation',
-      'fixture_isolation'
-    ];
-    json(join(phase5, 'manual-safety-review.json'), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      reviewer: 'synthetic-safety-reviewer',
-      reviewed_at: '2026-08-14',
-      checks: safetyIds.map((id) => ({
-        id,
-        status: 'pass',
-        evidence_link: supportLink
-      }))
-    });
-    json(join(phase5, 'security-review.json'), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      reviewer: 'synthetic-security-reviewer',
-      reviewed_at: '2026-08-14',
-      known_critical: 0,
-      known_high: 0,
-      areas: passChecks([
-        'credential_handling',
-        'tls',
-        'sql_targeting',
-        'transactions',
-        'row_editing',
-        'exports',
-        'local_file_access',
-        'secret_redaction'
-      ]),
-      findings: [],
-      evidence_links: [supportLink]
-    });
-
-    const dogfoodDates = [
-      '2026-08-10',
-      '2026-08-11',
-      '2026-08-12',
-      '2026-08-13',
-      '2026-08-14'
-    ];
-    json(join(phase5, 'dogfood-record.json'), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      owner: 'synthetic-project-owner',
-      fallback_client_used: false,
-      metrics: {
-        profile_to_editable_tab_ms: [100, 100, 100, 100, 100],
-        table_to_known_row_copy_ms: [200, 200, 200, 200, 200]
-      },
-      failures: [],
-      days: dogfoodDates.map((date, index) => {
-        const ids = ['DOG-1', 'DOG-2', 'DOG-3', 'DOG-4', 'DOG-6', 'DOG-9'];
-        if (index === 0) ids.push('DOG-5', 'DOG-7');
-        if (index > 0) ids.push('DOG-8');
-        return {
-          date,
-          unrecoverable_workspace_loss: false,
-          tasks: ids.map((id) => ({
-            id,
-            status: 'pass',
-            fallback_used: false,
-            modes:
-              id === 'DOG-1'
-                ? ['profile_created_or_edited_and_tested']
-                : id === 'DOG-4'
-                  ? ['selection', 'cursor_statement', 'run_all']
-                  : id === 'DOG-6'
-                    ? ['copy', 'filter_or_sort', 'load_more', 'export_csv']
-                    : id === 'DOG-7'
-                      ? ['successful_apply', 'rollback_or_conflict']
-                      : undefined,
-            evidence_link: supportLink
-          }))
-        };
-      })
-    });
-
-    json(join(phase5, 'beta-record.json'), {
-      schema_version: 1,
-      source_commit: sourceCommit,
-      status: 'pass',
-      participants: Array.from({ length: 5 }, (_, index) => ({
-        id: `synthetic-participant-${index + 1}`,
-        opt_in: true,
-        attempted: true,
-        completed_core_journey: index < 4,
-        maintainer_intervention: index === 4,
-        unresolved_data_safety_issue: false,
-        unresolved_workspace_loss: false,
-        evidence_link: supportLink
-      }))
-    });
-
-    json(join(phase5, 'local-validation-report.json'), {
-      status: 'pass_local_automation',
-      source_commit: sourceCommit
-    });
-    json(join(phase5, 'dependency-review.json'), {
-      status: 'pass',
-      source_commit: sourceCommit,
-      npm: { audit_vulnerabilities: { critical: 0, high: 0 } },
-      rust: {
-        new_advisories: 0,
-        cargo_deny_version: 'cargo-deny 0.20.2'
-      }
-    });
-    const targetIds = [
-      'mysql-5.7.44',
-      'mysql-8.0.46',
-      'mysql-8.4.10',
-      'mariadb-10.11.18',
-      'mariadb-11.4.12'
-    ];
-    json(join(phase5, 'adapter-conformance-report.json'), {
       status: 'pass',
       tested_source: sourceCommit,
-      network_results: targetIds.map((id) => ({
+      network_results: [
+        'mysql-5.7.44',
+        'mysql-8.0.46',
+        'mysql-8.4.10',
+        'mariadb-10.11.18',
+        'mariadb-11.4.12'
+      ].map((id) => ({
         id,
         marker_verified: true,
         adapter: {
           supported_capability_profile: true,
-          table_editing: { optimistic_conflict_atomic_rollback: true }
+          table_editing: tableEditing
         }
       }))
-    });
-
-    const traceabilityRecords = [
-      ...Array.from({ length: 101 }, (_, index) => ({
-        id: `REQ-${String(index + 1).padStart(3, '0')}`,
-        kind: 'requirement',
-        priority: 'must',
-        status: 'verified',
-        automated_test_ids: ['P5-AUTO-SYNTHETIC'],
-        manual_procedure_ids: ['P5-MAN-SYNTHETIC'],
-        evidence_links: [supportLink]
-      })),
-      ...Array.from({ length: 20 }, (_, index) => ({
-        id: `AC-${String(index + 1).padStart(2, '0')}`,
-        kind: 'acceptance_criterion',
-        priority: 'must',
-        status: 'verified',
-        automated_test_ids: ['P5-AUTO-SYNTHETIC'],
-        manual_procedure_ids: ['P5-MAN-SYNTHETIC'],
-        evidence_links: [supportLink]
-      }))
-    ];
-    json(join(root, 'traceability', 'requirements.json'), {
-      schema_version: 1,
-      records: traceabilityRecords
-    });
-    json(join(root, 'evidence', 'release', 'manifest.json'), {
-      schema_version: 1,
-      release_status: 'ready_to_publish',
-      source_commit: sourceCommit,
+    }
+  );
+  const layouts = [2048, 1280, 960, 720].map((viewport_width) => ({
+    viewport_width,
+    document_scroll_width: viewport_width,
+    workbench_bottom: 1039,
+    footer_top: 1039,
+    footer_bottom: 1068,
+    footer_height: 29
+  }));
+  write(resolve(directory, 'evidence/phase-5/ui-layout-report.json'), {
+    ...sourceRecord,
+    status: 'pass',
+    layouts,
+    theme_labels: ['System', 'Light', 'Dark', 'Forest'],
+    dialog_themes: ['system', 'light', 'dark', 'forest'].map((theme) => ({
+      theme,
+      inside_theme_context: true,
+      background_color: 'rgb(255, 250, 240)'
+    }))
+  });
+  write(
+    resolve(directory, 'evidence/phase-5/windows-artifact-inspection.json'),
+    {
+      ...sourceRecord,
       application_version: '0.1.0',
-      release_tag: 'v0.1.0',
-      reviewed_artifacts: artifacts.map(({ id, name, bytes, sha256 }) => ({
-        id,
-        name,
-        bytes,
-        sha256
-      })),
-      checksums: ['evidence/phase-5/SHA256SUMS'],
-      approved_exceptions: []
-    });
+      status: 'pass',
+      environment: { os: 'win32', architecture: 'x64' },
+      artifacts: [{ ...artifact }],
+      updater_artifacts: false,
+      capability_and_csp_review: 'pass'
+    }
+  );
+  write(resolve(directory, 'evidence/phase-5/windows-checksums.json'), {
+    ...sourceRecord,
+    application_version: '0.1.0',
+    algorithm: 'sha256',
+    artifacts: [
+      {
+        name: artifact.name,
+        bytes: artifact.bytes,
+        sha256: artifact.sha256
+      }
+    ]
+  });
+  write(
+    resolve(directory, 'evidence/phase-5/SHA256SUMS'),
+    `${artifact.sha256}  ${artifact.name}\n`
+  );
+  write(resolve(directory, 'evidence/phase-5/packaging-results.json'), {
+    ...sourceRecord,
+    status: 'pass',
+    updater_artifacts: false,
+    checksum_verification: 'pass',
+    checksum_manifest: 'evidence/phase-5/SHA256SUMS',
+    artifacts: [artifact]
+  });
+  const postRelease = {
+    native_windows_owner_journey: 'unperformed',
+    manual_safety_accessibility_performance: 'unperformed',
+    fixed_five_day_dogfood: 'unperformed',
+    external_beta: 'deferred_single_participant'
+  };
+  write(resolve(directory, 'evidence/phase-5/product-owner-scope.json'), {
+    ...sourceRecord,
+    status: 'approved_revision',
+    decision:
+      'docs/architecture/0010-windows-first-release-validation-boundary.md',
+    release_platforms: ['windows-11-x64'],
+    initial_participants: 1,
+    post_release_validation: postRelease,
+    attestation: 'Unperformed checks are not represented as pass.'
+  });
+  const records = [
+    ...Array.from({ length: 101 }, (_, index) => ({
+      id: `REQ-${index + 1}`,
+      kind: 'requirement'
+    })),
+    ...Array.from({ length: 20 }, (_, index) => ({
+      id: `AC-${String(index + 1).padStart(2, '0')}`,
+      kind: 'acceptance_criterion'
+    }))
+  ].map((record) => ({
+    ...record,
+    priority: 'must',
+    status: 'verified',
+    automated_test_ids: ['P5-AUTO-SYNTHETIC'],
+    manual_procedure_ids: ['POST-RELEASE-OWNER-JOURNEY:SYNTHETIC'],
+    evidence_links: [
+      'evidence/phase-5/local-validation-report.json',
+      'evidence/phase-5/product-owner-scope.json'
+    ]
+  }));
+  write(resolve(directory, 'traceability/requirements.json'), {
+    schema_version: 1,
+    records
+  });
+  write(resolve(directory, 'evidence/release/manifest.json'), {
+    schema_version: 1,
+    release_status: 'ready_to_publish',
+    source_commit: sourceCommit,
+    application_version: '0.1.0',
+    release_tag: 'v0.1.0',
+    release_platforms: ['windows-11-x64'],
+    reviewed_artifacts: [
+      {
+        id: artifact.id,
+        name: artifact.name,
+        bytes: artifact.bytes,
+        sha256: artifact.sha256
+      }
+    ],
+    checksums: ['evidence/phase-5/SHA256SUMS'],
+    product_owner_scope: 'evidence/phase-5/product-owner-scope.json',
+    approved_exceptions: []
+  });
+  commit(directory, 'evidence');
+  return { directory, sourceCommit };
+}
 
-    git(root, 'add', '.');
-    git(root, 'commit', '--quiet', '-m', 'evidence');
-    const result = spawnSync(
-      process.execPath,
-      [join(root, 'scripts', 'audit-release-evidence.mjs')],
-      { cwd: root, encoding: 'utf8' }
-    );
+function audit(directory: string) {
+  return spawnSync('node', ['scripts/audit-release-evidence.mjs'], {
+    cwd: directory,
+    encoding: 'utf8'
+  });
+}
+
+describe('release evidence audit', () => {
+  it('accepts the exact Windows-first contract with explicit post-release non-claims', () => {
+    const fixture = createSyntheticEvidence();
+    const result = audit(fixture.directory);
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      'all 101 requirements and 20 criteria are verified'
+      '101 requirements, 20 acceptance criteria, 1 supported platform, and 1 reviewed artifact'
     );
+  });
+
+  it('rejects a fabricated passed owner journey', () => {
+    const fixture = createSyntheticEvidence();
+    const path = resolve(
+      fixture.directory,
+      'evidence/phase-5/product-owner-scope.json'
+    );
+    const scope = JSON.parse(readFileSync(path, 'utf8'));
+    scope.post_release_validation.native_windows_owner_journey = 'pass';
+    write(path, scope);
+    commit(fixture.directory, 'fabricated pass');
+    const result = audit(fixture.directory);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'product owner scope does not preserve the approved post-release non-claims'
+    );
+  });
+
+  it('rejects extra artifacts and checksum substitution', () => {
+    const fixture = createSyntheticEvidence();
+    const packagingPath = resolve(
+      fixture.directory,
+      'evidence/phase-5/packaging-results.json'
+    );
+    const packaging = JSON.parse(readFileSync(packagingPath, 'utf8'));
+    packaging.artifacts.push({
+      ...packaging.artifacts[0],
+      id: 'unreviewed-artifact',
+      name: 'unreviewed.exe'
+    });
+    write(packagingPath, packaging);
+    write(
+      resolve(fixture.directory, 'evidence/phase-5/SHA256SUMS'),
+      `${'f'.repeat(64)}  ${packaging.artifacts[0].name}\n`
+    );
+    commit(fixture.directory, 'tampered artifact evidence');
+    const result = audit(fixture.directory);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('unsupported artifact');
+    expect(result.stderr).toContain('checksums do not match inspection');
   });
 });

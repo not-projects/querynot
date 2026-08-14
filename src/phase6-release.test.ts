@@ -12,17 +12,7 @@ const read = (path: string) => readFileSync(path, 'utf8');
 const sha = (digit: string) => digit.repeat(64);
 
 const artifactRows = [
-  ['windows-nsis-x64', 'nsis', 'QueryNot_0.1.0_x64-setup.exe', 101, sha('1')],
-  ['macos-dmg-intel', 'dmg', 'QueryNot_0.1.0_x64.dmg', 102, sha('2')],
-  ['macos-dmg-apple', 'dmg', 'QueryNot_0.1.0_aarch64.dmg', 103, sha('3')],
-  [
-    'linux-appimage-x64',
-    'appimage',
-    'QueryNot_0.1.0_amd64.AppImage',
-    104,
-    sha('4')
-  ],
-  ['linux-deb-x64', 'deb', 'QueryNot_0.1.0_amd64.deb', 105, sha('5')]
+  ['windows-nsis-x64', 'nsis', 'QueryNot_0.1.0_x64-setup.exe', 101, sha('1')]
 ] as const;
 
 function contract() {
@@ -72,13 +62,13 @@ function contract() {
 }
 
 describe('Phase 6 publication boundary', () => {
-  it('accepts exactly the five reviewed artifacts and retained checksums', () => {
+  it('accepts exactly the reviewed Windows artifact and retained checksum', () => {
     const result = validatePublicationContract(contract());
 
     expect(result.status).toBe('pass');
     expect(result.release_tag).toBe('v0.1.0');
-    expect(result.artifacts).toHaveLength(5);
-    expect(parseChecksumManifest(contract().checksumText).size).toBe(5);
+    expect(result.artifacts).toHaveLength(1);
+    expect(parseChecksumManifest(contract().checksumText).size).toBe(1);
   });
 
   it('rejects substituted bytes, extra packages, and checksum path traversal', () => {
@@ -96,7 +86,7 @@ describe('Phase 6 publication boundary', () => {
       path: '/synthetic/unreviewed.exe'
     });
     expect(() => validatePublicationContract(extra)).toThrow(
-      'exactly five artifacts'
+      'exactly 1 artifact'
     );
 
     expect(() =>

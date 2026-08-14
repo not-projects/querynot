@@ -3,18 +3,14 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
-  accessibilityChecks,
-  aggregateSamples,
-  coreJourneyChecks,
-  familyNetworkChecks,
-  osMatrix,
-  performanceMeasurements
+  expectedArtifacts,
+  osMatrix
 } from '../scripts/release-evidence-contract.mjs';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
-describe('Phase 5 release-candidate boundaries', () => {
-  it('keeps versions aligned and updater generation disabled', () => {
+describe('Phase 5 Windows-first release boundary', () => {
+  it('keeps versions aligned, updater generation disabled, and Windows packaging constrained', () => {
     const packageJson = JSON.parse(read('package.json'));
     const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
     const cargo = read('Cargo.toml');
@@ -25,81 +21,81 @@ describe('Phase 5 release-candidate boundaries', () => {
     expect(tauri.bundle.active).toBe(true);
     expect(tauri.bundle.targets).toEqual([]);
     expect(tauri.bundle.createUpdaterArtifacts).toBe(false);
-    expect(tauri.bundle.icon).toContain('icons/128x128.png');
-    expect(tauri.bundle.icon).toContain('icons/icon.icns');
     expect(tauri.bundle.icon).toContain('icons/icon.ico');
     expect(tauri.bundle.windows.webviewInstallMode.type).toBe('skip');
     expect(tauri.bundle.windows.nsis.installMode).toBe('currentUser');
-    expect(tauri.bundle.macOS.minimumSystemVersion).toBe('13.0');
-    expect(tauri.bundle.macOS.signingIdentity).toBe('-');
-    expect(tauri.bundle.macOS.hardenedRuntime).toBe(true);
+    expect([...expectedArtifacts]).toEqual([['windows-nsis-x64', 'nsis']]);
+    expect(osMatrix).toEqual(['windows-11-x64']);
   });
 
-  it('builds exactly the five requested package families only on manual dispatch', () => {
+  it('builds exactly one Windows NSIS candidate only on manual dispatch', () => {
     const workflow = read('.github/workflows/ci.yml');
+    const candidate = workflow.split('  release-candidate-packages:')[1];
 
-    expect(workflow).toContain('release-candidate-packages:');
-    expect(workflow).toContain("if: github.event_name == 'workflow_dispatch'");
-    expect(workflow).toContain('expected_formats: deb,appimage');
-    expect(workflow).toContain('expected_formats: nsis');
-    expect(workflow.match(/expected_formats: dmg/g)).toHaveLength(2);
-    expect(workflow).toContain('macos-15-intel');
-    expect(workflow).toContain('macos-15');
-    expect(workflow).toContain('npm run release:inspect');
-    expect(workflow).toContain('npm run release:checksums');
+    expect(candidate).toContain("if: github.event_name == 'workflow_dispatch'");
+    expect(candidate).toContain('runner: windows-2022');
+    expect(candidate).toContain('package_script: package:windows');
+    expect(candidate).toContain('expected_formats: nsis');
+    expect(candidate).toContain('artifact_name: querynot-windows-x64');
+    expect(candidate).not.toContain('expected_formats: dmg');
+    expect(candidate).not.toContain('expected_formats: deb,appimage');
+    expect(candidate).toContain('npm run release:inspect');
+    expect(candidate).toContain('npm run release:checksums');
     expect(workflow).not.toContain('release-action');
     expect(workflow).not.toContain('create-release');
   });
 
-  it('pins every on-demand AppImage packaging helper before Tauri runs', () => {
-    const packageJson = JSON.parse(read('package.json'));
-    const inputs = JSON.parse(read('fixtures/release-tool-inputs.json'));
-    const fetcher = read('scripts/fetch-release-tools.mjs');
-    const packager = read('scripts/package-platform.mjs');
+  it('matches PostNot shared CI action and toolchain conventions', () => {
+    const ci = read('.github/workflows/ci.yml');
+    const release = read('.github/workflows/release.yml');
+    const toolchain = read('rust-toolchain.toml');
 
-    expect(packageJson.scripts['package:linux']).toBe(
-      'node scripts/package-platform.mjs linux'
-    );
-    expect(inputs.inputs).toHaveLength(5);
-    for (const input of inputs.inputs) {
-      expect(input.url).toMatch(
-        /^https:\/\/(github\.com|raw\.githubusercontent\.com)\//
-      );
-      expect(input.bytes).toBeGreaterThan(0);
-      expect(input.sha256).toMatch(/^[a-f0-9]{64}$/);
+    for (const workflow of [ci, release]) {
+      expect(workflow).toContain('actions/checkout@v5');
+      expect(workflow).toContain('actions/setup-node@v5');
+      expect(workflow).toContain('node-version: 24');
     }
-    expect(fetcher).toContain("createHash('sha256')");
-    expect(fetcher).toContain('exceeded its reviewed byte count');
-    expect(fetcher).toContain("resolve(cacheRoot, 'reviewed')");
-    expect(fetcher).toContain('copyFileSync(reviewed, working, 0)');
-    expect(packager).toContain('XDG_CACHE_HOME: cacheRoot');
-    expect(packager).toContain('CARGO_TARGET_DIR: targetRoot');
-    expect(packager).toContain(
-      'rmSync(targetRoot, { recursive: true, force: true })'
-    );
-    expect(packager.indexOf('fetch-release-tools.mjs')).toBeLessThan(
-      packager.indexOf("'build', '--bundles'")
+    expect(ci).toContain('dtolnay/rust-toolchain@1.97.0');
+    expect(ci).toContain('swatinem/rust-cache@v2');
+    expect(ci).toContain('workspaces: ./ -> target');
+    expect(toolchain).toContain('channel = "1.97.0"');
+    expect(ci).toContain('npx playwright install --with-deps chromium');
+    expect(ci).toContain('npm run test:ui-layout');
+  });
+
+  it('retains cross-platform compile checks without making release claims', () => {
+    const workflow = read('.github/workflows/ci.yml');
+    const compatibility = read('docs/compatibility-matrix.md');
+
+    expect(workflow).toContain('ubuntu-22.04');
+    expect(workflow).toContain('ubuntu-24.04');
+    expect(workflow).toContain('macos-15');
+    expect(workflow).toContain('macos-15-intel');
+    expect(workflow).toContain('windows-2022');
+    expect(compatibility).toContain('Sole supported and published 0.1.0 row');
+    expect(compatibility).toContain(
+      'Deferred; no `0.1.0` support or artifact claim'
     );
   });
 
-  it('documents checksum verification without global security bypasses', () => {
+  it('documents the unsigned Windows install and checksum flow without a global bypass', () => {
     const installation = read('docs/release/unsigned-installation.md');
 
     expect(installation).toContain('Get-FileHash -Algorithm SHA256');
-    expect(installation).toContain('shasum -a 256');
-    expect(installation).toContain('sha256sum');
     expect(installation).toContain('Microsoft Edge WebView2 runtime');
-    expect(installation).toContain('Open Anyway');
-    expect(installation).toContain('Do not disable Gatekeeper globally');
+    expect(installation).toContain('Windows 11');
     expect(installation).toContain('has no self-updater');
+    expect(installation).not.toContain('Open Anyway');
+    expect(installation).not.toContain('shasum -a 256');
+    expect(installation).not.toContain('sha256sum');
   });
 
-  it('keeps every human evidence template explicitly unperformed', () => {
+  it('keeps superseded manual templates explicitly unperformed', () => {
     const templates = readdirSync('evidence/phase-5/templates').filter((name) =>
       name.endsWith('.example.json')
     );
 
-    expect(templates).toHaveLength(9);
+    expect(templates.length).toBeGreaterThanOrEqual(9);
     for (const name of templates) {
       const record = JSON.parse(read(`evidence/phase-5/templates/${name}`));
       expect(record.schema_version).toBe(1);
@@ -108,104 +104,28 @@ describe('Phase 5 release-candidate boundaries', () => {
     }
   });
 
-  it('pre-expands the native and accessibility evidence to the exact release matrix', () => {
-    const operatingSystems = JSON.parse(
-      read('evidence/phase-5/templates/operating-system-results.example.json')
-    );
-    const accessibility = JSON.parse(
-      read('evidence/phase-5/templates/accessibility-results.example.json')
-    );
-
-    expect(
-      operatingSystems.results.map(({ id }: { id: string }) => id)
-    ).toEqual(osMatrix);
-    for (const result of operatingSystems.results) {
-      for (const packageJourney of result.packages) {
-        expect(Object.keys(packageJourney.journey_checks)).toEqual(
-          coreJourneyChecks
-        );
-      }
-    }
-    expect(
-      operatingSystems.family_network_journeys.map(
-        ({ id }: { id: string }) => id
-      )
-    ).toEqual(['windows', 'macos', 'linux']);
-    for (const journey of operatingSystems.family_network_journeys) {
-      expect(Object.keys(journey.checks)).toEqual(familyNetworkChecks);
-    }
-
-    expect(accessibility.results.map(({ id }: { id: string }) => id)).toEqual(
-      osMatrix
-    );
-    for (const result of accessibility.results) {
-      expect(Object.keys(result.checks)).toEqual(accessibilityChecks);
-      expect(result.combinations_reviewed).toBe(0);
-    }
-  });
-
-  it('defines recomputable statistics for every native performance measurement', () => {
-    const summary = JSON.parse(
-      read('evidence/phase-5/templates/performance-results.example.json')
-    );
-    const raw = JSON.parse(
-      read('evidence/phase-5/templates/performance-raw.example.json')
-    );
-
-    expect(Object.keys(summary.measurements)).toEqual([
-      ...performanceMeasurements.keys()
-    ]);
-    expect(Object.keys(raw.measurements)).toEqual([
-      ...performanceMeasurements.keys()
-    ]);
-    for (const [name, contract] of performanceMeasurements) {
-      expect(summary.measurements[name].aggregation).toBe(contract.aggregation);
-      expect(raw.measurements[name].aggregation).toBe(contract.aggregation);
-    }
-    expect(aggregateSamples([1, 2, 3, 4, 5], 'nearest_rank_p95')).toBe(5);
-    expect(aggregateSamples([1, 2, 3, 4, 5], 'maximum')).toBe(5);
-  });
-
-  it('fails closed on all external release evidence and traceability gates', () => {
+  it('fails closed on source-tied automation, package evidence, scope, and traceability', () => {
     const audit = read('scripts/audit-release-evidence.mjs');
     const procedures = read('docs/release/phase5-manual-procedures.md');
     const traceability = JSON.parse(read('traceability/requirements.json'));
 
     for (const evidence of [
-      'operating-system-results.json',
+      'local-validation-report.json',
+      'dependency-review.json',
+      'adapter-conformance-report.json',
+      'ui-layout-report.json',
+      'windows-artifact-inspection.json',
+      'windows-checksums.json',
       'packaging-results.json',
-      'accessibility-results.json',
-      'performance-results.json',
-      'manual-safety-review.json',
-      'security-review.json',
-      'dogfood-record.json',
-      'beta-record.json'
+      'product-owner-scope.json'
     ]) {
       expect(audit).toContain(evidence);
     }
-    for (const id of [
-      'windows-10-22h2-x64',
-      'windows-11-x64',
-      'macos-13-intel',
-      'macos-13-apple',
-      'macos-current-intel',
-      'macos-current-apple',
-      'ubuntu-22.04-x64',
-      'ubuntu-24.04-x64'
-    ]) {
-      expect(osMatrix).toContain(id);
-    }
-    expect(audit).toContain('days.length === 5');
-    expect(audit).toContain('participants.length >= 5');
-    expect(audit).toContain('raw sample set is incomplete');
-    expect(audit).toContain('family_network_journeys');
-    expect(audit).toContain('templates/');
-    expect(audit).toContain("record.priority === 'must'");
-    expect(audit).toContain(
-      "releaseManifest?.release_status === 'ready_to_publish'"
-    );
-    expect(audit).toContain('releaseManifest.approved_exceptions.length === 0');
-    expect(audit).toContain('must rows without Phase 5 evidence');
+    expect(audit).toContain("manifest?.release_status === 'ready_to_publish'");
+    expect(audit).toContain('manifest?.approved_exceptions?.length === 0');
+    expect(audit).toContain('Unperformed checks are not represented as pass.');
+    expect(audit).toContain("record?.priority === 'must'");
+
     const verificationIds = traceability.records.flatMap(
       (record: {
         automated_test_ids: string[];
@@ -213,19 +133,12 @@ describe('Phase 5 release-candidate boundaries', () => {
       }) => [...record.automated_test_ids, ...record.manual_procedure_ids]
     );
     expect(
-      verificationIds.some((id: string) => id.startsWith('PLANNED-'))
+      verificationIds.some((id: string) =>
+        /^(PLANNED|PENDING|P5-MAN)-/.test(id)
+      )
     ).toBe(false);
-    expect(
-      verificationIds.some((id: string) => id.startsWith('PENDING-'))
-    ).toBe(false);
-    expect(procedures).toContain('P5-MAN-OS-CORE');
-    expect(procedures).toContain('P5-MAN-A11Y');
-    expect(procedures).toContain('P5-MAN-PERF');
-    expect(procedures).toContain('P5-MAN-SAFETY');
-    expect(procedures).toContain('P5-MAN-SECURITY');
-    expect(procedures).toContain('P5-MAN-DOGFOOD');
-    expect(procedures).toContain('P5-MAN-BETA');
-    expect(procedures).toContain('P5-MAN-EVIDENCE');
+    expect(procedures).toContain('post-release');
+    expect(procedures).toContain('never `pass`');
   });
 
   it('does not attribute dirty application inputs to a committed release source', () => {
@@ -238,7 +151,6 @@ describe('Phase 5 release-candidate boundaries', () => {
     expect(inspection).toContain(
       'release artifact inspection refuses uncommitted application or packaging inputs'
     );
-    expect(inspection).toContain('architecture: arch()');
     expect(checksums).toContain(
       'release checksums refuse uncommitted application or packaging inputs'
     );

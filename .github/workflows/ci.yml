@@ -13,10 +13,10 @@ jobs:
   frontend-and-policy:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22.22.1
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run test:contracts
@@ -43,21 +43,24 @@ jobs:
           - macos-15-intel
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@1.97.0
         with:
-          toolchain: 1.94.0
           components: clippy,rustfmt
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./ -> target
       - run: cargo test --locked -p querynot-core
       - run: cargo clippy --locked -p querynot-core --all-targets -- -D warnings
 
   native-dependency-review:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: swatinem/rust-cache@v2
         with:
-          toolchain: 1.94.0
+          workspaces: ./ -> target
       - run: cargo install cargo-deny --version 0.20.2 --locked
       - run: cargo deny check advisories licenses bans sources
 
@@ -68,16 +71,17 @@ jobs:
         runner: [ubuntu-22.04, ubuntu-24.04]
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Tauri system dependencies
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22.22.1
+          node-version: 24
           cache: npm
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: swatinem/rust-cache@v2
         with:
-          toolchain: 1.94.0
+          workspaces: ./ -> target
       - run: npm ci
       - run: cargo check --locked --workspace --all-targets
 
@@ -88,14 +92,15 @@ jobs:
         runner: [windows-2022, macos-15, macos-15-intel]
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22.22.1
+          node-version: 24
           cache: npm
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: swatinem/rust-cache@v2
         with:
-          toolchain: 1.94.0
+          workspaces: ./ -> target
       - run: npm ci
       - run: cargo check --locked --workspace --all-targets
 
@@ -103,14 +108,15 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22.22.1
+          node-version: 24
           cache: npm
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: swatinem/rust-cache@v2
         with:
-          toolchain: 1.94.0
+          workspaces: ./ -> target
       - run: npm ci
       - run: npm run test:feasibility
       - uses: actions/upload-artifact@v4
@@ -124,43 +130,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-22.04
-            package_script: package:linux
-            binary: target/release-candidate-linux/release/querynot
-            bundle_directory: target/release-candidate-linux/release/bundle
-            expected_formats: deb,appimage
-            artifact_name: querynot-linux-x64
           - runner: windows-2022
             package_script: package:windows
             binary: target/release-candidate-windows/release/querynot.exe
             bundle_directory: target/release-candidate-windows/release/bundle
             expected_formats: nsis
             artifact_name: querynot-windows-x64
-          - runner: macos-15-intel
-            package_script: package:macos
-            binary: target/release-candidate-macos/release/querynot
-            bundle_directory: target/release-candidate-macos/release/bundle
-            expected_formats: dmg
-            artifact_name: querynot-macos-intel
-          - runner: macos-15
-            package_script: package:macos
-            binary: target/release-candidate-macos/release/querynot
-            bundle_directory: target/release-candidate-macos/release/bundle
-            expected_formats: dmg
-            artifact_name: querynot-macos-apple
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Tauri system dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22.22.1
+          node-version: 24
           cache: npm
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: swatinem/rust-cache@v2
         with:
-          toolchain: 1.94.0
+          workspaces: ./ -> target
       - run: npm ci
       - run: npm run ${{ matrix.package_script }}
       - name: Prepare retained candidate records
@@ -174,9 +163,6 @@ jobs:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
           path: |
-            target/release-candidate-*/release/bundle/**/*.AppImage
-            target/release-candidate-*/release/bundle/**/*.deb
-            target/release-candidate-*/release/bundle/**/*.dmg
             target/release-candidate-*/release/bundle/**/*.exe
             artifacts/release-candidate/**
 
@@ -185,10 +171,10 @@ jobs:
     needs: release-candidate-packages
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 22.22.1
+          node-version: 24
           cache: npm
       - uses: actions/download-artifact@v4
         with:

@@ -1,59 +1,14 @@
 import { basename } from 'node:path';
 
-export const osMatrix = [
-  'windows-10-22h2-x64',
-  'windows-11-x64',
-  'macos-13-intel',
-  'macos-13-apple',
-  'macos-current-intel',
-  'macos-current-apple',
-  'ubuntu-22.04-x64',
-  'ubuntu-24.04-x64'
-];
+export const osMatrix = ['windows-11-x64'];
 
-export const osArchitectures = new Map([
-  ['windows-10-22h2-x64', 'x86_64'],
-  ['windows-11-x64', 'x86_64'],
-  ['macos-13-intel', 'x86_64'],
-  ['macos-13-apple', 'aarch64'],
-  ['macos-current-intel', 'x86_64'],
-  ['macos-current-apple', 'aarch64'],
-  ['ubuntu-22.04-x64', 'x86_64'],
-  ['ubuntu-24.04-x64', 'x86_64']
-]);
+export const osArchitectures = new Map([['windows-11-x64', 'x86_64']]);
 
-export const osFamilies = new Map([
-  ['windows', ['windows-10-22h2-x64', 'windows-11-x64']],
-  [
-    'macos',
-    [
-      'macos-13-intel',
-      'macos-13-apple',
-      'macos-current-intel',
-      'macos-current-apple'
-    ]
-  ],
-  ['linux', ['ubuntu-22.04-x64', 'ubuntu-24.04-x64']]
-]);
+export const osFamilies = new Map([['windows', ['windows-11-x64']]]);
 
-export const expectedArtifacts = new Map([
-  ['windows-nsis-x64', 'nsis'],
-  ['macos-dmg-intel', 'dmg'],
-  ['macos-dmg-apple', 'dmg'],
-  ['linux-appimage-x64', 'appimage'],
-  ['linux-deb-x64', 'deb']
-]);
+export const expectedArtifacts = new Map([['windows-nsis-x64', 'nsis']]);
 
-export const osArtifacts = new Map([
-  ['windows-10-22h2-x64', ['windows-nsis-x64']],
-  ['windows-11-x64', ['windows-nsis-x64']],
-  ['macos-13-intel', ['macos-dmg-intel']],
-  ['macos-13-apple', ['macos-dmg-apple']],
-  ['macos-current-intel', ['macos-dmg-intel']],
-  ['macos-current-apple', ['macos-dmg-apple']],
-  ['ubuntu-22.04-x64', ['linux-appimage-x64', 'linux-deb-x64']],
-  ['ubuntu-24.04-x64', ['linux-appimage-x64', 'linux-deb-x64']]
-]);
+export const osArtifacts = new Map([['windows-11-x64', ['windows-nsis-x64']]]);
 
 export const coreJourneyChecks = [
   'first_run_shell_offline',
