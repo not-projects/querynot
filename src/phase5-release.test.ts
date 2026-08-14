@@ -96,6 +96,8 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(compose).toContain('127.0.0.1:${QUERYNOT_MYSQL84_PORT}:3306');
     expect(compose).toContain('127.0.0.1:${QUERYNOT_MARIADB114_PORT}:3306');
     expect(compose).not.toContain('127.0.0.1::3306');
+    expect(compose).toContain('driver: bridge');
+    expect(compose).not.toContain('internal: true');
     expect(feasibility).toContain(".replaceAll(password, '[REDACTED]')");
     expect(feasibility).toContain(
       "['logs', '--no-color', '--timestamps', '--tail', '200']"

@@ -83,4 +83,7 @@ services:
 
 networks:
   fixture:
-    internal: true
+    # The harness runs on the host and reaches only the three random ports
+    # published above on 127.0.0.1. An internal network has no host gateway and
+    # therefore makes those loopback bindings unreachable on Docker Engine.
+    driver: bridge
