@@ -9,7 +9,7 @@ QueryNot is a planned local-first desktop SQL client focused on a fast, calm, an
 
 ## Project Status
 
-QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, the locally implemented Phase 4 productivity and safe-data-editing slice, and a Phase 5 release-candidate validation framework. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Unsigned package configuration, checksum and artifact inspection, fail-closed evidence auditing, and executable native/manual procedures now exist. This remains development behavior, not a release-tested support claim: the exact cross-platform packages and journeys, accessibility, native performance, named safety/security review, dogfood, beta, and final release gates remain incomplete.
+QueryNot is in pre-alpha development. The repository contains the Phase 0 scaffold, Phase 1 secure foundation, Phase 2 SQLite vertical slice, Phase 3 MySQL-family parity, the locally implemented Phase 4 productivity and safe-data-editing slice, a Phase 5 release-candidate validation framework, and fail-closed Phase 6 publication preparation. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB development matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Unsigned package configuration, checksum and artifact inspection, fail-closed evidence/publication auditing, and executable native/manual procedures now exist. This remains development behavior, not a release-tested support claim: the exact cross-platform packages and journeys, accessibility, native performance, named safety/security review, dogfood, beta, and final release gates remain incomplete.
 
 The planned application stack is:
 
@@ -63,6 +63,7 @@ npm run tauri -- build --no-bundle
 npm run package:linux
 npm run test:release-evidence
 npm run verify:phase5:local
+npm run release:prepare-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.0 --confirm publish-v0.1.0 --report artifacts/publication-plan.json
 ```
 
 `npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for the pending Windows/macOS/Linux OS-vault and manual accessibility procedures.
@@ -76,6 +77,8 @@ npm run verify:phase5:local
 Phase 5 prepares unsigned NSIS, architecture-specific DMG, AppImage, and Debian packages without updater artifacts. `npm run package:linux` has produced and inspected the two Linux candidate formats locally. Windows and macOS package jobs are configured for manual CI dispatch but are not evidence until they run and their native journeys pass. `npm run test:release-evidence` intentionally fails while any required native, human, traceability, or release-manifest record is absent. Follow the [unsigned installation guide](docs/release/unsigned-installation.md) and [Phase 5 procedures](docs/release/phase5-manual-procedures.md); do not infer a support claim from a successful build.
 
 `npm run verify:phase5:local` has passed for the commit recorded in `evidence/phase-5/local-validation-report.json`. It reruns the complete local regression, exact dependency gates, five-server candidate conformance, and isolated Linux package/inspection/checksum path. Its explicit incomplete phase gate is authoritative: it does not replace the eight native OS/package journeys, native accessibility and performance, named safety/security review, fixed five-day dogfood period, five-person beta, or final all-20 evidence audit.
+
+The Phase 6 publication command is intended for the manual release workflow after the Phase 5 gate. It reruns that gate, rejects substituted or extra artifacts, stages only the five reviewed package bytes and retained checksum file, and requires an exact release confirmation. The workflow creates and round-trip verifies a draft before publication; it never rebuilds or overwrites a candidate. The command is expected to fail while the manifest remains incomplete.
 
 `npm run test:feasibility` additionally requires Docker and starts only generated disposable MySQL/MariaDB fixtures on random loopback ports. It never discovers an existing database. See [fixture isolation](docs/testing/fixture-isolation.md) before running database tests.
 

@@ -71,10 +71,12 @@ Obtain explicit opt-in from at least five external developers and assign private
 
 ## P5-MAN-EVIDENCE — final Phase 5 gate
 
-After all candidate evidence is committed, update every traceability row to `verified` with exact evidence links, freeze exact OS/runtime/package/database combinations in the compatibility matrix, and update `evidence/release/manifest.json` with the exact source commit, five reviewed artifacts, checksum path, Phase 5 reports, and zero exceptions. Set `release_status` to `ready_to_publish` only then. From a clean checkout at that exact commit, run:
+After all candidate evidence is committed, update every traceability row to `verified` with exact evidence links, freeze exact OS/runtime/package/database combinations in the compatibility matrix, and update `evidence/release/manifest.json` with the exact source commit, application version and release tag, five reviewed artifact filenames/byte counts/digests, the sole retained checksum path, Phase 5 reports, and zero exceptions. Set `release_status` to `ready_to_publish` only then. From a clean checkout at that exact commit, run:
 
 ```sh
 npm run test:release-evidence
 ```
 
 The command must pass with all 101 requirements and all 20 acceptance criteria verified. A missing file, stale commit, unsupported claim, placeholder, evidence link outside the Phase 5 bundle, incomplete dogfood/beta record, or unverified must row blocks Phase 6.
+
+After it passes, manually dispatch `.github/workflows/release.yml` from the evidence commit with the successful candidate packaging run ID and the literal `publish-v0.1.0` confirmation. The workflow downloads rather than rebuilds the candidate, reruns this evidence gate, matches all package bytes to the manifest and `SHA256SUMS`, creates an unpublished draft tagged at the audited evidence commit, round-trip verifies the draft assets, and publishes only after that verification. The manifest and audit retain the distinct reviewed binary source commit, while the tag exposes the frozen matrix and evidence closure. A failed run may leave a draft and tag for deliberate inspection; do not overwrite or delete them without resolving the failure.

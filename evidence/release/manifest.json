@@ -2,6 +2,8 @@
   "schema_version": 1,
   "release_status": "incomplete",
   "source_commit": null,
+  "application_version": "0.1.0",
+  "release_tag": "v0.1.0",
   "reviewed_artifacts": [],
   "checksums": [],
   "phase_validation_reports": [

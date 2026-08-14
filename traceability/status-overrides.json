@@ -890,7 +890,8 @@
       "automated_test_ids": [
         "P5-AUTO-RELEASE-CONTRACTS",
         "P5-AUTO-ARTIFACT-INSPECTION",
-        "P5-AUTO-CHECKSUMS"
+        "P5-AUTO-CHECKSUMS",
+        "P6-AUTO-PUBLICATION-GUARD"
       ],
       "manual_procedure_ids": ["P5-MAN-OS-CORE"]
     },
@@ -940,7 +941,8 @@
       ],
       "automated_test_ids": [
         "P5-AUTO-RELEASE-EVIDENCE",
-        "P5-AUTO-ADAPTER-CONFORMANCE"
+        "P5-AUTO-ADAPTER-CONFORMANCE",
+        "P6-AUTO-PUBLICATION-GUARD"
       ],
       "manual_procedure_ids": ["P5-MAN-BETA", "P5-MAN-EVIDENCE"]
     },

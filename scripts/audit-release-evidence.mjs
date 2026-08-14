@@ -73,6 +73,7 @@ const releaseManifest = readJson(
   resolve(root, 'evidence', 'release', 'manifest.json'),
   'release manifest'
 );
+const packageJson = readJson(resolve(root, 'package.json'), 'package.json');
 const sourceCommit = releaseManifest?.source_commit;
 requireCondition(
   typeof sourceCommit === 'string' && /^[a-f0-9]{40}$/.test(sourceCommit),
@@ -81,6 +82,14 @@ requireCondition(
 requireCondition(
   releaseManifest?.release_status === 'ready_to_publish',
   'release manifest is not ready_to_publish'
+);
+requireCondition(
+  releaseManifest?.application_version === packageJson?.version,
+  'release manifest application version does not match package.json'
+);
+requireCondition(
+  releaseManifest?.release_tag === `v${packageJson?.version}`,
+  'release manifest tag does not match package.json'
 );
 const sourceAncestor = spawnSync(
   'git',
@@ -402,14 +411,18 @@ for (const [id] of expectedArtifacts) {
   const artifact = artifacts.get(id);
   const reviewed = reviewedArtifacts.get(id);
   requireCondition(
-    reviewed?.name === artifact?.name && reviewed?.sha256 === artifact?.sha256,
+    reviewed?.name === artifact?.name &&
+      reviewed?.bytes === artifact?.bytes &&
+      reviewed?.sha256 === artifact?.sha256,
     `release manifest does not match reviewed artifact ${id}`
   );
 }
 requireCondition(
   Array.isArray(releaseManifest?.checksums) &&
-    releaseManifest.checksums.some(validEvidenceLink),
-  'release manifest has no retained checksum file'
+    releaseManifest.checksums.length === 1 &&
+    releaseManifest.checksums[0] === evidence.packaging?.checksum_manifest &&
+    validEvidenceLink(releaseManifest.checksums[0]),
+  'release manifest does not identify exactly the reviewed checksum file'
 );
 
 const accessibility = evidence.accessibility ?? {};
