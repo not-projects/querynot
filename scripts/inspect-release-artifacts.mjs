@@ -11,6 +11,8 @@ import { spawnSync } from 'node:child_process';
 import { arch, platform, release } from 'node:os';
 import { parseArgs } from 'node:util';
 
+import { porcelainPaths } from './release-source-state.mjs';
+
 const root = resolve(import.meta.dirname, '..');
 const { values } = parseArgs({
   options: {
@@ -146,12 +148,9 @@ const gitStatus = spawnSync(
 );
 if (gitStatus.status !== 0)
   throw new Error('could not inspect the release source tree');
-const disallowedChanges = gitStatus.stdout
-  .trim()
-  .split('\n')
-  .filter(Boolean)
-  .map((line) => line.slice(3))
-  .filter((path) => !path.startsWith('evidence/phase-5/'));
+const disallowedChanges = porcelainPaths(gitStatus.stdout).filter(
+  (path) => !path.startsWith('evidence/phase-5/')
+);
 if (disallowedChanges.length > 0) {
   throw new Error(
     'release artifact inspection refuses uncommitted application or packaging inputs'

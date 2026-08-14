@@ -6,6 +6,7 @@ import {
   parseChecksumManifest,
   validatePublicationContract
 } from '../scripts/release-publication.mjs';
+import { porcelainPaths } from '../scripts/release-source-state.mjs';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 const sha = (digit: string) => digit.repeat(64);
@@ -101,6 +102,17 @@ describe('Phase 6 publication boundary', () => {
     expect(() =>
       parseChecksumManifest(`${sha('1')}  ../QueryNot.exe\n`)
     ).toThrow('invalid line');
+  });
+
+  it('preserves the leading porcelain status column for the first evidence path', () => {
+    expect(
+      porcelainPaths(
+        ' M evidence/phase-5/adapter-conformance-report.json\n?? evidence/phase-5/new.json\n'
+      )
+    ).toEqual([
+      'evidence/phase-5/adapter-conformance-report.json',
+      'evidence/phase-5/new.json'
+    ]);
   });
 
   it('publishes only by manual confirmation after a round-trip draft check', () => {
