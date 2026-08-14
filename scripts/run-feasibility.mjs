@@ -8,6 +8,7 @@ import {
   writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
@@ -23,12 +24,55 @@ const tlsAuthorityDirectory = resolve(runtimeDirectory, 'tls-authority');
 const password = randomBytes(24).toString('base64url');
 const markerToken = randomBytes(32).toString('hex');
 const composeProject = `querynot-feasibility-${process.pid}`;
+const fixturePorts = await reserveLoopbackPorts([
+  'mysql57',
+  'mysql84',
+  'mariadb114'
+]);
 const composeEnvironment = {
   ...process.env,
   QUERYNOT_FIXTURE_PASSWORD: password,
   QUERYNOT_FIXTURE_INIT_SQL: initSqlPath,
-  QUERYNOT_FIXTURE_TLS: tlsDirectory
+  QUERYNOT_FIXTURE_TLS: tlsDirectory,
+  QUERYNOT_MYSQL57_PORT: String(fixturePorts.mysql57),
+  QUERYNOT_MYSQL84_PORT: String(fixturePorts.mysql84),
+  QUERYNOT_MARIADB114_PORT: String(fixturePorts.mariadb114)
 };
+
+async function reserveLoopbackPorts(serviceNames) {
+  const reservations = await Promise.all(
+    serviceNames.map(
+      (service) =>
+        new Promise((resolveReservation, rejectReservation) => {
+          const server = createServer();
+          server.unref();
+          server.once('error', rejectReservation);
+          server.listen(0, '127.0.0.1', () => {
+            const address = server.address();
+            if (!address || typeof address === 'string') {
+              server.close();
+              rejectReservation(
+                new Error(`could not reserve a loopback port for ${service}`)
+              );
+              return;
+            }
+            resolveReservation({ service, port: address.port, server });
+          });
+        })
+    )
+  );
+  await Promise.all(
+    reservations.map(
+      ({ server }) =>
+        new Promise((resolveClose, rejectClose) =>
+          server.close((error) => (error ? rejectClose(error) : resolveClose()))
+        )
+    )
+  );
+  return Object.fromEntries(
+    reservations.map(({ service, port }) => [service, port])
+  );
+}
 
 function command(program, commandArguments, options = {}) {
   const result = spawnSync(program, commandArguments, {

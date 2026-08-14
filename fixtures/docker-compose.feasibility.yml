@@ -5,21 +5,25 @@ services:
     image: mysql:5.7.44
     command:
       [
-        "--tls-version=TLSv1.2",
-        "--ssl-ca=/querynot-tls/ca.pem",
-        "--ssl-cert=/querynot-tls/server.pem",
-        "--ssl-key=/querynot-tls/server-key.pem",
+        '--tls-version=TLSv1.2',
+        '--ssl-ca=/querynot-tls/ca.pem',
+        '--ssl-cert=/querynot-tls/server.pem',
+        '--ssl-key=/querynot-tls/server-key.pem'
       ]
     environment:
       MYSQL_ROOT_PASSWORD: ${QUERYNOT_FIXTURE_PASSWORD}
-      MYSQL_ROOT_HOST: "%"
+      MYSQL_ROOT_HOST: '%'
     ports:
-      - "127.0.0.1::3306"
+      - '127.0.0.1:${QUERYNOT_MYSQL57_PORT}:3306'
     volumes:
-      - "${QUERYNOT_FIXTURE_INIT_SQL}:/docker-entrypoint-initdb.d/001-querynot.sql:ro"
-      - "${QUERYNOT_FIXTURE_TLS}:/querynot-tls:ro"
+      - '${QUERYNOT_FIXTURE_INIT_SQL}:/docker-entrypoint-initdb.d/001-querynot.sql:ro'
+      - '${QUERYNOT_FIXTURE_TLS}:/querynot-tls:ro'
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD --silent'
+        ]
       interval: 2s
       timeout: 3s
       retries: 60
@@ -29,21 +33,25 @@ services:
     image: mysql:8.4.10
     command:
       [
-        "--tls-version=TLSv1.2",
-        "--ssl-ca=/querynot-tls/ca.pem",
-        "--ssl-cert=/querynot-tls/server.pem",
-        "--ssl-key=/querynot-tls/server-key.pem",
+        '--tls-version=TLSv1.2',
+        '--ssl-ca=/querynot-tls/ca.pem',
+        '--ssl-cert=/querynot-tls/server.pem',
+        '--ssl-key=/querynot-tls/server-key.pem'
       ]
     environment:
       MYSQL_ROOT_PASSWORD: ${QUERYNOT_FIXTURE_PASSWORD}
-      MYSQL_ROOT_HOST: "%"
+      MYSQL_ROOT_HOST: '%'
     ports:
-      - "127.0.0.1::3306"
+      - '127.0.0.1:${QUERYNOT_MYSQL84_PORT}:3306'
     volumes:
-      - "${QUERYNOT_FIXTURE_INIT_SQL}:/docker-entrypoint-initdb.d/001-querynot.sql:ro"
-      - "${QUERYNOT_FIXTURE_TLS}:/querynot-tls:ro"
+      - '${QUERYNOT_FIXTURE_INIT_SQL}:/docker-entrypoint-initdb.d/001-querynot.sql:ro'
+      - '${QUERYNOT_FIXTURE_TLS}:/querynot-tls:ro'
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD --silent"]
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD --silent'
+        ]
       interval: 2s
       timeout: 3s
       retries: 60
@@ -53,21 +61,21 @@ services:
     image: mariadb:11.4.12
     command:
       [
-        "--tls-version=TLSv1.2",
-        "--ssl-ca=/querynot-tls/ca.pem",
-        "--ssl-cert=/querynot-tls/server.pem",
-        "--ssl-key=/querynot-tls/server-key.pem",
+        '--tls-version=TLSv1.2',
+        '--ssl-ca=/querynot-tls/ca.pem',
+        '--ssl-cert=/querynot-tls/server.pem',
+        '--ssl-key=/querynot-tls/server-key.pem'
       ]
     environment:
       MARIADB_ROOT_PASSWORD: ${QUERYNOT_FIXTURE_PASSWORD}
-      MARIADB_ROOT_HOST: "%"
+      MARIADB_ROOT_HOST: '%'
     ports:
-      - "127.0.0.1::3306"
+      - '127.0.0.1:${QUERYNOT_MARIADB114_PORT}:3306'
     volumes:
-      - "${QUERYNOT_FIXTURE_INIT_SQL}:/docker-entrypoint-initdb.d/001-querynot.sql:ro"
-      - "${QUERYNOT_FIXTURE_TLS}:/querynot-tls:ro"
+      - '${QUERYNOT_FIXTURE_INIT_SQL}:/docker-entrypoint-initdb.d/001-querynot.sql:ro'
+      - '${QUERYNOT_FIXTURE_TLS}:/querynot-tls:ro'
     healthcheck:
-      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      test: ['CMD-SHELL', 'healthcheck.sh --connect --innodb_initialized']
       interval: 2s
       timeout: 3s
       retries: 60

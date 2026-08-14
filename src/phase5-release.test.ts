@@ -79,11 +79,20 @@ describe('Phase 5 Windows-first release boundary', () => {
 
   it('makes disposable TLS mounts traversable and redacts failed-service diagnostics', () => {
     const feasibility = read('scripts/run-feasibility.mjs');
+    const compose = read('fixtures/docker-compose.feasibility.yml');
 
     expect(feasibility).toContain('mkdirSync(tlsDirectory, { mode: 0o755 })');
     expect(feasibility).toContain(
       "writeFileSync(initSqlPath, initSql(), { encoding: 'utf8', mode: 0o644 })"
     );
+    expect(feasibility).toContain("server.listen(0, '127.0.0.1'");
+    expect(feasibility).toContain('QUERYNOT_MYSQL57_PORT');
+    expect(feasibility).toContain('QUERYNOT_MYSQL84_PORT');
+    expect(feasibility).toContain('QUERYNOT_MARIADB114_PORT');
+    expect(compose).toContain('127.0.0.1:${QUERYNOT_MYSQL57_PORT}:3306');
+    expect(compose).toContain('127.0.0.1:${QUERYNOT_MYSQL84_PORT}:3306');
+    expect(compose).toContain('127.0.0.1:${QUERYNOT_MARIADB114_PORT}:3306');
+    expect(compose).not.toContain('127.0.0.1::3306');
     expect(feasibility).toContain(".replaceAll(password, '[REDACTED]')");
     expect(feasibility).toContain(
       "['logs', '--no-color', '--timestamps', '--tail', '200']"
