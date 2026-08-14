@@ -126,14 +126,19 @@ try {
     maxBuffer: 16 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe']
   });
+  const evidenceGateOutput = `${evidenceGate.stderr ?? ''}${evidenceGate.stdout ?? ''}`;
+  const expectedPreCandidateFailures = [
+    'release manifest is not ready_to_publish',
+    'application or packaging inputs changed after the release source commit'
+  ];
   if (
     evidenceGate.status === 0 ||
-    !`${evidenceGate.stderr ?? ''}${evidenceGate.stdout ?? ''}`.includes(
-      'release manifest is not ready_to_publish'
+    !expectedPreCandidateFailures.some((message) =>
+      evidenceGateOutput.includes(message)
     )
   ) {
     throw new Error(
-      'incomplete Phase 5 evidence did not fail closed for the expected reason'
+      'incomplete or prior-candidate Phase 5 evidence did not fail closed for the expected reason'
     );
   }
   checks.push({

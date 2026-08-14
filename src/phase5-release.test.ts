@@ -158,6 +158,7 @@ describe('Phase 5 Windows-first release boundary', () => {
 
   it('fails closed on source-tied automation, package evidence, scope, and traceability', () => {
     const audit = read('scripts/audit-release-evidence.mjs');
+    const localVerification = read('scripts/verify-phase5-local.mjs');
     const procedures = read('docs/release/phase5-manual-procedures.md');
     const traceability = JSON.parse(read('traceability/requirements.json'));
 
@@ -177,6 +178,9 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(audit).toContain('manifest?.approved_exceptions?.length === 0');
     expect(audit).toContain('Unperformed checks are not represented as pass.');
     expect(audit).toContain("record?.priority === 'must'");
+    expect(localVerification).toContain(
+      'application or packaging inputs changed after the release source commit'
+    );
 
     const verificationIds = traceability.records.flatMap(
       (record: {
