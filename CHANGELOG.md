@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Kept CodeMirror mounted and focused through normal SQL typing by untracking one-time attachment initialization while retaining targeted reactive document, dialect, wrapping, and editable-state updates.
+
+### Changed
+
+- Nested query and table-data tabs under their saved connection profiles, added an Offline group for unbound files and drafts, and removed the duplicate horizontal tab strip.
+- Kept Connect and Disconnect at profile level while lazily opening one isolated native session for each selected child; new children on connected profiles open immediately, restored unused children remain offline, failed opens expose scoped Retry, and pending opens block close, disconnect, and updater handoff.
+- Moved CSV formula-prefix, NULL-token, and binary-format guidance inside the expanded Export control instead of displaying it whenever result rows exist.
+
 ## [0.1.2] - 2026-08-20
 
 ### Fixed

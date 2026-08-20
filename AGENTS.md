@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.1 is the current published Windows 11 x86-64 release and the first release on the signed-updater channel; the source tree is prepared as 0.1.2 pending signed candidate validation and publication.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.2 is the current published Windows 11 x86-64 release on the signed-updater channel. Stable SQL editing and connection-grouped tabs are Unreleased work after 0.1.2.
 
 > Query your data, not your patience.
 
@@ -38,14 +38,16 @@ The repository contains the completed Phase 0–6 implementation and release evi
 
 Connection creation uses one immutable Server/File choice. One explicitly selected database file is probed read-only and detected as SQLite behind an opaque native grant; it is never discovered by scanning. SQL document actions live in the File menu. Safe window close is silent, while actionable native work keeps the window open and focuses its blocker. The persisted query/results split is pointer- and keyboard-resizable from 20–70%.
 
-The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011 and was published from the exact reviewed candidate recorded under `evidence/release-updates/0.1.1`. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
+Unreleased work keeps the CodeMirror instance mounted through normal typing and derives connection-grouped sidebar tabs from the unchanged flat workspace. Connect/Disconnect remain profile-level; selecting a child under a connected profile lazily opens that child's isolated native session, while unused restored children remain offline. CSV safety guidance is disclosed inside Export.
+
+The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011; version 0.1.2 is the current published release. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
 
 ## Verified Commands
 
 - `npm install` — install the exact frontend/Tauri CLI lockfile.
 - `npm run check` — Svelte and TypeScript diagnostics.
 - `npm run test` — frontend/policy unit tests with a repository-local temporary directory.
-- `npm run test:ui-layout` — Chromium regression checks for large/narrow status-bar geometry, PostNot theme names, and opaque themed dialogs; install the pinned browser once with `npx playwright install chromium`.
+- `npm run test:ui-layout` — Chromium regression checks for large/narrow status-bar geometry, PostNot theme names, opaque themed dialogs, and stable CodeMirror node/focus behavior through typing and recovery debounce; install the pinned browser once with `npx playwright install chromium`.
 - `npm run build` — production frontend build.
 - `npm run test:contracts` — generated Rust/TypeScript command contract drift check.
 - `npm run test:traceability` — PRD/matrix coverage and evidence invariant check.

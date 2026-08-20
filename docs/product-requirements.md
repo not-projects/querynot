@@ -153,8 +153,8 @@ Database administrators are not a primary initial-release audience.
 
 QueryNot uses an editor-first workbench:
 
-- A persistent left sidebar contains saved connections and the active connection's schema tree.
-- The main region contains connection-bound query and table-data tabs.
+- A persistent left sidebar contains saved connections, their collapsible query/table-data children, one Offline group for unbound files and detached drafts, and the active connection's schema tree.
+- The main region contains the active query or table-data child without a duplicate global tab strip.
 - A compact context bar shows engine, connection, database or schema, and transaction state.
 - The editor occupies the primary canvas.
 - Results, messages, and related execution details appear directly below the editor in a resizable region.
@@ -228,11 +228,11 @@ The default journey is:
 
 ### 8.2 Workspace and tabs
 
-**WKS-1 — Connection-bound tabs.** Every query and table-data tab is visibly bound to one connection profile and one current catalog/database/schema context. Tabs from different connections may coexist in one window.
+**WKS-1 — Connection-bound tabs.** Every query and table-data tab is visibly nested under one connection profile and one current catalog/database/schema context. Unbound SQL files and detached drafts are visibly nested under Offline. Tabs from different connections may coexist in one window.
 
 **WKS-2 — Context visibility.** The active tab must show connection name, detected engine, database/schema, transaction mode, and running/idle state without requiring a menu.
 
-**WKS-3 — Multiple tabs.** Users can create, rename, reorder, duplicate, pin, and close query tabs. Closing a tab with unsaved file changes, uncommitted transaction work, staged row edits, or a running query requires an explicit decision.
+**WKS-3 — Multiple tabs.** Users can create, rename, reorder, duplicate, pin, and close query tabs. Pinning and reordering stay within the owning connection or Offline group; moving a tab between groups requires a separate explicit binding design. Closing a tab with unsaved file changes, uncommitted transaction work, staged row edits, or a running query requires an explicit decision.
 
 **WKS-4 — Session restoration.** When restoration is enabled, QueryNot restores open tabs, unsaved drafts, tab order, connection bindings, selected database/schema, panel sizes including the 20–70% query/results split, and the last active tab after a normal restart or recoverable crash. It does not automatically reconnect profiles unless the user enables that preference.
 
@@ -240,7 +240,7 @@ The default journey is:
 
 **WKS-6 — Disconnect behavior.** Tabs survive a disconnect in an offline state. The user can reconnect and run again without losing editor content.
 
-**WKS-7 — Session isolation.** Each connected query or table-data tab owns one dedicated native session. Tabs created from the same profile must not share transaction state, temporary objects, session variables, current database/schema, cancellation, or active results. Different tabs may execute concurrently; one tab permits at most one active execution.
+**WKS-7 — Session isolation.** Each online query or table-data tab owns one dedicated native session, created lazily when that child is selected after its profile is connected or immediately when a new child is created under an established connection. Unused restored children do not eagerly open sessions. Tabs created from the same profile must not share transaction state, temporary objects, session variables, current database/schema, cancellation, or active results. Different tabs may execute concurrently; one tab permits at most one active execution.
 
 **WKS-8 — Context changes.** Changing the active database/schema updates only the active tab's native session. A context change is blocked while that tab has an active execution, open transaction, or staged row edits. The resulting context must be confirmed by the adapter before the UI displays it as active.
 
@@ -248,11 +248,11 @@ The default journey is:
 
 **WKS-10 — External file changes.** Before overwriting an opened SQL file, QueryNot compares its last-known file identity and modification state. If the file changed externally, moved, or became unavailable, Save must stop and offer review, Save as, or cancel. Autosaved draft data never writes through to the source file.
 
-**WKS-11 — Single-window baseline.** The initial release uses one application window. Opening a supported file while QueryNot is running routes it into that window without executing it. A safe window close silently saves the local recovery snapshot, closes clean native sessions, and exits without writing SQL source files. Running jobs, unresolved transactions, staged table edits, connection setup, recovery failure, or dirty drafts while restoration is disabled keep the window open, select the affected context when available, and show the exact next action instead of opening a generic close-decision dialog.
+**WKS-11 — Single-window baseline.** The initial release uses one application window. Opening a supported file while QueryNot is running routes it into that window without executing it. A safe window close silently saves the local recovery snapshot, closes clean native sessions, and exits without writing SQL source files. Running jobs, unresolved transactions, staged table edits, profile or tab-session setup, recovery failure, or dirty drafts while restoration is disabled keep the window open, select the affected context when available, and show the exact next action instead of opening a generic close-decision dialog.
 
-**WKS-12 — Metadata session isolation.** A connected profile owns a separate adapter session for schema metadata and connection health. It never executes editor SQL or participates in a tab transaction. Its failure marks schema state stale but does not cancel healthy tab sessions; reconnecting it does not reconnect tabs automatically.
+**WKS-12 — Metadata session isolation.** A connected profile owns a separate adapter session for schema metadata and connection health. It never executes editor SQL or participates in a tab transaction. Its failure marks schema state stale but does not cancel healthy tab sessions. After explicit profile connection, selecting a bound child transparently and idempotently opens only that child's dedicated session with its saved context; automatic profile reconnect may do this only for the restored active child. Other restored children remain offline until selected. A failed child-session open leaves the profile connected, preserves context, exposes scoped Retry, and participates in disconnect/window-close/updater blockers while pending.
 
-**WKS-13 — First-run and empty states.** With no profiles or restored tabs, the workbench offers one Create connection route with Server/File selection, a compact File menu for new/open/save SQL-file actions, and Settings. It does not scan the filesystem, network, ports, environment variables, or other clients. Every empty/error state retains a keyboard-reachable route to a valid next action.
+**WKS-13 — First-run and empty states.** With no profiles or restored tabs, the workbench offers one Create connection route with Server/File selection, an Offline group with an explicit new-query action, a compact File menu for new/open/save SQL-file actions, and Settings. It does not scan the filesystem, network, ports, environment variables, or other clients. Every empty/error state retains a keyboard-reachable route to a valid next action.
 
 ### 8.3 Schema explorer
 
