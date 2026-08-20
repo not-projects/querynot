@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Reconciled result batches that arrive before the native execution-start response so the first run immediately shows both populated and zero-row result sets.
+- Replaced the redundant application-close decision dialog with silent recovery and clean-session shutdown; actionable work keeps the window open and focuses its blocking context.
+
+### Changed
+
+- Unified connection creation behind an immutable Server/File choice. Explicit database files are detected as SQLite through a read-only native probe and represented by opaque grants; standalone open/create SQLite actions were removed, with new-file creation deferred.
+- Moved SQL document actions into a compact File menu and replaced the fixed, scroll-heavy result block with a persisted 20–70% keyboard- and pointer-resizable split, selectable result-set tabs, a single virtualized result viewport, and grouped export options.
+
 ### Security
 
 - Added independent Ed25519-BLAKE2b verification of updater installer and trusted-comment signatures against the configured public key before future signed-release publication.

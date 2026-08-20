@@ -196,7 +196,7 @@ The default journey is:
 
 **CON-1 — Saved profiles.** Users must be able to create, edit, duplicate, test, connect, disconnect, rename, and delete connection profiles.
 
-**CON-2 — SQLite.** A SQLite profile must support opening an existing database file, creating a new database file through an explicit file chooser, and opening a file read-only. QueryNot must not scan the filesystem for databases.
+**CON-2 — SQLite.** The shared Create connection flow must offer a File target without asking the user to choose an adapter first. QueryNot probes only the explicitly selected local file through the native boundary, detects a supported SQLite database, returns an opaque file grant, and supports read-only or read-write profiles. It must not infer type from the extension, expose the full path to the WebView, or scan the filesystem for databases. Creating a new database file is deferred.
 
 **CON-3 — MySQL / MariaDB.** A network profile must support host, port, optional default database, username, password, and TLS settings. The default port may be suggested but remains editable.
 
@@ -234,7 +234,7 @@ The default journey is:
 
 **WKS-3 — Multiple tabs.** Users can create, rename, reorder, duplicate, pin, and close query tabs. Closing a tab with unsaved file changes, uncommitted transaction work, staged row edits, or a running query requires an explicit decision.
 
-**WKS-4 — Session restoration.** When restoration is enabled, QueryNot restores open tabs, unsaved drafts, tab order, connection bindings, selected database/schema, panel sizes, and the last active tab after a normal restart or recoverable crash. It does not automatically reconnect profiles unless the user enables that preference.
+**WKS-4 — Session restoration.** When restoration is enabled, QueryNot restores open tabs, unsaved drafts, tab order, connection bindings, selected database/schema, panel sizes including the 20–70% query/results split, and the last active tab after a normal restart or recoverable crash. It does not automatically reconnect profiles unless the user enables that preference.
 
 **WKS-5 — SQL files.** Users can open and save `.sql` files through explicit native file choosers. Draft restoration must not overwrite a file on disk without a user save action.
 
@@ -248,11 +248,11 @@ The default journey is:
 
 **WKS-10 — External file changes.** Before overwriting an opened SQL file, QueryNot compares its last-known file identity and modification state. If the file changed externally, moved, or became unavailable, Save must stop and offer review, Save as, or cancel. Autosaved draft data never writes through to the source file.
 
-**WKS-11 — Single-window baseline.** The initial release uses one application window. Opening a supported file while QueryNot is running routes it into that window without executing it. Window close applies the same running-job, transaction, staged-edit, and unsaved-file decisions as closing the affected tabs.
+**WKS-11 — Single-window baseline.** The initial release uses one application window. Opening a supported file while QueryNot is running routes it into that window without executing it. A safe window close silently saves the local recovery snapshot, closes clean native sessions, and exits without writing SQL source files. Running jobs, unresolved transactions, staged table edits, connection setup, recovery failure, or dirty drafts while restoration is disabled keep the window open, select the affected context when available, and show the exact next action instead of opening a generic close-decision dialog.
 
 **WKS-12 — Metadata session isolation.** A connected profile owns a separate adapter session for schema metadata and connection health. It never executes editor SQL or participates in a tab transaction. Its failure marks schema state stale but does not cancel healthy tab sessions; reconnecting it does not reconnect tabs automatically.
 
-**WKS-13 — First-run and empty states.** With no profiles or restored tabs, the workbench offers Create connection, Open SQLite file, Open SQL file offline, and Settings. It does not scan the filesystem, network, ports, environment variables, or other clients. Every empty/error state retains a keyboard-reachable route to a valid next action.
+**WKS-13 — First-run and empty states.** With no profiles or restored tabs, the workbench offers one Create connection route with Server/File selection, a compact File menu for new/open/save SQL-file actions, and Settings. It does not scan the filesystem, network, ports, environment variables, or other clients. Every empty/error state retains a keyboard-reachable route to a valid next action.
 
 ### 8.3 Schema explorer
 
