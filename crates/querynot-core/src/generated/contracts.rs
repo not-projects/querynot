@@ -203,6 +203,14 @@ pub struct FilePickerResponse {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ConnectionFilePickerResponse {
+    pub cancelled: bool,
+    pub file_grant_id: Option<String>,
+    pub display_name: Option<String>,
+    pub detected_kind: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct PendingSqlFilesResponse {
     pub files: Vec<FilePickerResponse>,
 }

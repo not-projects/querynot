@@ -221,26 +221,33 @@
     <button type="button" onclick={() => void copyRows(true)}
       >Copy with headers</button
     >
-    <label class="null-token">
-      <span>CSV NULL token</span>
-      <input
-        bind:value={nullToken}
-        maxlength="64"
-        aria-label="CSV null token"
-      />
-    </label>
-    <button type="button" onclick={() => onexport('csv', false, nullToken)}
-      >Export server-order CSV</button
-    >
-    <button type="button" onclick={() => onexport('csv', true, nullToken)}
-      >Export current CSV view</button
-    >
-    <button type="button" onclick={() => onexport('json', false, nullToken)}
-      >Export server-order JSON</button
-    >
-    <button type="button" onclick={() => onexport('json', true, nullToken)}
-      >Export current JSON</button
-    >
+    <details class="export-options">
+      <summary>Export…</summary>
+      <div>
+        <label class="null-token">
+          <span>CSV NULL token</span>
+          <input
+            bind:value={nullToken}
+            maxlength="64"
+            aria-label="CSV null token"
+          />
+        </label>
+        <button type="button" onclick={() => onexport('csv', false, nullToken)}
+          >Server-order CSV</button
+        >
+        <button type="button" onclick={() => onexport('csv', true, nullToken)}
+          >Current-view CSV</button
+        >
+        <button
+          type="button"
+          onclick={() => onexport('json', false, nullToken)}
+          >Server-order JSON</button
+        >
+        <button type="button" onclick={() => onexport('json', true, nullToken)}
+          >Current-view JSON</button
+        >
+      </div>
+    </details>
   </div>
 
   <div class="grid-shell">
@@ -363,8 +370,12 @@
 
   .result-set {
     display: grid;
-    gap: 0.55rem;
     min-width: 0;
+    min-height: 0;
+    height: 100%;
+    gap: 0.45rem;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
   }
 
   .result-tools,
@@ -391,6 +402,35 @@
     width: 4.5rem;
   }
 
+  .export-options {
+    position: relative;
+  }
+
+  .export-options summary {
+    min-height: 30px;
+    padding: 6px 10px;
+    border: 1px solid var(--divider);
+    border-radius: 5px;
+    background: var(--surface-raised);
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+
+  .export-options > div {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 4px);
+    right: 0;
+    display: grid;
+    width: 13rem;
+    padding: 0.55rem;
+    gap: 0.35rem;
+    border: 1px solid var(--divider);
+    border-radius: 6px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow);
+  }
+
   .loaded-label,
   .result-footer {
     color: var(--muted);
@@ -398,7 +438,11 @@
   }
 
   .grid-shell {
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
     overflow-x: auto;
+    overflow-y: hidden;
     border: 1px solid var(--divider);
     border-radius: 10px;
     background: var(--surface-raised);
@@ -477,8 +521,9 @@
   }
 
   .grid-viewport {
-    height: min(21rem, 42vh);
-    overflow: auto;
+    min-height: 0;
+    overflow-x: visible;
+    overflow-y: auto;
   }
 
   .grid-canvas {

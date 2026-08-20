@@ -7,7 +7,7 @@ use querynot_core::history::{HistoryEntry, HistoryStatus};
 use querynot_core::ownership::OwnershipRegistry;
 use querynot_core::profile::{ConnectionProfile, ConnectionTarget, TlsMode};
 use querynot_core::settings::{AppSettings, ThemePreference};
-use querynot_core::sqlite::create_sqlite_file as create_sqlite_database_file;
+use querynot_core::sqlite::test_sqlite_connection;
 use querynot_core::state::LocalStoreState;
 use querynot_core::store::{
     LocalStore, ProfileDeletionOutcome, delete_profile_two_step, unix_time_ms,
@@ -897,21 +897,20 @@ pub(crate) fn route_sql_file_paths(app: &AppHandle, paths: impl IntoIterator<Ite
 }
 
 #[tauri::command]
-pub(crate) async fn pick_sqlite_file(
+pub(crate) async fn pick_connection_file(
     app: AppHandle,
     state: State<'_, AppRuntimeState>,
-) -> Result<FilePickerResponse, QueryNotError> {
+) -> Result<ConnectionFilePickerResponse, QueryNotError> {
     let selected = app
         .dialog()
         .file()
-        .add_filter("SQLite databases", &["sqlite", "sqlite3", "db"])
-        .set_title("Choose SQLite database")
+        .set_title("Choose database file")
         .blocking_pick_file();
     let Some(selected) = selected else {
-        return Ok(cancelled_file_picker());
+        return Ok(cancelled_connection_file_picker());
     };
     let path = selected.into_path().map_err(|_| {
-        QueryNotError::authorization("Only local filesystem SQLite files are supported.")
+        QueryNotError::authorization("Only local filesystem database files are supported.")
     })?;
     let metadata = std::fs::metadata(&path).map_err(|_| {
         QueryNotError::local_storage("The selected SQLite file is unavailable.", true)
@@ -921,48 +920,23 @@ pub(crate) async fn pick_sqlite_file(
             "The selected SQLite path is not a regular file.",
         ));
     }
-    let grant_id = grant_file(&state, path.clone(), FilePurpose::SqliteDatabase)?;
-    Ok(FilePickerResponse {
-        cancelled: false,
-        file_grant_id: Some(grant_id.to_string()),
-        tab_id: None,
-        display_name: Some(display_name(&path)),
-        content: None,
-    })
-}
-
-#[tauri::command]
-pub(crate) async fn pick_new_sqlite_file(
-    app: AppHandle,
-    state: State<'_, AppRuntimeState>,
-) -> Result<FilePickerResponse, QueryNotError> {
-    let selected = app
-        .dialog()
-        .file()
-        .add_filter("SQLite databases", &["sqlite3", "sqlite", "db"])
-        .set_file_name("database.sqlite3")
-        .set_title("Create SQLite database")
-        .blocking_save_file();
-    let Some(selected) = selected else {
-        return Ok(cancelled_file_picker());
-    };
-    let path = selected.into_path().map_err(|_| {
-        QueryNotError::authorization("Only local filesystem SQLite files are supported.")
+    test_sqlite_connection(&path, true).await.map_err(|_| {
+        QueryNotError::authorization(
+            "The selected file is not a supported SQLite database. QueryNot left it unchanged.",
+        )
     })?;
-    create_sqlite_database_file(&path).await?;
     let grant_id = grant_file(&state, path.clone(), FilePurpose::SqliteDatabase)?;
     log_event(
         &state,
         DiagnosticArea::Workspace,
-        "sqlite_file_created",
+        "connection_file_detected",
         None,
     );
-    Ok(FilePickerResponse {
+    Ok(ConnectionFilePickerResponse {
         cancelled: false,
         file_grant_id: Some(grant_id.to_string()),
-        tab_id: None,
         display_name: Some(display_name(&path)),
-        content: None,
+        detected_kind: Some("sqlite".to_owned()),
     })
 }
 
@@ -1826,6 +1800,15 @@ fn cancelled_file_picker() -> FilePickerResponse {
         tab_id: None,
         display_name: None,
         content: None,
+    }
+}
+
+fn cancelled_connection_file_picker() -> ConnectionFilePickerResponse {
+    ConnectionFilePickerResponse {
+        cancelled: true,
+        file_grant_id: None,
+        display_name: None,
+        detected_kind: None,
     }
 }
 

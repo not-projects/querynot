@@ -10,9 +10,12 @@ describe('Phase 1 native boundaries', () => {
     const runtime = read('src-tauri/src/phase1.rs');
 
     expect(contract).toContain('"create_offline_tab"');
+    expect(contract).toContain('"pick_connection_file"');
+    expect(contract).not.toContain('"pick_new_sqlite_file"');
     expect(contract).toContain('"file_grant_id"');
     expect(runtime).toContain('let tab_id = TabId::new()');
     expect(runtime).toContain('let grant_id = FileGrantId::new()');
+    expect(runtime).toContain('test_sqlite_connection(&path, true)');
     expect(runtime).toContain(
       'file_name: Some(display_name(Path::new(file_path)))'
     );

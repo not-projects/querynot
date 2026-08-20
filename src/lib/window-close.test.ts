@@ -3,40 +3,44 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
-  requiresWindowCloseDecision,
-  type WindowCloseDecisionState
+  firstWindowCloseBlocker,
+  type WindowCloseState
 } from './window-close';
 
-const cleanWindow: WindowCloseDecisionState = {
-  busy: false,
+const cleanWindow: WindowCloseState = {
+  activeExecutionTabId: null,
+  unresolvedTransactionTabId: null,
+  stagedTableTabId: null,
+  connectionOperationTabId: null,
   connectionOperationCount: 0,
-  dirtyTabCount: 0,
-  stagedTableChangeCount: 0,
-  sessionCount: 0,
-  activeExecutionCount: 0,
-  workspaceSavePending: false
+  busy: false,
+  unrecoverableDirtyTabId: null
 };
 
-describe('native window close decision', () => {
-  it('leaves a clean close request to the standard native window path', () => {
-    expect(requiresWindowCloseDecision(cleanWindow)).toBe(false);
+describe('silent native window close', () => {
+  it('closes a clean window without asking for a redundant decision', () => {
+    expect(firstWindowCloseBlocker(cleanWindow)).toBeNull();
   });
 
-  it.each<keyof WindowCloseDecisionState>([
-    'busy',
-    'connectionOperationCount',
-    'dirtyTabCount',
-    'stagedTableChangeCount',
-    'sessionCount',
-    'activeExecutionCount',
-    'workspaceSavePending'
-  ])('pauses close when %s requires a safety decision', (field) => {
+  it.each([
+    ['activeExecutionTabId', 'execution'],
+    ['unresolvedTransactionTabId', 'transaction'],
+    ['stagedTableTabId', 'staged-changes'],
+    ['unrecoverableDirtyTabId', 'recovery-disabled']
+  ] as const)('focuses the affected tab for %s', (field, kind) => {
     expect(
-      requiresWindowCloseDecision({
+      firstWindowCloseBlocker({ ...cleanWindow, [field]: 'tab-1' })
+    ).toMatchObject({ kind, tabId: 'tab-1' });
+  });
+
+  it('blocks connection setup without treating clean sessions as dirty work', () => {
+    expect(
+      firstWindowCloseBlocker({
         ...cleanWindow,
-        [field]: typeof cleanWindow[field] === 'boolean' ? true : 1
+        connectionOperationCount: 1,
+        connectionOperationTabId: 'tab-2'
       })
-    ).toBe(true);
+    ).toMatchObject({ kind: 'connection', tabId: 'tab-2' });
   });
 
   it('grants only the explicit destroy command used after safety checks', () => {

@@ -47,7 +47,7 @@
     type ExecutionUi,
     type ResultUi
   } from './lib/execution-ui';
-  import { requiresWindowCloseDecision } from './lib/window-close';
+  import { firstWindowCloseBlocker } from './lib/window-close';
   import {
     localMutationErrors,
     nativeMutationOperations,
@@ -62,7 +62,6 @@
     | 'diagnostics'
     | 'file-review'
     | 'close-tab'
-    | 'close-window'
     | 'destructive'
     | null;
 
@@ -156,6 +155,7 @@
   let busy = $state(false);
   let modal = $state<ModalName>(null);
   let profileForm = $state<ProfileForm>(defaultProfileForm());
+  let connectionSource = $state<'server' | 'file'>('server');
   let editingProfileId = $state<string | null>(null);
   let selectedSqliteName = $state<string | null>(null);
   let selectedTlsCaName = $state<string | null>(null);
@@ -178,6 +178,7 @@
   let sessions = $state<Record<string, SessionView>>({});
   let executions = $state<Record<string, ExecutionUi>>({});
   let results = $state<Record<string, ResultUi[]>>({});
+  let selectedResultIds = $state<Record<string, string>>({});
   let resultViewIndexes = $state<Record<string, number[]>>({});
   let schemaNamespaces = $state<Record<string, SchemaNamespaceView[]>>({});
   let schemaObjects = $state<Record<string, SchemaObjectView[]>>({});
@@ -206,6 +207,11 @@
   let pendingFileDrainRequested = false;
   let pendingFileDrainPromise: Promise<void> | null = null;
   let executionEventQueue = Promise.resolve();
+  let closingWindow = $state(false);
+  let fileMenuOpen = $state(false);
+  let fileMenuButton = $state<HTMLButtonElement>();
+  let fileMenuElement = $state<HTMLElement>();
+  let mainElement = $state<HTMLElement>();
 
   const activeTab = $derived(
     workspace.tabs.find((tab) => tab.id === workspace.active_tab_id) ?? null
@@ -224,6 +230,27 @@
   );
   const activeResults = $derived(
     activeTab ? (results[activeTab.id] ?? []) : []
+  );
+  const activeVisibleResult = $derived(
+    activeResults.find(
+      (result) => result.id === selectedResultIds[activeTab?.id ?? '']
+    ) ??
+      activeResults.at(-1) ??
+      null
+  );
+  const queryResultsVisible = $derived(
+    Boolean(
+      activeTab?.kind === 'query' &&
+        (activeResults.length || activeExecution?.error)
+    )
+  );
+  const resultsPercent = $derived(
+    clampResultsPercent(workspace.panel_sizes.results_percent)
+  );
+  const queryGridRows = $derived(
+    queryResultsVisible
+      ? `auto auto minmax(10rem, ${100 - resultsPercent}fr) 7px minmax(8rem, ${resultsPercent}fr)`
+      : undefined
   );
   const activeTableUi = $derived(
     activeTab?.kind === 'table_data' ? (tableTabs[activeTab.id] ?? null) : null
@@ -262,6 +289,10 @@
 
   function denseMetadataText(value: string, maximum = 160): string {
     return value.length > maximum ? `${value.slice(0, maximum)}…` : value;
+  }
+
+  function clampResultsPercent(value: number): number {
+    return Math.min(70, Math.max(20, Number.isFinite(value) ? value : 35));
   }
   const displayedSettings = $derived(
     modal === 'settings' ? settingsDraft : settings
@@ -304,28 +335,9 @@
         else unlistenOpenFiles = removeListener;
       });
       void getCurrentWindow()
-        .onCloseRequested(async (event) => {
-          if (
-            requiresWindowCloseDecision({
-              busy,
-              connectionOperationCount:
-                Object.keys(connectionOperations).length,
-              dirtyTabCount: workspace.tabs.filter((tab) => tab.dirty).length,
-              stagedTableChangeCount: Object.values(tableTabs).filter(
-                (table) => table.staged.length > 0
-              ).length,
-              sessionCount: Object.keys(sessions).length,
-              activeExecutionCount: Object.values(executions).filter(
-                (execution) => isExecutionActive(execution.state)
-              ).length,
-              workspaceSavePending: workspaceRecoveryWarning !== null
-            })
-          ) {
-            event.preventDefault();
-            await openModal('close-window');
-            statusMessage =
-              'Window close paused so offline draft changes can be preserved.';
-          }
+        .onCloseRequested((event) => {
+          event.preventDefault();
+          void requestSilentWindowClose();
         })
         .then((removeListener) => {
           if (disposed) removeListener();
@@ -398,11 +410,15 @@
     settings = response.settings;
     settingsDraft = structuredClone(response.settings);
     workspace = response.workspace;
+    workspace.panel_sizes.results_percent = clampResultsPercent(
+      workspace.panel_sizes.results_percent
+    );
     connections = {};
     connectionOperations = {};
     sessions = {};
     executions = {};
     results = {};
+    selectedResultIds = {};
     tableTabs = {};
     storeState = response.store_state;
     storeMessage = response.store_message;
@@ -442,6 +458,7 @@
     delete sessions[tabId];
     delete executions[tabId];
     delete results[tabId];
+    delete selectedResultIds[tabId];
     const table = tableTabs[tabId];
     if (table) {
       table.preview = null;
@@ -463,6 +480,7 @@
     delete sessions[tabId];
     delete executions[tabId];
     delete results[tabId];
+    delete selectedResultIds[tabId];
     const table = tableTabs[tabId];
     if (table) {
       table.preview = null;
@@ -665,10 +683,12 @@
     };
   };
 
-  function openNetworkProfile() {
+  function openConnectionProfile(source: 'server' | 'file' = 'server') {
     profileForm = defaultProfileForm();
     profileForm.connection_timeout_seconds =
       settings.connection_timeout_seconds;
+    connectionSource = source;
+    profileForm.kind = source === 'file' ? 'sqlite' : 'mysql_family';
     editingProfileId = null;
     selectedSqliteName = null;
     selectedTlsCaName = null;
@@ -677,60 +697,48 @@
     void openModal('profile');
   }
 
-  async function chooseSqliteProfile() {
-    if (!hasNativeRuntime()) {
-      statusMessage =
-        'SQLite file selection is available in the desktop runtime.';
-      return;
-    }
-    await runAction(async () => {
-      const picked = await invokeCommand('pick_sqlite_file', null);
-      if (picked.cancelled) {
-        statusMessage = 'SQLite file selection was cancelled.';
-        return;
-      }
-      profileForm = {
-        ...defaultProfileForm(),
-        name:
-          picked.display_name?.replace(/\.(sqlite3?|db)$/i, '') ||
-          'SQLite database',
-        kind: 'sqlite',
-        file_grant_id: picked.file_grant_id,
-        connection_timeout_seconds: settings.connection_timeout_seconds
-      };
-      editingProfileId = null;
-      selectedSqliteName = picked.display_name;
-      await openModal('profile');
-    });
+  function setConnectionSource(source: 'server' | 'file') {
+    if (editingProfileId || source === connectionSource) return;
+    const name = profileForm.name;
+    profileForm = {
+      ...defaultProfileForm(),
+      name,
+      kind: source === 'file' ? 'sqlite' : 'mysql_family',
+      connection_timeout_seconds: settings.connection_timeout_seconds
+    };
+    connectionSource = source;
+    selectedSqliteName = null;
+    selectedTlsCaName = null;
+    selectedTlsClientCertificateName = null;
+    selectedTlsClientKeyName = null;
   }
 
-  async function chooseNewSqliteProfile() {
+  async function chooseConnectionFile() {
     if (!hasNativeRuntime()) {
       statusMessage =
-        'SQLite file creation is available in the desktop runtime.';
+        'Database file selection is available in the desktop runtime.';
       return;
     }
     await runAction(async () => {
-      const picked = await invokeCommand('pick_new_sqlite_file', null);
+      const picked = await invokeCommand('pick_connection_file', null);
       if (picked.cancelled) {
-        statusMessage =
-          'SQLite file creation was cancelled; no file was created.';
+        statusMessage = 'Database file selection was cancelled.';
         return;
       }
-      profileForm = {
-        ...defaultProfileForm(),
-        name:
+      if (picked.detected_kind !== 'sqlite' || !picked.file_grant_id) {
+        throw new Error(
+          'The selected database file type is not supported by this release.'
+        );
+      }
+      profileForm.kind = 'sqlite';
+      profileForm.file_grant_id = picked.file_grant_id;
+      if (!profileForm.name.trim()) {
+        profileForm.name =
           picked.display_name?.replace(/\.(sqlite3?|db)$/i, '') ||
-          'SQLite database',
-        kind: 'sqlite',
-        file_grant_id: picked.file_grant_id,
-        connection_timeout_seconds: settings.connection_timeout_seconds
-      };
-      editingProfileId = null;
+          'SQLite database';
+      }
       selectedSqliteName = picked.display_name;
-      statusMessage =
-        'Created an empty SQLite file. Save its profile to make it available in the workspace.';
-      await openModal('profile');
+      statusMessage = `${picked.display_name ?? 'Database file'} detected as SQLite. Save the profile to use it.`;
     });
   }
 
@@ -818,6 +826,7 @@
 
   function editProfile(profile: ProfileView) {
     editingProfileId = profile.id;
+    connectionSource = profile.kind === 'sqlite' ? 'file' : 'server';
     selectedSqliteName = profile.file_name;
     selectedTlsCaName = profile.tls_ca_file_name;
     selectedTlsClientCertificateName = profile.tls_client_certificate_file_name;
@@ -1032,6 +1041,7 @@
         for (const tabId of removedTableIds) {
           delete tableTabs[tabId];
           delete results[tabId];
+          delete selectedResultIds[tabId];
           delete executions[tabId];
         }
         if (shouldDeleteDrafts) {
@@ -2071,6 +2081,7 @@
           ...tabResults,
           resultFromFirstBatch(event)
         ];
+        selectedResultIds[event.tab_id] = event.result_set_id;
         result = results[event.tab_id].at(-1)!;
         execution.receivedRows += event.rows.length;
         setExecutionState(execution, 'running');
@@ -2381,6 +2392,7 @@
       }
       delete executions[tabId];
       delete results[tabId];
+      delete selectedResultIds[tabId];
       delete tableTabs[tabId];
       await saveWorkspaceNow();
       statusMessage =
@@ -2424,33 +2436,58 @@
     }
   }
 
+  function windowCloseBlocker(includeBusy: boolean) {
+    const activeExecutionTabId =
+      Object.values(executions).find((execution) =>
+        isExecutionActive(execution.state)
+      )?.tabId ?? null;
+    const unresolvedTransactionTabId =
+      Object.values(sessions).find(
+        (session) => session.transaction.certainty !== 'clean'
+      )?.tab_id ?? null;
+    const stagedTableTabId =
+      Object.entries(tableTabs).find(([, table]) => table.staged.length > 0)?.[0] ??
+      null;
+    const connectionProfileId = Object.keys(connectionOperations)[0] ?? null;
+    const connectionOperationTabId = connectionProfileId
+      ? (workspace.tabs.find((tab) => tab.profile_id === connectionProfileId)
+          ?.id ?? null)
+      : null;
+    const unrecoverableDirtyTabId = settings.session_restoration_enabled
+      ? null
+      : (workspace.tabs.find((tab) => tab.dirty)?.id ?? null);
+    return firstWindowCloseBlocker({
+      activeExecutionTabId,
+      unresolvedTransactionTabId,
+      stagedTableTabId,
+      connectionOperationTabId,
+      connectionOperationCount: Object.keys(connectionOperations).length,
+      busy: includeBusy && busy,
+      unrecoverableDirtyTabId
+    });
+  }
+
+  async function focusWindowCloseBlocker(
+    blocker: NonNullable<ReturnType<typeof windowCloseBlocker>>
+  ) {
+    if (blocker.tabId) {
+      workspace.active_tab_id = blocker.tabId;
+      await tick();
+      if (workspace.tabs.find((tab) => tab.id === blocker.tabId)?.kind === 'query') {
+        editorApi?.focus();
+      } else {
+        document.getElementById('query-results')?.focus();
+      }
+    } else {
+      await tick();
+      document.getElementById('connections-heading')?.focus();
+    }
+    statusMessage = blocker.message;
+  }
+
   async function prepareForApplicationExit() {
-    if (Object.keys(connectionOperations).length > 0) {
-      throw new Error(
-        'Wait for or cancel connection setup before closing the window.'
-      );
-    }
-    const activeJob = Object.values(executions).find((execution) =>
-      isExecutionActive(execution.state)
-    );
-    if (activeJob) {
-      throw new Error(
-        'Cancel the running query and wait for its terminal state before closing the window.'
-      );
-    }
-    const unresolved = Object.values(sessions).find(
-      (session) => session.transaction.certainty !== 'clean'
-    );
-    if (unresolved) {
-      throw new Error(
-        'Commit or roll back every open or unknown tab transaction before closing the window.'
-      );
-    }
-    if (Object.values(tableTabs).some((table) => table.staged.length > 0)) {
-      throw new Error(
-        'Apply or discard staged table changes in every table-data tab before closing the window.'
-      );
-    }
+    const blocker = windowCloseBlocker(false);
+    if (blocker) throw new Error(blocker.message);
     if (!(await saveWorkspaceNow())) {
       throw new Error(
         'Draft recovery did not reach a valid saved state. The window remains open with current in-memory work.'
@@ -2471,43 +2508,28 @@
     await getCurrentWindow().destroy();
   }
 
+  async function requestSilentWindowClose() {
+    if (!hasNativeRuntime() || closingWindow) return;
+    const blocker = windowCloseBlocker(true);
+    if (blocker) {
+      await focusWindowCloseBlocker(blocker);
+      return;
+    }
+    closingWindow = true;
+    statusMessage = 'Saving local recovery and closing clean sessions…';
+    try {
+      await closeWindowAfterSafetyChecks();
+    } catch (error) {
+      closingWindow = false;
+      statusMessage = safeErrorMessage(error);
+    }
+  }
+
   async function installAvailableUpdate() {
     if (!hasNativeRuntime()) return;
     await runAction(async () => {
       statusMessage = `Preparing the signed QueryNot ${updater.availableUpdate?.version ?? ''} update…`;
       statusMessage = await updater.install(prepareForApplicationExit);
-    });
-  }
-
-  async function preserveDraftsAndCloseWindow() {
-    if (!hasNativeRuntime()) return;
-    await runAction(closeWindowAfterSafetyChecks);
-  }
-
-  async function saveChangedFilesAndCloseWindow() {
-    if (!hasNativeRuntime()) return;
-    await runAction(async () => {
-      for (const tab of workspace.tabs.filter(
-        (candidate) =>
-          candidate.kind === 'query' &&
-          candidate.dirty &&
-          candidate.source_file_grant_id
-      )) {
-        const response = await invokeCommand('save_sql_file', {
-          profile_id: tab.profile_id,
-          tab_id: tab.id,
-          file_grant_id: tab.source_file_grant_id!,
-          content: tab.sql
-        });
-        if (response.status !== 'saved') {
-          workspace.active_tab_id = tab.id;
-          throw new Error(
-            `${response.message} The window remains open so you can review or use Save as.`
-          );
-        }
-        tab.dirty = false;
-      }
-      await closeWindowAfterSafetyChecks();
     });
   }
 
@@ -2665,9 +2687,98 @@
     });
   }
 
+  function closeFileMenu(returnFocus = false) {
+    if (!fileMenuOpen) return;
+    fileMenuOpen = false;
+    if (returnFocus) void tick().then(() => fileMenuButton?.focus());
+  }
+
+  function handleDocumentPointerdown(event: PointerEvent) {
+    const target = event.target;
+    if (
+      fileMenuOpen &&
+      target instanceof Node &&
+      !fileMenuElement?.contains(target)
+    ) {
+      closeFileMenu();
+    }
+  }
+
+  function createQueryFromFileMenu() {
+    closeFileMenu();
+    void createOfflineTab(activeProfile?.id ?? null);
+  }
+
+  function openSqlFromFileMenu() {
+    closeFileMenu();
+    void openSqlFile();
+  }
+
+  function saveSqlFromFileMenu(saveAs: boolean) {
+    closeFileMenu();
+    void saveActiveSqlFile(saveAs);
+  }
+
+  function setResultsPercent(value: number, announce = false) {
+    workspace.panel_sizes.results_percent = clampResultsPercent(value);
+    if (announce) {
+      statusMessage = `Results panel uses ${Math.round(workspace.panel_sizes.results_percent)}% of the query workspace.`;
+      queueWorkspaceSave();
+    }
+  }
+
+  function beginResultsResize(event: PointerEvent) {
+    if (event.button !== 0 || !mainElement) return;
+    event.preventDefault();
+    const editor = mainElement.querySelector<HTMLElement>('#query-editor-pane');
+    const resultPane = mainElement.querySelector<HTMLElement>('#query-results');
+    if (!editor || !resultPane) return;
+    const top = editor.getBoundingClientRect().top;
+    const bottom = resultPane.getBoundingClientRect().bottom;
+    const height = Math.max(1, bottom - top);
+    const move = (moveEvent: PointerEvent) => {
+      setResultsPercent(((bottom - moveEvent.clientY) / height) * 100);
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      setResultsPercent(workspace.panel_sizes.results_percent, true);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop, { once: true });
+  }
+
+  function handleResultsSeparatorKeydown(event: KeyboardEvent) {
+    let next = resultsPercent;
+    const step = event.shiftKey ? 5 : 2;
+    if (event.key === 'ArrowUp') next += step;
+    else if (event.key === 'ArrowDown') next -= step;
+    else if (event.key === 'Home') next = 20;
+    else if (event.key === 'End') next = 70;
+    else return;
+    event.preventDefault();
+    setResultsPercent(next, true);
+  }
+
+  const resizeResultsSeparator: Attachment<HTMLElement> = (element) => {
+    element.tabIndex = 0;
+    const reset = () => setResultsPercent(35, true);
+    element.addEventListener('pointerdown', beginResultsResize);
+    element.addEventListener('keydown', handleResultsSeparatorKeydown);
+    element.addEventListener('dblclick', reset);
+    return () => {
+      element.removeEventListener('pointerdown', beginResultsResize);
+      element.removeEventListener('keydown', handleResultsSeparatorKeydown);
+      element.removeEventListener('dblclick', reset);
+    };
+  };
+
   function handleWindowKeydown(event: KeyboardEvent) {
     if (modal) return;
-    if ((event.metaKey || event.ctrlKey) && event.key === '1') {
+    if (fileMenuOpen && event.key === 'Escape') {
+      event.preventDefault();
+      closeFileMenu(true);
+    } else if ((event.metaKey || event.ctrlKey) && event.key === '1') {
       event.preventDefault();
       document.getElementById('connections-heading')?.focus();
     } else if ((event.metaKey || event.ctrlKey) && event.key === '2') {
@@ -2726,12 +2837,13 @@
 </svelte:head>
 
 <svelte:window onkeydown={handleWindowKeydown} />
+<svelte:document onpointerdown={handleDocumentPointerdown} />
 
 <div
   class="app-shell"
   data-theme={displayedSettings.theme}
   style:--ui-scale={displayedSettings.ui_scale_percent / 100}
-  aria-busy={busy}
+  aria-busy={busy || closingWindow}
 >
   <header class="topbar">
     <div class="brand">
@@ -2740,6 +2852,41 @@
       <span class="phase-badge">Common database adapter</span>
     </div>
     <div class="topbar-actions">
+      <div class="file-menu" bind:this={fileMenuElement}>
+        <button
+          type="button"
+          class="quiet"
+          aria-haspopup="menu"
+          aria-expanded={fileMenuOpen}
+          bind:this={fileMenuButton}
+          onclick={() => (fileMenuOpen = !fileMenuOpen)}>File</button
+        >
+        {#if fileMenuOpen}
+          <div class="file-menu-popover" role="menu" aria-label="File">
+            <button type="button" role="menuitem" onclick={createQueryFromFileMenu}
+              >New query <kbd>Mod+N</kbd></button
+            >
+            <button type="button" role="menuitem" onclick={openSqlFromFileMenu}
+              >Open SQL file… <kbd>Mod+O</kbd></button
+            >
+            <span class="menu-divider" aria-hidden="true"></span>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={activeTab?.kind !== 'query'}
+              onclick={() => saveSqlFromFileMenu(false)}
+              >Save <kbd>Mod+S</kbd></button
+            >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={activeTab?.kind !== 'query'}
+              onclick={() => saveSqlFromFileMenu(true)}
+              >Save as… <kbd>Mod+Shift+S</kbd></button
+            >
+          </div>
+        {/if}
+      </div>
       <span class="offline-badge">
         {Object.keys(connections).length
           ? `${Object.keys(connections).length} connected`
@@ -2788,8 +2935,8 @@
         <button
           type="button"
           class="icon-button"
-          aria-label="Create network connection profile"
-          onclick={openNetworkProfile}>+</button
+          aria-label="Create connection profile"
+          onclick={() => openConnectionProfile()}>+</button
         >
       </div>
 
@@ -2797,6 +2944,9 @@
         <div class="sidebar-empty">
           <p>No saved profiles</p>
           <span>QueryNot will not scan this device or network for them.</span>
+          <button type="button" onclick={() => openConnectionProfile()}
+            >Create connection</button
+          >
         </div>
       {:else}
         <ul class="profile-list" aria-label="Saved connection profiles">
@@ -2874,20 +3024,6 @@
         </ul>
       {/if}
 
-      <div class="sidebar-actions">
-        <button type="button" onclick={openNetworkProfile}
-          >Create connection</button
-        >
-        <button type="button" onclick={() => void chooseSqliteProfile()}
-          >Open SQLite file</button
-        >
-        <button type="button" onclick={() => void chooseNewSqliteProfile()}
-          >Create SQLite file</button
-        >
-        <button type="button" onclick={() => void openSqlFile()}
-          >Open SQL file offline</button
-        >
-      </div>
       <p class="sidebar-note">
         Profiles and drafts stay on this device. Credentials use the OS vault or
         native session memory.
@@ -3204,10 +3340,9 @@
     </aside>
 
     <main
-      class:has-query-results={Boolean(
-        activeTab?.kind === 'query' &&
-        (activeResults.length || activeExecution?.error)
-      )}
+      class:has-query-results={queryResultsVisible}
+      style:grid-template-rows={queryGridRows}
+      bind:this={mainElement}
     >
       <div class="context-bar" aria-label="Active query context">
         <span class="context-state" class:online={Boolean(activeSession)}>
@@ -3385,7 +3520,11 @@
             </section>
           {/if}
         {:else}
-          <section class="editor-workspace" aria-labelledby="editor-heading">
+          <section
+            id="query-editor-pane"
+            class="editor-workspace"
+            aria-labelledby="editor-heading"
+          >
             <div class="editor-heading-row">
               <div>
                 <p class="eyebrow">SQL draft</p>
@@ -3547,6 +3686,18 @@
           </section>
 
           {#if activeResults.length || activeExecution?.error}
+            <div
+              class="results-separator"
+              role="separator"
+              aria-label="Resize query results panel"
+              aria-orientation="horizontal"
+              aria-valuemin="20"
+              aria-valuemax="70"
+              aria-valuenow={Math.round(resultsPercent)}
+              {@attach resizeResultsSeparator}
+            >
+              <span aria-hidden="true"></span>
+            </div>
             <section
               class="results-workspace"
               id="query-results"
@@ -3566,7 +3717,22 @@
                   {activeExecution.error}
                 </div>
               {/if}
-              {#each activeResults as result (result.id)}
+              {#if activeResults.length > 1}
+                <div class="result-tabs" role="tablist" aria-label="Result sets">
+                  {#each activeResults as result (result.id)}
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeVisibleResult?.id === result.id}
+                      onclick={() =>
+                        activeTab &&
+                        (selectedResultIds[activeTab.id] = result.id)}
+                    >Statement {result.statementIndex + 1}</button>
+                  {/each}
+                </div>
+              {/if}
+              {#if activeVisibleResult}
+                {@const result = activeVisibleResult}
                 <ResultGrid
                   resultSetId={result.id}
                   statementIndex={result.statementIndex}
@@ -3583,13 +3749,16 @@
                   onviewchange={updateResultView}
                   onstatus={(message) => (statusMessage = message)}
                 />
-              {/each}
-              <p class="export-warning">
-                CSV preserves raw values, including spreadsheet-formula
-                prefixes. Opening a CSV in spreadsheet software may evaluate
-                formulas. NULL exports as <code>\N</code> by default; binary values
-                use hexadecimal in CSV and tagged base64 in JSON.
-              </p>
+              {/if}
+              <details class="export-warning">
+                <summary>Export safety</summary>
+                <p>
+                  CSV preserves raw values, including spreadsheet-formula
+                  prefixes. Spreadsheet software may evaluate them. NULL exports
+                  as <code>\N</code> by default; binary values use hexadecimal in
+                  CSV and tagged base64 in JSON.
+                </p>
+              </details>
             </section>
           {/if}
         {/if}
@@ -3603,19 +3772,9 @@
             drafts.
           </p>
           <div class="action-list">
-            <button type="button" onclick={openNetworkProfile}>
+            <button type="button" onclick={() => openConnectionProfile()}>
               <strong>Create connection</strong>
-              <span>Configure MySQL or MariaDB manually.</span>
-            </button>
-            <button type="button" onclick={() => void chooseSqliteProfile()}>
-              <strong>Open SQLite file</strong>
-              <span>Choose one database file through the native dialog.</span>
-            </button>
-            <button type="button" onclick={() => void openSqlFile()}>
-              <strong>Open SQL file offline</strong>
-              <span
-                >Read text into a draft without connecting or executing.</span
-              >
+              <span>Choose Server or File, then configure one exact target.</span>
             </button>
             <button type="button" onclick={openSettings}>
               <strong>Settings</strong>
@@ -3675,6 +3834,40 @@
           </div>
 
           <div class="form-grid">
+            <fieldset
+              class="field-full connection-source-choice"
+              disabled={Boolean(editingProfileId)}
+            >
+              <legend>Connection type</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="connection-source"
+                  checked={connectionSource === 'server'}
+                  onchange={() => setConnectionSource('server')}
+                />
+                <span>
+                  <strong>Server</strong>
+                  <small>MySQL or MariaDB at an exact host and port</small>
+                </span>
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="connection-source"
+                  checked={connectionSource === 'file'}
+                  onchange={() => setConnectionSource('file')}
+                />
+                <span>
+                  <strong>File</strong>
+                  <small>Choose a database file; QueryNot detects its type</small>
+                </span>
+              </label>
+              {#if editingProfileId}
+                <small>The connection type is fixed after profile creation.</small>
+              {/if}
+            </fieldset>
+
             <label class="field field-full">
               <span>Profile name</span>
               <input required maxlength="100" bind:value={profileForm.name} />
@@ -3685,11 +3878,32 @@
                 <span>Native file grant</span>
                 <strong
                   >{selectedSqliteName ??
-                    'Previously selected SQLite file'}</strong
+                    (editingProfileId
+                      ? 'Previously selected database file'
+                      : 'No database file selected')}</strong
                 >
                 <small
                   >The full local path is kept behind the native boundary.</small
                 >
+                <div class="profile-actions">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onclick={() => void chooseConnectionFile()}
+                    >{selectedSqliteName
+                      ? 'Choose another file…'
+                      : 'Choose database file…'}</button
+                  >
+                  {#if selectedSqliteName}
+                    <span class="detected-file-kind">SQLite detected</span>
+                  {/if}
+                </div>
+                {#if !selectedSqliteName}
+                  <small>
+                    Select one exact local file. QueryNot does not scan folders.
+                    Creating a new database file is planned for a later release.
+                  </small>
+                {/if}
               </div>
               <label class="check-row field-full">
                 <input type="checkbox" bind:checked={profileForm.read_only} />
@@ -3911,7 +4125,14 @@
             <button type="button" class="quiet" onclick={closeModal}
               >Cancel</button
             >
-            <button type="submit" class="primary" disabled={busy}>
+            <button
+              type="submit"
+              class="primary"
+              disabled={busy ||
+                (!editingProfileId &&
+                  connectionSource === 'file' &&
+                  !profileForm.file_grant_id)}
+            >
               {editingProfileId ? 'Save profile' : 'Create profile'}
             </button>
           </div>
@@ -4520,42 +4741,6 @@
               class="danger"
               onclick={() => closeTabId && void closeTab(closeTabId)}
               >Discard draft and close</button
-            >
-          {/if}
-        </div>
-      {:else if modal === 'close-window'}
-        <div class="modal-header">
-          <div>
-            <p class="eyebrow">Window close decision</p>
-            <h2 id="modal-title">
-              Resolve native work, preserve drafts, and close?
-            </h2>
-          </div>
-        </div>
-        <p class="modal-copy">
-          QueryNot retains draft text, tab order, profile bindings, context, and
-          panel sizes locally. It closes only clean tab sessions; running jobs
-          and active or unknown transactions must be cancelled, committed, or
-          rolled back first. Closing never executes SQL or writes through to SQL
-          source files.
-        </p>
-        <div class="modal-actions">
-          <button type="button" class="quiet" onclick={closeModal}
-            >Keep window open</button
-          >
-          <button
-            type="button"
-            class="primary"
-            disabled={busy}
-            onclick={() => void preserveDraftsAndCloseWindow()}
-            >Close without changing source files; preserve recovery drafts</button
-          >
-          {#if workspace.tabs.some((tab) => tab.kind === 'query' && tab.dirty && tab.source_file_grant_id)}
-            <button
-              type="button"
-              disabled={busy}
-              onclick={() => void saveChangedFilesAndCloseWindow()}
-              >Save changed source files, preserve drafts, and close</button
             >
           {/if}
         </div>

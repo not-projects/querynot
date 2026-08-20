@@ -85,13 +85,9 @@
       "request": null,
       "response": "PendingSqlFilesResponse"
     },
-    "pick_sqlite_file": {
+    "pick_connection_file": {
       "request": null,
-      "response": "FilePickerResponse"
-    },
-    "pick_new_sqlite_file": {
-      "request": null,
-      "response": "FilePickerResponse"
+      "response": "ConnectionFilePickerResponse"
     },
     "pick_tls_ca_file": {
       "request": null,
@@ -394,6 +390,12 @@
       "tab_id": "string?",
       "display_name": "string?",
       "content": "string?"
+    },
+    "ConnectionFilePickerResponse": {
+      "cancelled": "bool",
+      "file_grant_id": "string?",
+      "display_name": "string?",
+      "detected_kind": "string?"
     },
     "PendingSqlFilesResponse": {
       "files": "FilePickerResponse[]"

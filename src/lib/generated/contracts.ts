@@ -178,6 +178,13 @@ export interface FilePickerResponse {
   content: string | null;
 }
 
+export interface ConnectionFilePickerResponse {
+  cancelled: boolean;
+  file_grant_id: string | null;
+  display_name: string | null;
+  detected_kind: string | null;
+}
+
 export interface PendingSqlFilesResponse {
   files: FilePickerResponse[];
 }
@@ -703,8 +710,10 @@ export interface QueryNotCommands {
     response: FilePickerResponse;
   };
   take_pending_sql_files: { request: null; response: PendingSqlFilesResponse };
-  pick_sqlite_file: { request: null; response: FilePickerResponse };
-  pick_new_sqlite_file: { request: null; response: FilePickerResponse };
+  pick_connection_file: {
+    request: null;
+    response: ConnectionFilePickerResponse;
+  };
   pick_tls_ca_file: { request: null; response: FilePickerResponse };
   pick_tls_client_certificate_file: {
     request: null;

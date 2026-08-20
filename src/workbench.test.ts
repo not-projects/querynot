@@ -30,12 +30,11 @@ function button(name: string): HTMLButtonElement {
 }
 
 describe('Phase 1 workbench', () => {
-  it('offers every keyboard-reachable first-run route without execution controls', async () => {
+  it('offers a unified connection route and compact File menu without execution controls', async () => {
     await renderWorkbench();
 
     expect(button('Create connection').disabled).toBe(false);
-    expect(button('Open SQLite file').disabled).toBe(false);
-    expect(button('Open SQL file offline').disabled).toBe(false);
+    expect(button('File').disabled).toBe(false);
     expect(button('Settings').disabled).toBe(false);
     expect(document.body.textContent?.replace(/\s+/g, ' ')).toContain(
       'does not scan for databases, reconnect automatically, or execute restored drafts'
@@ -45,6 +44,33 @@ describe('Phase 1 workbench', () => {
         /^(run|execute)$/i.test(element.textContent?.trim() ?? '')
       )
     ).toBe(false);
+
+    button('File').click();
+    flushSync();
+    expect(document.querySelector('[role="menu"]')?.textContent).toContain(
+      'Open SQL file…'
+    );
+  });
+
+  it('chooses Server or File inside one create-connection dialog', async () => {
+    await renderWorkbench();
+    button('Create connection').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flushSync();
+
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('Connection type');
+    expect(dialog?.textContent).toContain('Server');
+    expect(dialog?.textContent).toContain('File');
+    expect(dialog?.textContent).not.toContain('Create SQLite file');
+
+    const fileChoice = dialog?.querySelectorAll<HTMLInputElement>(
+      'input[name="connection-source"]'
+    )[1];
+    fileChoice?.click();
+    flushSync();
+    expect(dialog?.textContent).toContain('Choose database file…');
+    expect(button('Create profile').disabled).toBe(true);
   });
 
   it('renders an accessible settings dialog with all documented local defaults', async () => {

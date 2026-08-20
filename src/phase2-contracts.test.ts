@@ -167,12 +167,12 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(app).toContain('resultFromFirstBatch(event)');
     expect(app).not.toContain('(results[event.tab_id] ??= [])');
     expect(lifecycle).toContain('execution.completedAt ?? now');
-    expect(css).toMatch(
-      /main\.has-query-results\s*\{[^}]*grid-template-rows:[^}]*minmax\(12rem, 2fr\)/s
-    );
-    expect(css).toMatch(
-      /\.results-workspace\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*auto;/s
-    );
+    expect(app).toContain('workspace.panel_sizes.results_percent');
+    expect(app).toContain('role="separator"');
+    expect(app).toContain('aria-valuemin="20"');
+    expect(app).toContain('aria-valuemax="70"');
+    expect(css).toMatch(/\.results-separator\s*\{[^}]*cursor:\s*row-resize/s);
+    expect(css).toMatch(/\.results-workspace\s*\{[^}]*overflow:\s*hidden/s);
   });
 
   it('quotes structural TSV characters and opens only one large value on demand', async () => {
