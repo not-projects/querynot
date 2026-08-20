@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.2 is the current published Windows 11 x86-64 release on the signed-updater channel; the source tree is prepared as 0.1.3 pending signed candidate validation and publication.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.3 is the current published Windows 11 x86-64 release on the signed-updater channel.
 
 > Query your data, not your patience.
 
@@ -38,9 +38,9 @@ The repository contains the completed Phase 0–6 implementation and release evi
 
 Connection creation uses one immutable Server/File choice. One explicitly selected database file is probed read-only and detected as SQLite behind an opaque native grant; it is never discovered by scanning. SQL document actions live in the File menu. Safe window close is silent, while actionable native work keeps the window open and focuses its blocker. The persisted query/results split is pointer- and keyboard-resizable from 20–70%.
 
-The 0.1.3 release source keeps the CodeMirror instance mounted through normal typing and derives connection-grouped sidebar tabs from the unchanged flat workspace. Connect/Disconnect remain profile-level; selecting a child under a connected profile lazily opens that child's isolated native session, while unused restored children remain offline. CSV safety guidance is disclosed inside Export.
+Version 0.1.3 keeps the CodeMirror instance mounted through normal typing and derives connection-grouped sidebar tabs from the unchanged flat workspace. Connect/Disconnect remain profile-level; selecting a child under a connected profile lazily opens that child's isolated native session, while unused restored children remain offline. CSV safety guidance is disclosed inside Export.
 
-The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011; version 0.1.2 is the current published release. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
+The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011; version 0.1.3 is the current published release. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
 
 ## Verified Commands
 

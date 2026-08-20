@@ -32,7 +32,7 @@ The candidate job validates presence and document shape without printing any key
 
 The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset.
 
-The current completed signed release is `v0.1.2`: candidate CI run `32368993319`, publication run `32370157774`, and source commit `4088b024d834213ee1e7815c4330a561cc2048ea`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
+The current completed signed release is `v0.1.3`: candidate CI run `32414032321`, publication run `32415066935`, and source commit `35a097795fb05b9a261f5cbd18e103074b44d44b`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
 
 ## Rotation and recovery
 

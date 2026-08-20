@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-20
-- Scope: Included in the `0.1.3` release source after `0.1.2`
+- Scope: Released in `0.1.3`
 
 ## Context
 
