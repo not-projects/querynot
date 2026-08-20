@@ -17,6 +17,7 @@
   import { Compartment, EditorState } from '@codemirror/state';
   import { EditorView, keymap } from '@codemirror/view';
   import { openSearchPanel } from '@codemirror/search';
+  import { untrack } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
 
   export interface EditorRunRequest {
@@ -141,92 +142,93 @@
     return diagnostics;
   });
 
-  const mountEditor: Attachment<HTMLElement> = (element) => {
-    const state = EditorState.create({
-      doc: value,
-      extensions: [
-        basicSetup,
-        languageCompartment.of(languageExtensions()),
-        wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
-        editableCompartment.of(EditorView.editable.of(!disabled)),
-        parseDiagnostics,
-        keymap.of([
-          { key: 'Mod-Enter', run: () => run(false) },
-          { key: 'Mod-Shift-Enter', run: () => run(true) },
-          {
-            key: 'Mod-.',
-            run: () => {
-              oncancel();
-              return true;
+  const mountEditor: Attachment<HTMLElement> = (element) =>
+    untrack(() => {
+      const state = EditorState.create({
+        doc: value,
+        extensions: [
+          basicSetup,
+          languageCompartment.of(languageExtensions()),
+          wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
+          editableCompartment.of(EditorView.editable.of(!disabled)),
+          parseDiagnostics,
+          keymap.of([
+            { key: 'Mod-Enter', run: () => run(false) },
+            { key: 'Mod-Shift-Enter', run: () => run(true) },
+            {
+              key: 'Mod-.',
+              run: () => {
+                oncancel();
+                return true;
+              }
+            },
+            {
+              key: 'Shift-Alt-f',
+              run: () => {
+                onformat();
+                return true;
+              }
             }
-          },
-          {
-            key: 'Shift-Alt-f',
-            run: () => {
-              onformat();
-              return true;
+          ]),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged && !applyingExternal) {
+              onchange(update.state.doc.toString());
             }
-          }
-        ]),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged && !applyingExternal) {
-            onchange(update.state.doc.toString());
-          }
-        }),
-        EditorView.theme({
-          '&': {
-            height: '100%',
-            color: 'var(--text)',
-            backgroundColor: 'var(--surface-raised)'
-          },
-          '.cm-content': {
-            caretColor: 'var(--accent)',
-            fontFamily:
-              "'IBM Plex Mono', 'Cascadia Code', ui-monospace, monospace",
-            fontSize: '0.9rem',
-            lineHeight: '1.6'
-          },
-          '.cm-cursor, .cm-dropCursor': {
-            borderLeftColor: 'var(--accent)'
-          },
-          '.cm-gutters': {
-            color: 'var(--muted)',
-            backgroundColor: 'var(--surface)',
-            borderRightColor: 'var(--divider)'
-          },
-          '.cm-activeLine, .cm-activeLineGutter': {
-            backgroundColor:
-              'color-mix(in srgb, var(--accent) 12%, transparent)'
-          },
-          '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-            backgroundColor:
-              'color-mix(in srgb, var(--accent) 28%, transparent)'
-          },
-          '&.cm-focused': { outline: '2px solid var(--accent)' }
-        })
-      ]
+          }),
+          EditorView.theme({
+            '&': {
+              height: '100%',
+              color: 'var(--text)',
+              backgroundColor: 'var(--surface-raised)'
+            },
+            '.cm-content': {
+              caretColor: 'var(--accent)',
+              fontFamily:
+                "'IBM Plex Mono', 'Cascadia Code', ui-monospace, monospace",
+              fontSize: '0.9rem',
+              lineHeight: '1.6'
+            },
+            '.cm-cursor, .cm-dropCursor': {
+              borderLeftColor: 'var(--accent)'
+            },
+            '.cm-gutters': {
+              color: 'var(--muted)',
+              backgroundColor: 'var(--surface)',
+              borderRightColor: 'var(--divider)'
+            },
+            '.cm-activeLine, .cm-activeLineGutter': {
+              backgroundColor:
+                'color-mix(in srgb, var(--accent) 12%, transparent)'
+            },
+            '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
+              backgroundColor:
+                'color-mix(in srgb, var(--accent) 28%, transparent)'
+            },
+            '&.cm-focused': { outline: '2px solid var(--accent)' }
+          })
+        ]
+      });
+      view = new EditorView({ state, parent: element });
+      onready?.({
+        focus: () => view?.focus(),
+        openSearch: () => {
+          if (view) openSearchPanel(view);
+        },
+        selection: () => {
+          const selection = view?.state.selection.main;
+          return {
+            start: selection?.from ?? 0,
+            end: selection?.to ?? 0,
+            cursor: selection?.head ?? 0
+          };
+        }
+      });
+      return () => {
+        onready?.(null);
+        view?.destroy();
+        view = null;
+      };
     });
-    view = new EditorView({ state, parent: element });
-    onready?.({
-      focus: () => view?.focus(),
-      openSearch: () => {
-        if (view) openSearchPanel(view);
-      },
-      selection: () => {
-        const selection = view?.state.selection.main;
-        return {
-          start: selection?.from ?? 0,
-          end: selection?.to ?? 0,
-          cursor: selection?.head ?? 0
-        };
-      }
-    });
-    return () => {
-      onready?.(null);
-      view?.destroy();
-      view = null;
-    };
-  };
 
   $effect(() => {
     if (!view || view.state.doc.toString() === value) return;

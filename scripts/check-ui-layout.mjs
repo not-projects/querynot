@@ -236,6 +236,49 @@ try {
     'connection actions overflow their profile card'
   );
 
+  const editorPage = await browser.newPage({
+    viewport: { width: 1280, height: 800 },
+    reducedMotion: 'reduce'
+  });
+  await editorPage.goto(
+    `http://127.0.0.1:${address.port}/scripts/fixtures/editor-focus.html`,
+    { waitUntil: 'networkidle' }
+  );
+  const editor = editorPage.locator('.cm-editor');
+  const content = editorPage.locator('.cm-content');
+  await editor.waitFor();
+  await editor.evaluate((element) => {
+    element.setAttribute('data-focus-regression-node', 'stable');
+  });
+  await content.click();
+  await content.pressSequentially('select 12345;', { delay: 45 });
+  await editorPage.waitForTimeout(1_150);
+  const editorFocus = await editorPage.evaluate(() => {
+    const currentEditor = document.querySelector('.cm-editor');
+    const currentContent = document.querySelector('.cm-content');
+    return {
+      same_node:
+        currentEditor?.getAttribute('data-focus-regression-node') === 'stable',
+      focused:
+        currentContent === document.activeElement ||
+        currentContent?.contains(document.activeElement),
+      text: currentContent?.textContent ?? '',
+      recovery_banner:
+        document.querySelector('.recovery-banner')?.textContent ?? null
+    };
+  });
+  assert(editorFocus.same_node, 'typing remounted the CodeMirror editor node');
+  assert(editorFocus.focused, 'typing moved focus away from the SQL editor');
+  assert(
+    editorFocus.text === 'select 12345;',
+    `typing lost SQL characters (${JSON.stringify(editorFocus.text)})`
+  );
+  assert(
+    editorFocus.recovery_banner === null,
+    `normal typing displayed a recovery banner (${editorFocus.recovery_banner})`
+  );
+  await editorPage.close();
+
   mkdirSync(dirname(reportPath), { recursive: true });
   await page.screenshot({ path: screenshotPath, fullPage: true });
   const report = {
@@ -248,6 +291,7 @@ try {
     dialog_themes: dialogThemes,
     scale_preview: { baseline: baselineScale, scaled: scalePreview },
     sidebar_overflow: sidebarOverflow,
+    editor_focus: editorFocus,
     theme_labels: options,
     screenshot: 'artifacts/ui-layout-settings.png'
   };
