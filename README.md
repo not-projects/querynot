@@ -9,9 +9,9 @@ QueryNot is a local-first desktop SQL client focused on a fast, calm, and depend
 
 ## Project Status
 
-QueryNot 0.1.1 is the current Windows release and the first release on the dedicated signed-updater channel. The repository contains the completed Phase 0–6 implementation, release evidence, and no-rebuild publication workflow. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB release matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Connection creation has one Server/File choice: an explicitly selected database file is detected through a read-only native probe and becomes an SQLite profile without filesystem scanning. Read-only and read-write SQLite profiles are supported; creating a new database file remains deferred.
+QueryNot 0.1.1 is the current published Windows release and the first release on the dedicated signed-updater channel. The source tree is prepared as 0.1.2 with the completed workbench repairs recorded in the changelog and versioned release notes; it is not a published support claim until the signed candidate and no-rebuild publication workflow complete. The desktop workbench uses one capability-driven adapter flow for SQLite plus the exact MySQL/MariaDB release matrix, including direct TLS, detected identity/version, progressive metadata, dedicated query and table sessions, dialect-aware editing, history and SQL-file workflows, transactions, cancellation, acknowledged streaming, multiple results, lossless values, deterministic table browsing, and staged atomic mutations. Connection creation has one Server/File choice: an explicitly selected database file is detected through a read-only native probe and becomes an SQLite profile without filesystem scanning. Read-only and read-write SQLite profiles are supported; creating a new database file remains deferred.
 
-The support envelope remains Windows 11 x86-64 only. WSL2 and Linux package builds are engineering evidence, not supported application platforms or public release artifacts. Version 0.1.1 adds the dedicated QueryNot signed-updater channel; because 0.1.0 has no updater, 0.1.1 is installed manually once and later signed releases can be installed from Settings. Native owner checks, five-day dogfood, and external beta remain explicitly unperformed until they occur.
+The support envelope remains Windows 11 x86-64 only. WSL2 and Linux package builds are engineering evidence, not supported application platforms or public release artifacts. Version 0.1.1 added the dedicated QueryNot signed-updater channel; because 0.1.0 has no updater, 0.1.1 is installed manually once and later signed releases such as 0.1.2 can be installed from Settings after publication. Native owner checks, five-day dogfood, and external beta remain explicitly unperformed until they occur.
 
 The planned application stack is:
 
@@ -66,7 +66,7 @@ npm run tauri -- build --no-bundle
 npm run release:validate-updater-signing
 npm run release:verify-updater-signature -- <installer.exe> <installer.exe.sig>
 npm run release:create-updater-manifest -- --directory <bundle-dir> --output artifacts/release-candidate/latest.json --report artifacts/release-candidate/updater-manifest-report.json
-npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.1 --confirm publish-v0.1.1 --report artifacts/publication-plan.json
+npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.2 --confirm publish-v0.1.2 --report artifacts/publication-plan.json
 ```
 
 `npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for post-release native Windows vault and accessibility observation.

@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-20
+
 ### Fixed
 
 - Kept normal SQL typing focused and layout-stable by making the one-second draft-recovery debounce silent; the recovery banner now appears only after a real persistence failure.
@@ -15,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Reduced Rust development and test debug-symbol volume while retaining incremental compilation, keeping local Tauri builds faster and generated artifacts bounded.
 - Unified connection creation behind an immutable Server/File choice. Explicit database files are detected as SQLite through a read-only native probe and represented by opaque grants; standalone open/create SQLite actions were removed, with new-file creation deferred.
 - Moved SQL document actions into a compact File menu and replaced the fixed, scroll-heavy result block with a persisted 20–70% keyboard- and pointer-resizable split, selectable result-set tabs, a single virtualized result viewport, and grouped export options.
 

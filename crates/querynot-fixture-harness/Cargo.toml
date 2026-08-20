@@ -9,7 +9,7 @@ rust-version.workspace = true
 
 [dependencies]
 futures-util.workspace = true
-querynot-core = { path = "../querynot-core", version = "0.1.1" }
+querynot-core = { path = "../querynot-core", version = "0.1.2" }
 secrecy.workspace = true
 serde.workspace = true
 serde_json.workspace = true

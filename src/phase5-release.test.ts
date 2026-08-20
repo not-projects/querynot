@@ -10,14 +10,34 @@ import {
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Phase 5 Windows-first release boundary', () => {
-  it('keeps 0.1.1 versions aligned, updater generation enabled, and Windows packaging constrained', () => {
+  it('keeps 0.1.2 versions aligned, updater generation enabled, and Windows packaging constrained', () => {
     const packageJson = JSON.parse(read('package.json'));
+    const packageLock = JSON.parse(read('package-lock.json'));
     const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
     const cargo = read('Cargo.toml');
+    const cargoLock = read('Cargo.lock');
+    const tauriCargo = read('src-tauri/Cargo.toml');
+    const fixtureCargo = read('crates/querynot-fixture-harness/Cargo.toml');
 
-    expect(packageJson.version).toBe('0.1.1');
+    expect(packageJson.version).toBe('0.1.2');
+    expect(packageLock.version).toBe(packageJson.version);
+    expect(packageLock.packages[''].version).toBe(packageJson.version);
     expect(tauri.version).toBe(packageJson.version);
     expect(cargo).toContain(`version = "${packageJson.version}"`);
+    expect(tauriCargo).toContain(`version = "${packageJson.version}"`);
+    expect(fixtureCargo).toContain(`version = "${packageJson.version}"`);
+    for (const crate of [
+      'querynot',
+      'querynot-core',
+      'querynot-fixture-harness'
+    ]) {
+      expect(cargoLock).toContain(
+        `name = "${crate}"\nversion = "${packageJson.version}"`
+      );
+    }
+    expect(read(`docs/release/${packageJson.version}-notes.md`)).toContain(
+      `# QueryNot ${packageJson.version}`
+    );
     expect(tauri.bundle.active).toBe(true);
     expect(tauri.bundle.targets).toEqual([]);
     expect(tauri.bundle.createUpdaterArtifacts).toBe(true);
