@@ -225,9 +225,8 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
     );
 
     expect(starter).toContain('connections[profileId]');
-    expect(starter).toContain(
-      'openConnectedTabSession(tab, profileId, object.namespace)'
-    );
+    expect(starter).toContain('await ensureTabSession(tab)');
+    expect(starter).toContain('tab.context_label = object.namespace');
     expect(starter).toContain("invokeCommand('open_tab_session'");
     expect(app.indexOf('id="schema-heading"')).toBeLessThan(
       app.indexOf('id="history-heading"')

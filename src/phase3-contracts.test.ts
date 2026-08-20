@@ -43,14 +43,15 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     const contract = read('contracts/querynot.v1.json');
     const runtime = read('src-tauri/src/phase2.rs');
     const app = read('src/App.svelte');
+    const connectionTabs = read('src/lib/components/ConnectionTabs.svelte');
 
     expect(contract).toContain('cancel_profile_connection');
     expect(runtime).toContain('begin_connection_attempt');
     expect(runtime).toContain('connection_timeout_error');
     expect(runtime).toContain('partial native resources were closed');
     expect(app).toContain('connectionOperations');
-    expect(app).toContain('Testing…');
-    expect(app).toContain('Connecting…');
+    expect(connectionTabs).toContain('Testing…');
+    expect(connectionTabs).toContain('Connecting…');
   });
 
   it('implements metadata, cancellation, authoritative transactions, and multiple results natively', () => {

@@ -600,77 +600,6 @@ main.has-query-results {
   font: inherit;
 }
 
-.tab-strip {
-  display: flex;
-  min-height: 38px;
-  align-items: end;
-  padding: 4px 8px 0;
-  gap: 3px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--divider);
-  background: var(--surface-subtle);
-}
-
-.tab-item {
-  display: flex;
-  min-width: 120px;
-  max-width: 430px;
-  height: 33px;
-  align-items: center;
-  border: 1px solid var(--divider);
-  border-bottom: 0;
-  border-radius: 5px 5px 0 0;
-  background: var(--surface-subtle);
-}
-
-.tab-rename {
-  display: none;
-  width: 7rem;
-  min-height: 24px;
-  padding: 2px 5px;
-  font-size: 0.65rem;
-}
-
-.tab-item.active .tab-rename,
-.tab-item:focus-within .tab-rename {
-  display: block;
-}
-
-.tab-item:not(.active) > .tab-close:not(:last-child) {
-  display: none;
-}
-
-.tab-item.active {
-  background: var(--surface-raised);
-}
-
-.tab-item > button[role='tab'] {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: center;
-  justify-content: space-between;
-  gap: 7px;
-  border: 0;
-  background: transparent;
-  font-size: 0.7rem;
-}
-
-.tab-item > button[role='tab'] span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tab-close,
-.new-tab {
-  min-height: 28px;
-  padding: 0 7px;
-  border: 0;
-  color: var(--muted);
-  background: transparent;
-}
-
 .editor-workspace {
   display: grid;
   min-height: 0;
@@ -982,8 +911,7 @@ main.has-query-results .editor-workspace {
   color: var(--accent);
 }
 
-.result-error,
-.export-warning {
+.result-error {
   padding: 9px 11px;
   border: 1px solid var(--warning);
   border-radius: 6px;
@@ -991,21 +919,6 @@ main.has-query-results .editor-workspace {
   background: color-mix(in srgb, var(--warning) 8%, var(--surface-raised));
   font-size: 0.72rem;
   line-height: 1.45;
-}
-
-.export-warning {
-  flex: 0 0 auto;
-  padding: 5px 8px;
-  font-size: 0.64rem;
-}
-
-.export-warning summary {
-  cursor: pointer;
-  font-weight: 650;
-}
-
-.export-warning p {
-  margin-top: 5px;
 }
 
 .safety-flags {

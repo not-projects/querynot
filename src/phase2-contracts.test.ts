@@ -245,6 +245,22 @@ describe('Phase 2 SQLite boundaries', () => {
       }
     });
     flushSync();
+
+    const exportOptions = document.querySelector<HTMLDetailsElement>(
+      'details.export-options'
+    );
+    const exportSafety = exportOptions?.querySelector('.export-safety-note');
+    expect(document.querySelector('.export-warning')).toBeNull();
+    expect(
+      document.querySelector('.result-set > .export-safety-note')
+    ).toBeNull();
+    expect(exportOptions?.open).toBe(false);
+    expect(exportSafety?.textContent).toContain(
+      'CSV keeps raw spreadsheet-formula prefixes'
+    );
+    if (exportOptions) exportOptions.open = true;
+    expect(exportOptions?.open).toBe(true);
+
     const firstCell = document.querySelector<HTMLButtonElement>(
       '.grid-row [role="gridcell"]'
     );

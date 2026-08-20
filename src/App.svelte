@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
+  import { SvelteMap } from 'svelte/reactivity';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
@@ -31,6 +32,7 @@
     WorkspaceTabView,
     WorkspaceView
   } from './lib/generated/contracts';
+  import ConnectionTabs from './lib/components/ConnectionTabs.svelte';
   import ResultGrid from './lib/components/ResultGrid.svelte';
   import TableDataGrid from './lib/components/TableDataGrid.svelte';
   import SqlEditor, {
@@ -175,7 +177,15 @@
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let connections = $state<Record<string, ConnectionInfoView>>({});
   let connectionOperations = $state<Record<string, 'test' | 'connect'>>({});
+  let tabSessionOperations = $state<Record<string, boolean>>({});
+  let tabSessionErrors = $state<Record<string, string>>({});
+  let expandedProfiles = $state<Record<string, boolean>>({});
+  let offlineTabsExpanded = $state(true);
   let sessions = $state<Record<string, SessionView>>({});
+  const tabSessionOpenPromises = new SvelteMap<
+    string,
+    Promise<SessionView | null>
+  >();
   let executions = $state<Record<string, ExecutionUi>>({});
   let results = $state<Record<string, ResultUi[]>>({});
   let selectedResultIds = $state<Record<string, string>>({});
@@ -398,7 +408,16 @@
         });
         connections[profile.id] = info;
         await loadSchemaNamespaces(profile.id);
-        statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. Restored tabs remain offline until opened.`;
+        const restoredActiveTab = workspace.tabs.find(
+          (tab) =>
+            tab.id === workspace.active_tab_id && tab.profile_id === profile.id
+        );
+        const restoredSession = restoredActiveTab
+          ? await ensureTabSession(restoredActiveTab)
+          : null;
+        if (!restoredActiveTab || restoredSession) {
+          statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. Only its restored active tab was opened; other tabs remain lazy.`;
+        }
       } catch (error) {
         statusMessage = `${profile.name} automatic reconnect failed safely: ${safeErrorMessage(error)}`;
       }
@@ -415,7 +434,17 @@
     );
     connections = {};
     connectionOperations = {};
+    tabSessionOperations = {};
+    tabSessionErrors = {};
+    tabSessionOpenPromises.clear();
     sessions = {};
+    const restoredActiveTab = workspace.tabs.find(
+      (tab) => tab.id === workspace.active_tab_id
+    );
+    expandedProfiles = restoredActiveTab?.profile_id
+      ? { [restoredActiveTab.profile_id]: true }
+      : {};
+    offlineTabsExpanded = !restoredActiveTab?.profile_id;
     executions = {};
     results = {};
     selectedResultIds = {};
@@ -493,6 +522,14 @@
   }
 
   function focusProfileSafetyBlocker(profileId: string): boolean {
+    const openingTab = pendingTabForProfile(profileId);
+    if (openingTab) {
+      workspace.active_tab_id = openingTab.id;
+      expandTabGroup(openingTab);
+      statusMessage =
+        'Wait for this tab’s dedicated session to finish opening before disconnecting the profile.';
+      return true;
+    }
     const stagedTab = stagedTableTabForProfile(profileId);
     if (stagedTab) {
       workspace.active_tab_id = stagedTab.id;
@@ -529,6 +566,11 @@
   }
 
   async function closeProfileSessions(profileId: string) {
+    if (pendingTabForProfile(profileId)) {
+      throw new Error(
+        'A dedicated tab session is still opening. Wait for it to finish before disconnecting this profile.'
+      );
+    }
     const owned = Object.values(sessions).filter(
       (session) => session.profile_id === profileId
     );
@@ -543,6 +585,128 @@
         'This table tab was disconnected cleanly. Reconnect to load a fresh page.'
       );
     }
+  }
+
+  function tabsInGroup(profileId: string | null) {
+    return workspace.tabs.filter((tab) => tab.profile_id === profileId);
+  }
+
+  function expandTabGroup(tab: WorkspaceTabView) {
+    if (tab.profile_id) expandedProfiles[tab.profile_id] = true;
+    else offlineTabsExpanded = true;
+  }
+
+  async function activateTab(tabId: string, focusEditor = true) {
+    const tab = workspace.tabs.find((candidate) => candidate.id === tabId);
+    if (!tab) return;
+    workspace.active_tab_id = tab.id;
+    expandTabGroup(tab);
+    queueWorkspaceSave();
+    if (tab.profile_id && connections[tab.profile_id] && !sessions[tab.id]) {
+      await ensureTabSession(tab);
+    }
+    await tick();
+    if (
+      focusEditor &&
+      workspace.active_tab_id === tab.id &&
+      tab.kind === 'query'
+    ) {
+      editorApi?.focus();
+    }
+  }
+
+  async function selectProfileGroup(profile: ProfileView) {
+    expandedProfiles[profile.id] = true;
+    const firstTab = tabsInGroup(profile.id)[0];
+    if (firstTab) await activateTab(firstTab.id);
+    else await createOfflineTab(profile.id);
+  }
+
+  async function selectOfflineGroup() {
+    offlineTabsExpanded = true;
+    const firstTab = tabsInGroup(null)[0];
+    if (firstTab) await activateTab(firstTab.id);
+    else await createOfflineTab(null);
+  }
+
+  function toggleProfileGroup(profileId: string) {
+    expandedProfiles[profileId] = !expandedProfiles[profileId];
+  }
+
+  function toggleOfflineGroup() {
+    offlineTabsExpanded = !offlineTabsExpanded;
+  }
+
+  function pendingTabForProfile(profileId: string) {
+    return workspace.tabs.find(
+      (tab) => tab.profile_id === profileId && tabSessionOperations[tab.id]
+    );
+  }
+
+  function ensureTabSession(
+    tab: WorkspaceTabView
+  ): Promise<SessionView | null> {
+    if (sessions[tab.id]) return Promise.resolve(sessions[tab.id]);
+    const pending = tabSessionOpenPromises.get(tab.id);
+    if (pending) return pending;
+    if (tab.kind === 'table_data' && tableTabs[tab.id]?.staged.length) {
+      const message =
+        'Discard the in-memory staged edits from the lost table session before opening a new dedicated session; QueryNot will not replay them automatically.';
+      tabSessionErrors[tab.id] = message;
+      statusMessage = message;
+      return Promise.resolve(null);
+    }
+    if (
+      !tab.profile_id ||
+      !connections[tab.profile_id] ||
+      !hasNativeRuntime()
+    ) {
+      return Promise.resolve(null);
+    }
+    const profileId = tab.profile_id;
+    const openPromise = (async () => {
+      tabSessionOperations[tab.id] = true;
+      delete tabSessionErrors[tab.id];
+      try {
+        const context =
+          tab.kind === 'table_data' ? tab.table_namespace : tab.context_label;
+        const session = await openConnectedTabSession(tab, profileId, context);
+        if (tab.kind === 'table_data') {
+          tableTabs[tab.id] ??= newTableUi();
+          await loadTablePage(tab.id, [], 0, false);
+        }
+        if (workspace.active_tab_id === tab.id) {
+          const connection = connections[profileId];
+          statusMessage = `${tab.title} is online with its own dedicated ${connection?.engine ?? 'database'} session.`;
+        }
+        return session;
+      } catch (error) {
+        const message = safeErrorMessage(error);
+        tabSessionErrors[tab.id] = message;
+        if (tab.kind === 'table_data') {
+          tableTabs[tab.id] ??= newTableUi();
+          tableTabs[tab.id].error = message;
+        }
+        if (workspace.active_tab_id === tab.id) {
+          statusMessage = `${tab.title} stayed offline: ${message}`;
+        }
+        return null;
+      } finally {
+        delete tabSessionOperations[tab.id];
+        tabSessionOpenPromises.delete(tab.id);
+      }
+    })();
+    tabSessionOpenPromises.set(tab.id, openPromise);
+    return openPromise;
+  }
+
+  async function retryTabSession(tab: WorkspaceTabView) {
+    if (!tab.profile_id || !connections[tab.profile_id]) {
+      statusMessage =
+        'Connect the profile before retrying this tab’s dedicated session.';
+      return;
+    }
+    await ensureTabSession(tab);
   }
 
   function schemaFailureState(error: unknown): SchemaLoadState {
@@ -787,6 +951,11 @@
           statusMessage +=
             ' Cached metadata is shown as stale because refresh failed.';
         }
+        const selectedTab = workspace.tabs.find(
+          (tab) =>
+            tab.id === workspace.active_tab_id && tab.profile_id === profile.id
+        );
+        if (selectedTab) await ensureTabSession(selectedTab);
       } finally {
         delete connectionOperations[profile.id];
       }
@@ -819,6 +988,11 @@
       delete schemaNamespaces[profile.id];
       delete schemaObjects[profile.id];
       schemaStates[profile.id] = 'disconnected';
+      for (const tab of workspace.tabs) {
+        if (tab.profile_id === profile.id) {
+          delete tabSessionErrors[tab.id];
+        }
+      }
       selectedSchemaObject = null;
       statusMessage = result.message;
     });
@@ -1048,12 +1222,6 @@
           workspace.tabs = workspace.tabs.filter(
             (tab) => tab.profile_id !== profileId
           );
-          if (
-            workspace.active_tab_id &&
-            !workspace.tabs.some((tab) => tab.id === workspace.active_tab_id)
-          ) {
-            workspace.active_tab_id = workspace.tabs[0]?.id ?? null;
-          }
         } else {
           workspace.tabs = workspace.tabs.filter(
             (tab) => tab.profile_id !== profileId || tab.kind === 'query'
@@ -1067,11 +1235,15 @@
           }
         }
         workspace.tabs.forEach((tab, position) => (tab.position = position));
-        if (
-          workspace.active_tab_id &&
-          !workspace.tabs.some((tab) => tab.id === workspace.active_tab_id)
-        ) {
-          workspace.active_tab_id = workspace.tabs[0]?.id ?? null;
+        const survivingActiveTab = workspace.tabs.find(
+          (tab) => tab.id === workspace.active_tab_id
+        );
+        if (survivingActiveTab) {
+          expandTabGroup(survivingActiveTab);
+        } else {
+          workspace.active_tab_id = null;
+          const fallbackTab = workspace.tabs[0];
+          if (fallbackTab) await activateTab(fallbackTab.id, false);
         }
         selectedSchemaObject = null;
         await closeCompletedModal();
@@ -1090,20 +1262,23 @@
         profile_id: profileId
       });
       tab.position = workspace.tabs.length;
-      if (profileId && connections[profileId]) {
-        await openConnectedTabSession(tab, profileId);
-        statusMessage =
-          'Opened a query tab with its own dedicated native database session.';
-      } else {
-        statusMessage = profileId
-          ? 'Opened a profile-bound offline draft. Connect the profile to create a dedicated session.'
-          : 'Opened an offline draft.';
-      }
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
+      expandTabGroup(tab);
+      if (profileId && connections[profileId]) {
+        const session = await ensureTabSession(tab);
+        if (session) {
+          statusMessage =
+            'Opened a query tab with its own dedicated native database session.';
+        }
+      } else {
+        statusMessage = profileId
+          ? 'Opened a profile-bound offline draft. Connect the profile once; its selected tabs open dedicated sessions automatically.'
+          : 'Opened an offline draft.';
+      }
       await saveWorkspaceNow();
       await tick();
-      document.getElementById('sql-editor')?.focus();
+      if (workspace.active_tab_id === tab.id) editorApi?.focus();
     });
   }
 
@@ -1148,6 +1323,7 @@
     };
     workspace.tabs.push(tab);
     workspace.active_tab_id = tab.id;
+    offlineTabsExpanded = true;
     return tab;
   }
 
@@ -1167,7 +1343,7 @@
               statusMessage = `${opened.length} SQL file${opened.length === 1 ? '' : 's'} routed into offline draft tabs without connecting or executing.`;
               await saveWorkspaceNow();
               await tick();
-              document.getElementById('sql-editor')?.focus();
+              editorApi?.focus();
             }
           } catch (error) {
             statusMessage = `SQL-file routing failed safely: ${safeErrorMessage(error)}`;
@@ -1242,20 +1418,36 @@
   }
 
   function moveTab(tabId: string, direction: -1 | 1) {
-    const index = workspace.tabs.findIndex((tab) => tab.id === tabId);
-    const target = index + direction;
-    if (index < 0 || target < 0 || target >= workspace.tabs.length) return;
-    const [tab] = workspace.tabs.splice(index, 1);
-    workspace.tabs.splice(target, 0, tab);
+    const tab = workspace.tabs.find((candidate) => candidate.id === tabId);
+    if (!tab) return;
+    const groupIndexes = workspace.tabs.flatMap((candidate, index) =>
+      candidate.profile_id === tab.profile_id ? [index] : []
+    );
+    const groupIndex = groupIndexes.findIndex(
+      (index) => workspace.tabs[index].id === tabId
+    );
+    const target = groupIndex + direction;
+    if (target < 0 || target >= groupIndexes.length) return;
+    const sourceIndex = groupIndexes[groupIndex];
+    const targetIndex = groupIndexes[target];
+    [workspace.tabs[sourceIndex], workspace.tabs[targetIndex]] = [
+      workspace.tabs[targetIndex],
+      workspace.tabs[sourceIndex]
+    ];
     queueWorkspaceSave();
   }
 
   function togglePinTab(tab: WorkspaceTabView) {
     tab.pinned = !tab.pinned;
-    workspace.tabs = [
-      ...workspace.tabs.filter((candidate) => candidate.pinned),
-      ...workspace.tabs.filter((candidate) => !candidate.pinned)
-    ];
+    const groupIndexes = workspace.tabs.flatMap((candidate, index) =>
+      candidate.profile_id === tab.profile_id ? [index] : []
+    );
+    const orderedGroup = groupIndexes
+      .map((index) => workspace.tabs[index])
+      .sort((left, right) => Number(right.pinned) - Number(left.pinned));
+    groupIndexes.forEach((index, groupIndex) => {
+      workspace.tabs[index] = orderedGroup[groupIndex];
+    });
     queueWorkspaceSave();
   }
 
@@ -1273,8 +1465,14 @@
       duplicate.position = workspace.tabs.length;
       workspace.tabs.push(duplicate);
       workspace.active_tab_id = duplicate.id;
-      statusMessage =
-        'Duplicated the query draft and non-secret binding without sharing its file grant, native session, transaction, results, or running job.';
+      expandTabGroup(duplicate);
+      const session = duplicate.profile_id
+        ? await ensureTabSession(duplicate)
+        : null;
+      if (session || !duplicate.profile_id) {
+        statusMessage =
+          'Duplicated the query draft and non-secret binding without sharing its file grant, native session, transaction, results, or running job.';
+      }
       await saveWorkspaceNow();
     });
   }
@@ -1311,30 +1509,10 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
-      try {
-        const session = await invokeCommand('open_tab_session', {
-          profile_id: profile.id,
-          tab_id: tab.id
-        });
-        sessions[tab.id] = session;
-        if (session.context !== object.namespace) {
-          const changed = await invokeCommand('change_tab_context', {
-            profile_id: profile.id,
-            tab_id: tab.id,
-            session_id: session.session_id,
-            context: object.namespace
-          });
-          session.context = changed.context;
-        }
-        tab.context_label = session.context;
-        tableTabs[tab.id] = newTableUi();
-        await loadTablePage(tab.id, [], 0, false);
-        await saveWorkspaceNow();
-      } catch (error) {
-        if (safeErrorCategory(error) === 'connectivity')
-          delete sessions[tab.id];
-        statusMessage = safeErrorMessage(error);
-      }
+      expandTabGroup(tab);
+      tableTabs[tab.id] = newTableUi();
+      await ensureTabSession(tab);
+      await saveWorkspaceNow();
     });
   }
 
@@ -1719,14 +1897,17 @@
       tab.dirty = true;
       tab.context_label = object.namespace;
       tab.position = workspace.tabs.length;
-      if (connections[profileId]) {
-        await openConnectedTabSession(tab, profileId, object.namespace);
-      }
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
-      statusMessage = connections[profileId]
-        ? `${starter.message} Opened with a dedicated session on the existing connection.`
-        : starter.message;
+      expandTabGroup(tab);
+      const session = connections[profileId]
+        ? await ensureTabSession(tab)
+        : null;
+      if (session) {
+        statusMessage = `${starter.message} Opened with a dedicated session on the existing connection.`;
+      } else if (!connections[profileId]) {
+        statusMessage = starter.message;
+      }
       await saveWorkspaceNow();
     });
   }
@@ -1735,12 +1916,11 @@
     tab: WorkspaceTabView,
     profileId: string,
     context: string | null = null
-  ) {
+  ): Promise<SessionView> {
     const session = await invokeCommand('open_tab_session', {
       profile_id: profileId,
       tab_id: tab.id
     });
-    sessions[tab.id] = session;
     try {
       if (context && session.context !== context) {
         const changed = await invokeCommand('change_tab_context', {
@@ -1752,6 +1932,8 @@
         session.context = changed.context;
       }
       tab.context_label = session.context;
+      sessions[tab.id] = session;
+      return session;
     } catch (error) {
       await invokeCommand('close_tab_session', {
         profile_id: profileId,
@@ -1769,80 +1951,6 @@
     activeTab.dirty = true;
     pendingExecution = null;
     queueWorkspaceSave();
-  }
-
-  async function connectActiveTab() {
-    if (!activeTab?.profile_id || !activeProfile || !hasNativeRuntime()) {
-      statusMessage =
-        'Bind this draft to a saved profile before connecting it.';
-      return;
-    }
-    const stagedTab = stagedTableTabForProfile(activeProfile.id);
-    if (stagedTab) {
-      workspace.active_tab_id = stagedTab.id;
-      statusMessage =
-        'Discard the in-memory staged edits from the lost table session before reconnecting; QueryNot will not replay them automatically.';
-      return;
-    }
-    await runAction(async () => {
-      let connection = connections[activeProfile.id];
-      if (!connection) {
-        connectionOperations[activeProfile.id] = 'connect';
-        try {
-          connection = await invokeCommand('connect_profile', {
-            profile_id: activeProfile.id
-          });
-          connections[activeProfile.id] = connection;
-          await loadSchemaNamespaces(activeProfile.id);
-        } finally {
-          delete connectionOperations[activeProfile.id];
-        }
-      }
-      sessions[activeTab.id] = await invokeCommand('open_tab_session', {
-        profile_id: activeProfile.id,
-        tab_id: activeTab.id
-      });
-      if (
-        activeTab.kind === 'table_data' &&
-        activeTab.table_namespace &&
-        sessions[activeTab.id].context !== activeTab.table_namespace
-      ) {
-        const changed = await invokeCommand('change_tab_context', {
-          profile_id: activeProfile.id,
-          tab_id: activeTab.id,
-          session_id: sessions[activeTab.id].session_id,
-          context: activeTab.table_namespace
-        });
-        sessions[activeTab.id].context = changed.context;
-      }
-      activeTab.context_label = sessions[activeTab.id].context;
-      if (activeTab.kind === 'table_data') {
-        tableTabs[activeTab.id] = newTableUi();
-        await loadTablePage(activeTab.id, [], 0, false);
-      }
-      statusMessage = `${activeTab.title} is online with a dedicated ${connection.engine} ${connection.exact_version} session.`;
-    });
-  }
-
-  async function disconnectActiveTab() {
-    if (!activeTab || !activeSession || !hasNativeRuntime()) return;
-    if (activeTableUi?.staged.length) {
-      statusMessage =
-        'Apply, discard, or cancel staged table changes before disconnecting this tab.';
-      return;
-    }
-    await runAction(async () => {
-      const result = await invokeCommand('close_tab_session', {
-        profile_id: activeSession.profile_id,
-        tab_id: activeSession.tab_id,
-        session_id: activeSession.session_id
-      });
-      markTabOffline(
-        activeTab.id,
-        'This table tab was disconnected cleanly. Reconnect to load a fresh page.'
-      );
-      statusMessage = result.message;
-    });
   }
 
   async function toggleNamespace(namespace: string) {
@@ -2350,6 +2458,13 @@
   }
 
   function requestCloseTab(tab: WorkspaceTabView) {
+    if (tabSessionOperations[tab.id]) {
+      workspace.active_tab_id = tab.id;
+      expandTabGroup(tab);
+      statusMessage =
+        'Wait for this tab’s dedicated session to finish opening before closing it.';
+      return;
+    }
     if (
       tab.dirty ||
       sessions[tab.id] ||
@@ -2379,14 +2494,17 @@
       const index = workspace.tabs.findIndex((tab) => tab.id === tabId);
       workspace.tabs.splice(index, 1);
       if (workspace.active_tab_id === tabId) {
-        workspace.active_tab_id =
-          workspace.tabs[Math.min(index, workspace.tabs.length - 1)]?.id ??
-          null;
+        const nextTab =
+          workspace.tabs[Math.min(index, workspace.tabs.length - 1)] ?? null;
+        workspace.active_tab_id = null;
+        if (nextTab) await activateTab(nextTab.id, false);
       }
       delete executions[tabId];
       delete results[tabId];
       delete selectedResultIds[tabId];
       delete tableTabs[tabId];
+      delete tabSessionErrors[tabId];
+      delete tabSessionOperations[tabId];
       await saveWorkspaceNow();
       statusMessage =
         'Tab and its native database resources were closed explicitly.';
@@ -2442,7 +2560,11 @@
       Object.entries(tableTabs).find(
         ([, table]) => table.staged.length > 0
       )?.[0] ?? null;
-    const connectionProfileId = Object.keys(connectionOperations)[0] ?? null;
+    const pendingSessionProfileId =
+      workspace.tabs.find((tab) => tabSessionOperations[tab.id])?.profile_id ??
+      null;
+    const connectionProfileId =
+      Object.keys(connectionOperations)[0] ?? pendingSessionProfileId;
     const connectionOperationTabId = connectionProfileId
       ? (workspace.tabs.find((tab) => tab.profile_id === connectionProfileId)
           ?.id ?? null)
@@ -2455,7 +2577,9 @@
       unresolvedTransactionTabId,
       stagedTableTabId,
       connectionOperationTabId,
-      connectionOperationCount: Object.keys(connectionOperations).length,
+      connectionOperationCount:
+        Object.keys(connectionOperations).length +
+        Object.keys(tabSessionOperations).length,
       busy: includeBusy && busy,
       unrecoverableDirtyTabId
     });
@@ -2466,6 +2590,8 @@
   ) {
     if (blocker.tabId) {
       workspace.active_tab_id = blocker.tabId;
+      const blockerTab = workspace.tabs.find((tab) => tab.id === blocker.tabId);
+      if (blockerTab) expandTabGroup(blockerTab);
       await tick();
       if (
         workspace.tabs.find((tab) => tab.id === blocker.tabId)?.kind === 'query'
@@ -2597,10 +2723,20 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
+      expandTabGroup(tab);
       historyOpen = false;
+      const session =
+        profileId && connections[profileId]
+          ? await ensureTabSession(tab)
+          : null;
       await saveWorkspaceNow();
-      statusMessage =
-        'Reopened history in a new offline query tab. No connection or execution was started.';
+      if (session) {
+        statusMessage =
+          'Reopened history in a new query tab with its own dedicated session. No execution was started.';
+      } else if (!profileId || !connections[profileId]) {
+        statusMessage =
+          'Reopened history in a new offline query tab. No connection or execution was started.';
+      }
     });
   }
 
@@ -2818,8 +2954,7 @@
       const direction = event.shiftKey ? -1 : 1;
       const next =
         (current + direction + workspace.tabs.length) % workspace.tabs.length;
-      workspace.active_tab_id = workspace.tabs[next].id;
-      queueWorkspaceSave();
+      void activateTab(workspace.tabs[next].id);
     }
   }
 </script>
@@ -2947,81 +3082,38 @@
             >Create connection</button
           >
         </div>
-      {:else}
-        <ul class="profile-list" aria-label="Saved connection profiles">
-          {#each profiles as profile (profile.id)}
-            <li>
-              <button
-                type="button"
-                class="profile-main"
-                onclick={() => void createOfflineTab(profile.id)}
-                aria-label={`Open query tab for ${profile.name}`}
-              >
-                <span class="engine-mark" aria-hidden="true">
-                  {profile.kind === 'sqlite' ? 'SQ' : 'MY'}
-                </span>
-                <span>
-                  <strong>{profile.name}</strong>
-                  <small>
-                    {profile.kind === 'sqlite'
-                      ? profile.file_name
-                      : `${profile.host}:${profile.port}`}
-                  </small>
-                </span>
-                <span
-                  class="status-dot"
-                  class:connected={Boolean(connections[profile.id])}
-                  title={connections[profile.id] ? 'Connected' : 'Offline'}
-                  aria-label={connections[profile.id] ? 'Connected' : 'Offline'}
-                ></span>
-              </button>
-              <div class="profile-actions">
-                {#if connectionOperations[profile.id]}
-                  <span role="status">
-                    {connectionOperations[profile.id] === 'test'
-                      ? 'Testing…'
-                      : 'Connecting…'}
-                  </span>
-                  <button
-                    type="button"
-                    onclick={() => void cancelProfileConnection(profile)}
-                    >Cancel</button
-                  >
-                {:else}
-                  <button
-                    type="button"
-                    onclick={() => void testProfile(profile)}>Test</button
-                  >
-                {/if}
-                {#if connections[profile.id]}
-                  <button
-                    type="button"
-                    onclick={() => void disconnectProfile(profile)}
-                    >Disconnect</button
-                  >
-                {:else if !connectionOperations[profile.id]}
-                  <button
-                    type="button"
-                    onclick={() => void connectProfile(profile)}>Connect</button
-                  >
-                {/if}
-                <button type="button" onclick={() => editProfile(profile)}
-                  >Edit</button
-                >
-                <button
-                  type="button"
-                  onclick={() => void duplicateProfile(profile)}
-                  >Duplicate</button
-                >
-                <button
-                  type="button"
-                  onclick={() => confirmDeleteProfile(profile)}>Delete</button
-                >
-              </div>
-            </li>
-          {/each}
-        </ul>
       {/if}
+
+      <ConnectionTabs
+        {profiles}
+        tabs={workspace.tabs}
+        activeTabId={workspace.active_tab_id}
+        {connections}
+        {connectionOperations}
+        {sessions}
+        sessionOpening={tabSessionOperations}
+        sessionErrors={tabSessionErrors}
+        {expandedProfiles}
+        offlineExpanded={offlineTabsExpanded}
+        onselectprofile={(profile) => void selectProfileGroup(profile)}
+        onselectoffline={() => void selectOfflineGroup()}
+        ontoggleprofile={toggleProfileGroup}
+        ontoggleoffline={toggleOfflineGroup}
+        onnewquery={(profileId) => void createOfflineTab(profileId)}
+        onconnect={(profile) => void connectProfile(profile)}
+        ondisconnect={(profile) => void disconnectProfile(profile)}
+        ontest={(profile) => void testProfile(profile)}
+        oncancelconnection={(profile) => void cancelProfileConnection(profile)}
+        oneditprofile={editProfile}
+        onduplicateprofile={(profile) => void duplicateProfile(profile)}
+        ondeleteprofile={confirmDeleteProfile}
+        onactivatetab={(tab) => void activateTab(tab.id)}
+        onclosetab={requestCloseTab}
+        onrenametab={renameTab}
+        onduplicatetab={(tab) => void duplicateQueryTab(tab)}
+        onpintab={togglePinTab}
+        onmovetab={(tab, direction) => moveTab(tab.id, direction)}
+      />
 
       <p class="sidebar-note">
         Profiles and drafts stay on this device. Credentials use the OS vault or
@@ -3345,7 +3437,11 @@
     >
       <div class="context-bar" aria-label="Active query context">
         <span class="context-state" class:online={Boolean(activeSession)}>
-          {activeSession ? 'Online' : 'Offline'}
+          {activeSession
+            ? 'Online'
+            : activeTab && tabSessionOperations[activeTab.id]
+              ? 'Opening'
+              : 'Offline'}
         </span>
         <span>{activeTab?.profile_label ?? 'No profile'}</span>
         <span
@@ -3387,78 +3483,19 @@
       </div>
 
       {#if workspace.tabs.length > 0}
-        <div class="tab-strip" role="tablist" aria-label="Query tabs">
-          {#each workspace.tabs as tab (tab.id)}
-            <div
-              class:active={workspace.active_tab_id === tab.id}
-              class="tab-item"
+        {#if activeTab?.profile_id && !activeSession && tabSessionErrors[activeTab.id]}
+          <div class="recovery-banner tab-session-error" role="alert">
+            <strong>Tab session unavailable</strong>
+            <span>{tabSessionErrors[activeTab.id]}</span>
+            <button
+              type="button"
+              disabled={Boolean(tabSessionOperations[activeTab.id])}
+              onclick={() => void retryTabSession(activeTab)}
             >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={workspace.active_tab_id === tab.id}
-                tabindex={workspace.active_tab_id === tab.id ? 0 : -1}
-                onclick={() => (workspace.active_tab_id = tab.id)}
-              >
-                <span>{tab.title}</span>
-                {#if tab.pinned}<span aria-label="Pinned tab">◆</span>{/if}
-                {#if tab.kind === 'table_data'}<span aria-label="Table-data tab"
-                    >▦</span
-                  >{/if}
-                {#if tab.dirty}<span aria-label="Unsaved draft">●</span>{/if}
-              </button>
-              <input
-                class="tab-rename"
-                value={tab.title}
-                aria-label={`Rename ${tab.title}`}
-                onchange={(event) =>
-                  renameTab(
-                    tab,
-                    (event.currentTarget as HTMLInputElement).value
-                  )}
-              />
-              <button
-                type="button"
-                class="tab-close"
-                aria-label={`${tab.pinned ? 'Unpin' : 'Pin'} ${tab.title}`}
-                onclick={() => togglePinTab(tab)}>◆</button
-              >
-              <button
-                type="button"
-                class="tab-close"
-                aria-label={`Move ${tab.title} left`}
-                onclick={() => moveTab(tab.id, -1)}>←</button
-              >
-              <button
-                type="button"
-                class="tab-close"
-                aria-label={`Move ${tab.title} right`}
-                onclick={() => moveTab(tab.id, 1)}>→</button
-              >
-              {#if tab.kind === 'query'}
-                <button
-                  type="button"
-                  class="tab-close"
-                  aria-label={`Duplicate ${tab.title}`}
-                  onclick={() => void duplicateQueryTab(tab)}>⧉</button
-                >
-              {/if}
-              <button
-                type="button"
-                class="tab-close"
-                aria-label={`Close ${tab.title}`}
-                onclick={() => requestCloseTab(tab)}>×</button
-              >
-            </div>
-          {/each}
-          <button
-            type="button"
-            class="new-tab"
-            aria-label="New offline query tab"
-            onclick={() => void createOfflineTab(activeProfile?.id ?? null)}
-            >+</button
-          >
-        </div>
+              {tabSessionOperations[activeTab.id] ? 'Opening…' : 'Retry'}
+            </button>
+          </div>
+        {/if}
 
         {#if activeTab?.kind === 'table_data'}
           {#if activeTableUi?.page}
@@ -3466,13 +3503,6 @@
               <div class="recovery-banner" role="alert">
                 <strong>Table session offline</strong>
                 <span>{activeTableUi.error}</span>
-                <button
-                  type="button"
-                  disabled={activeTableUi.staged.length > 0}
-                  onclick={() => void connectActiveTab()}
-                >
-                  Reconnect after review
-                </button>
               </div>
             {/if}
             <TableDataGrid
@@ -3505,17 +3535,10 @@
               <h2 id="table-loading-heading">Table data is offline</h2>
               <p>
                 {activeTableUi?.error ??
-                  'Reconnect this restored table-data tab to load rows. Staged edits are never restored.'}
+                  (tabSessionOperations[activeTab.id]
+                    ? 'Opening this tab’s dedicated session…'
+                    : 'Connect the profile and select this tab to load a fresh page. Staged edits are never restored.')}
               </p>
-              {#if activeTab.profile_id && !activeSession}
-                <button
-                  type="button"
-                  class="primary"
-                  onclick={() => void connectActiveTab()}
-                >
-                  Connect table tab
-                </button>
-              {/if}
             </section>
           {/if}
         {:else}
@@ -3532,7 +3555,9 @@
               <span class="safety-label"
                 >{activeSession
                   ? `${activeConnection?.engine ?? 'Database'} · explicit execution only`
-                  : 'Offline · connect to execute'}</span
+                  : activeTab && tabSessionOperations[activeTab.id]
+                    ? 'Opening dedicated session…'
+                    : 'Offline · connect profile to execute'}</span
               >
             </div>
             <div class="query-toolbar" aria-label="Query actions">
@@ -3612,15 +3637,6 @@
                     >Rollback</button
                   >
                 {/if}
-                <button type="button" onclick={() => void disconnectActiveTab()}
-                  >Disconnect tab</button
-                >
-              {:else if activeTab?.profile_id}
-                <button
-                  type="button"
-                  class="primary"
-                  onclick={() => void connectActiveTab()}>Connect tab</button
-                >
               {/if}
               <button type="button" onclick={() => void formatEditor()}
                 >Format</button
@@ -3754,15 +3770,6 @@
                   onstatus={(message) => (statusMessage = message)}
                 />
               {/if}
-              <details class="export-warning">
-                <summary>Export safety</summary>
-                <p>
-                  CSV preserves raw values, including spreadsheet-formula
-                  prefixes. Spreadsheet software may evaluate them. NULL exports
-                  as <code>\N</code> by default; binary values use hexadecimal in
-                  CSV and tagged base64 in JSON.
-                </p>
-              </details>
             </section>
           {/if}
         {/if}

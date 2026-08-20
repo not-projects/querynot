@@ -232,6 +232,10 @@
             aria-label="CSV null token"
           />
         </label>
+        <p class="export-safety-note">
+          CSV keeps raw spreadsheet-formula prefixes. NULL uses the configured
+          token; binary values use hexadecimal in CSV and tagged base64 in JSON.
+        </p>
         <button type="button" onclick={() => onexport('csv', false, nullToken)}
           >Server-order CSV</button
         >
@@ -427,6 +431,13 @@
     border-radius: 6px;
     background: var(--surface-raised);
     box-shadow: var(--shadow);
+  }
+
+  .export-safety-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.68rem;
+    line-height: 1.35;
   }
 
   .loaded-label,
