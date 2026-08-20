@@ -164,6 +164,8 @@ describe('Phase 2 SQLite boundaries', () => {
 
     expect(app).toContain('executionElapsedMs(activeExecution, nowMs)');
     expect(app).toContain("setExecutionState(execution, 'succeeded')");
+    expect(app).toContain('resultFromFirstBatch(event)');
+    expect(app).not.toContain('(results[event.tab_id] ??= [])');
     expect(lifecycle).toContain('execution.completedAt ?? now');
     expect(css).toMatch(
       /main\.has-query-results\s*\{[^}]*grid-template-rows:[^}]*minmax\(12rem, 2fr\)/s

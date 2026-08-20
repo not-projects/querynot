@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   executionElapsedMs,
   isExecutionActive,
+  resultFromFirstBatch,
   setExecutionState,
   type ExecutionUi
 } from './execution-ui';
@@ -39,5 +40,48 @@ describe('execution UI lifecycle', () => {
     setExecutionState(execution, 'cancelled', 1_500);
     expect(isExecutionActive(execution.state)).toBe(false);
     expect(execution.completedAt).toBe(1_500);
+  });
+
+  it('materializes the first native batch before the start response can initialize UI state', () => {
+    const result = resultFromFirstBatch({
+      execution_id: 'execution',
+      result_set_id: 'result',
+      statement_index: 0,
+      columns: [{ name: 'answer', declared_type: 'INTEGER', nullable: false }],
+      rows: [
+        {
+          values: [
+            {
+              value_type: 'signed_integer',
+              text: '42',
+              boolean: null,
+              bytes_base64: null,
+              timezone_or_offset: null
+            }
+          ]
+        }
+      ],
+      retained_bytes: 2
+    });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.receivedRows).toBe(1);
+    expect(result.nextSequence).toBe(1);
+    expect(result.columns[0].name).toBe('answer');
+  });
+
+  it('retains a zero-row result when the native batch includes its columns', () => {
+    const result = resultFromFirstBatch({
+      execution_id: 'execution',
+      result_set_id: 'empty-result',
+      statement_index: 0,
+      columns: [{ name: 'answer', declared_type: 'INTEGER', nullable: true }],
+      rows: [],
+      retained_bytes: 0
+    });
+
+    expect(result.rows).toEqual([]);
+    expect(result.receivedRows).toBe(0);
+    expect(result.nextSequence).toBe(1);
   });
 });

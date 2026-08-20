@@ -17,8 +17,6 @@
     PendingSqlFilesSignal,
     ProfileInput,
     ProfileView,
-    ResultColumnView,
-    ResultRowView,
     SchemaNamespaceView,
     SchemaObjectDetailView,
     SchemaObjectView,
@@ -44,8 +42,10 @@
   import {
     executionElapsedMs,
     isExecutionActive,
+    resultFromFirstBatch,
     setExecutionState,
-    type ExecutionUi
+    type ExecutionUi,
+    type ResultUi
   } from './lib/execution-ui';
   import { requiresWindowCloseDecision } from './lib/window-close';
   import {
@@ -65,21 +65,6 @@
     | 'close-window'
     | 'destructive'
     | null;
-
-  type ResultUi = {
-    id: string;
-    executionId: string;
-    statementIndex: number;
-    columns: ResultColumnView[];
-    rows: ResultRowView[];
-    receivedRows: number;
-    retainedBytes: number;
-    paused: boolean;
-    capped: boolean;
-    terminalState: string | null;
-    durationMs: number | null;
-    nextSequence: number;
-  };
 
   type TablePosition = {
     cursor: TaggedValueView[];
@@ -220,6 +205,7 @@
   let nativeBootstrapComplete = false;
   let pendingFileDrainRequested = false;
   let pendingFileDrainPromise: Promise<void> | null = null;
+  let executionEventQueue = Promise.resolve();
 
   const activeTab = $derived(
     workspace.tabs.find((tab) => tab.id === workspace.active_tab_id) ?? null
@@ -294,7 +280,6 @@
 
   onMount(() => {
     void updater.initialize();
-    void bootstrap();
     let disposed = false;
     let unlisten: UnlistenFn | undefined;
     let unlistenExecution: UnlistenFn | undefined;
@@ -304,10 +289,13 @@
     }, 250);
     if (hasNativeRuntime()) {
       void listen<ExecutionEventView>('query_execution', (event) => {
-        void handleExecutionEvent(event.payload);
+        enqueueExecutionEvent(event.payload);
       }).then((removeListener) => {
         if (disposed) removeListener();
-        else unlistenExecution = removeListener;
+        else {
+          unlistenExecution = removeListener;
+          void bootstrap();
+        }
       });
       void listen<PendingSqlFilesSignal>('querynot_open_files', (event) => {
         if (event.payload.queued) void requestPendingSqlFileDrain();
@@ -343,6 +331,8 @@
           if (disposed) removeListener();
           else unlisten = removeListener;
         });
+    } else {
+      void bootstrap();
     }
     return () => {
       disposed = true;
@@ -354,6 +344,14 @@
       if (saveTimer) clearTimeout(saveTimer);
     };
   });
+
+  function enqueueExecutionEvent(event: ExecutionEventView) {
+    executionEventQueue = executionEventQueue
+      .then(() => handleExecutionEvent(event))
+      .catch((error) => {
+        statusMessage = safeErrorMessage(error);
+      });
+  }
 
   async function bootstrap() {
     if (!hasNativeRuntime()) {
@@ -2060,49 +2058,39 @@
       executions[event.tab_id] = execution;
     }
     if (event.event_type === 'batch' && event.result_set_id) {
-      const tabResults = (results[event.tab_id] ??= []);
+      const tabResults = results[event.tab_id] ?? [];
       let result = tabResults.find(
         (candidate) => candidate.id === event.result_set_id
       );
       if (!result) {
-        result = {
-          id: event.result_set_id,
-          executionId: event.execution_id,
-          statementIndex: event.statement_index ?? 0,
-          columns: event.columns,
-          rows: [],
-          receivedRows: 0,
-          retainedBytes: 0,
-          paused: false,
-          capped: false,
-          terminalState: null,
-          durationMs: null,
-          nextSequence: 0
-        };
-        tabResults.push(result);
+        if (event.sequence !== 0 || event.columns.length === 0) {
+          rejectExecutionEvent(execution, event.execution_id);
+          return;
+        }
+        results[event.tab_id] = [
+          ...tabResults,
+          resultFromFirstBatch(event)
+        ];
+        result = results[event.tab_id].at(-1)!;
+        execution.receivedRows += event.rows.length;
+        setExecutionState(execution, 'running');
+      } else {
+        if (
+          result.executionId !== event.execution_id ||
+          result.terminalState !== null ||
+          event.sequence !== result.nextSequence
+        ) {
+          rejectExecutionEvent(execution, event.execution_id);
+          return;
+        }
+        if (event.columns.length) result.columns = event.columns;
+        result.rows.push(...event.rows);
+        result.receivedRows += event.rows.length;
+        result.retainedBytes += event.retained_bytes;
+        result.nextSequence += 1;
+        execution.receivedRows += event.rows.length;
+        setExecutionState(execution, 'running');
       }
-      if (
-        result.executionId !== event.execution_id ||
-        result.terminalState !== null ||
-        event.sequence !== result.nextSequence ||
-        (result.nextSequence === 0 && event.columns.length === 0)
-      ) {
-        setExecutionState(execution, 'failed');
-        execution.error =
-          'A duplicate, late, unknown, or out-of-order result event was rejected.';
-        statusMessage = execution.error;
-        void invokeCommand('cancel_execution', {
-          execution_id: event.execution_id
-        }).catch(() => undefined);
-        return;
-      }
-      if (event.columns.length) result.columns = event.columns;
-      result.rows.push(...event.rows);
-      result.receivedRows += event.rows.length;
-      result.retainedBytes += event.retained_bytes;
-      result.nextSequence += 1;
-      execution.receivedRows += event.rows.length;
-      setExecutionState(execution, 'running');
       try {
         await invokeCommand('ack_result_batch', {
           execution_id: event.execution_id,
@@ -2186,6 +2174,19 @@
     } else if (event.event_type === 'started') {
       setExecutionState(execution, 'running');
     }
+  }
+
+  function rejectExecutionEvent(
+    execution: ExecutionUi,
+    executionId: string
+  ) {
+    setExecutionState(execution, 'failed');
+    execution.error =
+      'A duplicate, late, unknown, or out-of-order result event was rejected.';
+    statusMessage = execution.error;
+    void invokeCommand('cancel_execution', {
+      execution_id: executionId
+    }).catch(() => undefined);
   }
 
   async function loadMore(result: ResultUi) {
