@@ -27,12 +27,12 @@ The candidate job validates presence and document shape without printing any key
 1. Push the clean release-preparation commit to `master`.
 2. Manually dispatch `CI` on `master`.
 3. Review all jobs and the `querynot-windows-x64` artifact. The artifact must contain one NSIS `.exe`, its `.exe.sig`, `latest.json`, `SHA256SUMS`, and the three candidate reports.
-4. Manually dispatch `Publish reviewed signed release` with that successful CI run ID and the exact confirmation `publish-v0.1.2`.
+4. Manually dispatch `Publish reviewed signed release` with that successful CI run ID and the exact confirmation `publish-v0.1.3`.
 5. The workflow resolves and checks out the candidate run's exact commit, validates and cryptographically verifies the four public assets, creates a draft, downloads and re-verifies it, then publishes it as the stable release.
 
 The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset.
 
-The first completed signed release is `v0.1.1`: candidate CI run `31843628362`, publication run `31844465799`, and source commit `cf14accab85d88cafcccb14a3ddffd6a700b7ada`. Retained reports are under `evidence/release-updates/0.1.1`.
+The current completed signed release is `v0.1.2`: candidate CI run `32368993319`, publication run `32370157774`, and source commit `4088b024d834213ee1e7815c4330a561cc2048ea`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
 
 ## Rotation and recovery
 
