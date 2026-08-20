@@ -2319,10 +2319,9 @@
 
   function queueWorkspaceSave() {
     if (!hasNativeRuntime() || !settings.session_restoration_enabled) return;
-    workspaceRecoveryWarning =
-      'Draft recovery has unsaved changes and will retry after one second of inactivity.';
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
+      saveTimer = null;
       void saveWorkspaceNow();
     }, 1_000);
   }

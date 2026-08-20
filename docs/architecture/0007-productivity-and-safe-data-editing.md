@@ -7,7 +7,7 @@ Status: Implemented locally in Phase 4; target-platform release evidence pending
 
 QueryNot completes productivity workflows without moving database authority, secrets, file access, or durable storage into the WebView. Svelte owns presentation and ephemeral interaction state. Rust owns SQL planning and execution, adapter sessions, table metadata, immutable mutation plans, history storage, workspace persistence, credential bundles, and native file grants.
 
-The initial release remains one local application window. Startup and second-instance `.sql` files route into offline query tabs and never connect or execute. Query tabs can be renamed, reordered, duplicated, pinned, and closed. Workspace recovery persists query drafts, order, profile bindings, context labels, panel sizes, and the active tab after one second of editing inactivity and orderly close. It never persists table staging, results, running jobs, open transactions, credentials, or native sessions.
+The initial release remains one local application window. Startup and second-instance `.sql` files route into offline query tabs and never connect or execute. Query tabs can be renamed, reordered, duplicated, pinned, and closed. Workspace recovery silently persists query drafts, order, profile bindings, context labels, panel sizes, and the active tab after one second of editing inactivity and orderly close; only a real persistence failure surfaces the recovery warning. It never persists table staging, results, running jobs, open transactions, credentials, or native sessions.
 
 ## Editor, schema, history, and files
 

@@ -51,6 +51,17 @@ describe('Phase 1 native boundaries', () => {
     expect(css).toContain('grid-template-rows: auto auto minmax(0, 1fr) auto;');
   });
 
+  it('debounces healthy draft recovery without inserting a warning while typing', () => {
+    const app = read('src/App.svelte');
+    const queueWorkspaceSave = app
+      .split('function queueWorkspaceSave() {')[1]
+      .split('async function saveWorkspaceNow')[0];
+
+    expect(queueWorkspaceSave).toContain('setTimeout');
+    expect(queueWorkspaceSave).not.toContain('workspaceRecoveryWarning');
+    expect(app).toContain('Draft recovery could not be saved.');
+  });
+
   it('scales the complete viewport and keeps native selects themed and sidebar content bounded', () => {
     const app = read('src/App.svelte');
     const css = read('src/styles/app.css');
