@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Kept unsigned development builds startable with the current Tauri updater plugin by supplying an inert base configuration; signed release builds still inject the dedicated public key and update feed.
 - Reconciled result batches that arrive before the native execution-start response so the first run immediately shows both populated and zero-row result sets.
 - Replaced the redundant application-close decision dialog with silent recovery and clean-session shutdown; actionable work keeps the window open and focuses its blocking context.
 

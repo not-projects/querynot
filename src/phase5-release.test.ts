@@ -21,6 +21,7 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(tauri.bundle.active).toBe(true);
     expect(tauri.bundle.targets).toEqual([]);
     expect(tauri.bundle.createUpdaterArtifacts).toBe(true);
+    expect(tauri.plugins.updater).toEqual({ endpoints: [], pubkey: '' });
     expect(tauri.bundle.icon).toContain('icons/icon.ico');
     expect(tauri.bundle.windows.webviewInstallMode.type).toBe('skip');
     expect(tauri.bundle.windows.nsis.installMode).toBe('currentUser');
