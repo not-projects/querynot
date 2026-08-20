@@ -2,10 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  firstWindowCloseBlocker,
-  type WindowCloseState
-} from './window-close';
+import { firstWindowCloseBlocker, type WindowCloseState } from './window-close';
 
 const cleanWindow: WindowCloseState = {
   activeExecutionTabId: null,

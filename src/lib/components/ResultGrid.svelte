@@ -238,9 +238,7 @@
         <button type="button" onclick={() => onexport('csv', true, nullToken)}
           >Current-view CSV</button
         >
-        <button
-          type="button"
-          onclick={() => onexport('json', false, nullToken)}
+        <button type="button" onclick={() => onexport('json', false, nullToken)}
           >Server-order JSON</button
         >
         <button type="button" onclick={() => onexport('json', true, nullToken)}

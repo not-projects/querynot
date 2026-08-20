@@ -241,7 +241,7 @@
   const queryResultsVisible = $derived(
     Boolean(
       activeTab?.kind === 'query' &&
-        (activeResults.length || activeExecution?.error)
+      (activeResults.length || activeExecution?.error)
     )
   );
   const resultsPercent = $derived(
@@ -2077,10 +2077,7 @@
           rejectExecutionEvent(execution, event.execution_id);
           return;
         }
-        results[event.tab_id] = [
-          ...tabResults,
-          resultFromFirstBatch(event)
-        ];
+        results[event.tab_id] = [...tabResults, resultFromFirstBatch(event)];
         selectedResultIds[event.tab_id] = event.result_set_id;
         result = results[event.tab_id].at(-1)!;
         execution.receivedRows += event.rows.length;
@@ -2187,10 +2184,7 @@
     }
   }
 
-  function rejectExecutionEvent(
-    execution: ExecutionUi,
-    executionId: string
-  ) {
+  function rejectExecutionEvent(execution: ExecutionUi, executionId: string) {
     setExecutionState(execution, 'failed');
     execution.error =
       'A duplicate, late, unknown, or out-of-order result event was rejected.';
@@ -2445,8 +2439,9 @@
         (session) => session.transaction.certainty !== 'clean'
       )?.tab_id ?? null;
     const stagedTableTabId =
-      Object.entries(tableTabs).find(([, table]) => table.staged.length > 0)?.[0] ??
-      null;
+      Object.entries(tableTabs).find(
+        ([, table]) => table.staged.length > 0
+      )?.[0] ?? null;
     const connectionProfileId = Object.keys(connectionOperations)[0] ?? null;
     const connectionOperationTabId = connectionProfileId
       ? (workspace.tabs.find((tab) => tab.profile_id === connectionProfileId)
@@ -2472,7 +2467,9 @@
     if (blocker.tabId) {
       workspace.active_tab_id = blocker.tabId;
       await tick();
-      if (workspace.tabs.find((tab) => tab.id === blocker.tabId)?.kind === 'query') {
+      if (
+        workspace.tabs.find((tab) => tab.id === blocker.tabId)?.kind === 'query'
+      ) {
         editorApi?.focus();
       } else {
         document.getElementById('query-results')?.focus();
@@ -2862,7 +2859,10 @@
         >
         {#if fileMenuOpen}
           <div class="file-menu-popover" role="menu" aria-label="File">
-            <button type="button" role="menuitem" onclick={createQueryFromFileMenu}
+            <button
+              type="button"
+              role="menuitem"
+              onclick={createQueryFromFileMenu}
               >New query <kbd>Mod+N</kbd></button
             >
             <button type="button" role="menuitem" onclick={openSqlFromFileMenu}
@@ -3717,7 +3717,11 @@
                 </div>
               {/if}
               {#if activeResults.length > 1}
-                <div class="result-tabs" role="tablist" aria-label="Result sets">
+                <div
+                  class="result-tabs"
+                  role="tablist"
+                  aria-label="Result sets"
+                >
                   {#each activeResults as result (result.id)}
                     <button
                       type="button"
@@ -3726,7 +3730,8 @@
                       onclick={() =>
                         activeTab &&
                         (selectedResultIds[activeTab.id] = result.id)}
-                    >Statement {result.statementIndex + 1}</button>
+                      >Statement {result.statementIndex + 1}</button
+                    >
                   {/each}
                 </div>
               {/if}
@@ -3773,7 +3778,9 @@
           <div class="action-list">
             <button type="button" onclick={() => openConnectionProfile()}>
               <strong>Create connection</strong>
-              <span>Choose Server or File, then configure one exact target.</span>
+              <span
+                >Choose Server or File, then configure one exact target.</span
+              >
             </button>
             <button type="button" onclick={openSettings}>
               <strong>Settings</strong>
@@ -3859,11 +3866,15 @@
                 />
                 <span>
                   <strong>File</strong>
-                  <small>Choose a database file; QueryNot detects its type</small>
+                  <small
+                    >Choose a database file; QueryNot detects its type</small
+                  >
                 </span>
               </label>
               {#if editingProfileId}
-                <small>The connection type is fixed after profile creation.</small>
+                <small
+                  >The connection type is fixed after profile creation.</small
+                >
               {/if}
             </fieldset>
 

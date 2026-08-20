@@ -47,9 +47,7 @@ type FirstResultBatchEvent = Pick<
   | 'retained_bytes'
 >;
 
-export function resultFromFirstBatch(
-  event: FirstResultBatchEvent
-): ResultUi {
+export function resultFromFirstBatch(event: FirstResultBatchEvent): ResultUi {
   if (!event.result_set_id || event.columns.length === 0) {
     throw new Error('A first result batch requires an identifier and columns.');
   }

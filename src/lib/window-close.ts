@@ -53,15 +53,15 @@ export function firstWindowCloseBlocker(
     return {
       kind: 'connection',
       tabId: state.connectionOperationTabId,
-      message:
-        'Wait for or cancel connection setup before closing the window.'
+      message: 'Wait for or cancel connection setup before closing the window.'
     };
   }
   if (state.busy) {
     return {
       kind: 'busy',
       tabId: null,
-      message: 'Wait for the current action to finish before closing the window.'
+      message:
+        'Wait for the current action to finish before closing the window.'
     };
   }
   if (state.unrecoverableDirtyTabId) {
