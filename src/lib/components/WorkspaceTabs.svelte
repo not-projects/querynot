@@ -2,13 +2,12 @@
   import { tick } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
 
-  import type { SessionView, WorkspaceTabView } from '../generated/contracts';
+  import type { WorkspaceTabView } from '../generated/contracts';
 
   interface Props {
     tabs: WorkspaceTabView[];
     activeTabId: string | null;
     groupLabel: string;
-    sessions: Record<string, SessionView>;
     sessionOpening: Record<string, boolean>;
     sessionErrors: Record<string, string>;
     onnewquery: () => void;
@@ -24,7 +23,6 @@
     tabs,
     activeTabId,
     groupLabel,
-    sessions,
     sessionOpening,
     sessionErrors,
     onnewquery,
@@ -44,13 +42,6 @@
       if (tabList === element) tabList = undefined;
     };
   };
-
-  function sessionLabel(tab: WorkspaceTabView) {
-    if (sessionOpening[tab.id]) return 'Opening dedicated session';
-    if (sessions[tab.id]) return 'Dedicated session online';
-    if (sessionErrors[tab.id]) return 'Session open failed';
-    return tab.profile_id ? 'Tab offline' : 'Offline draft';
-  }
 
   function handleTabKeydown(event: KeyboardEvent, tab: WorkspaceTabView) {
     const current = tabs.findIndex((candidate) => candidate.id === tab.id);
@@ -86,28 +77,27 @@
           onkeydown={(event) => handleTabKeydown(event, tab)}
         >
           <span class="tab-title">{tab.title}</span>
-          <span class="tab-indicators">
-            {#if tab.pinned}<span aria-label="Pinned tab">◆</span>{/if}
-            {#if tab.kind === 'table_data'}<span aria-label="Table-data tab"
-                >▦</span
-              >{/if}
-            {#if tab.dirty}<span aria-label="Unsaved draft">●</span>{/if}
-            <span
-              class:online={Boolean(sessions[tab.id])}
-              class:error={Boolean(sessionErrors[tab.id])}
-              class:opening={Boolean(sessionOpening[tab.id])}
-              class="tab-session"
-              aria-label={sessionLabel(tab)}
-              title={sessionLabel(tab)}
-              >{sessionOpening[tab.id]
-                ? '◌'
-                : sessions[tab.id]
-                  ? '●'
-                  : sessionErrors[tab.id]
-                    ? '!'
-                    : '○'}</span
-            >
-          </span>
+          {#if tab.pinned || tab.kind === 'table_data' || tab.dirty || sessionOpening[tab.id] || sessionErrors[tab.id]}
+            <span class="tab-indicators">
+              {#if tab.pinned}<span aria-label="Pinned tab">◆</span>{/if}
+              {#if tab.kind === 'table_data'}<span aria-label="Table-data tab"
+                  >▦</span
+                >{/if}
+              {#if tab.dirty}<span class="tab-state" title="Unsaved draft"
+                  >Unsaved</span
+                >{/if}
+              {#if sessionOpening[tab.id]}
+                <span class="tab-state" title="Opening dedicated session"
+                  >Opening…</span
+                >
+              {:else if sessionErrors[tab.id]}
+                <span
+                  class="tab-state error"
+                  title="Dedicated session failed to open">Error</span
+                >
+              {/if}
+            </span>
+          {/if}
         </button>
 
         <details class="tab-overflow">
@@ -240,24 +230,14 @@
     font-size: 0.56rem;
   }
 
-  .tab-session {
-    display: inline-grid;
-    width: 0.75rem;
-    height: 0.75rem;
-    place-items: center;
-  }
-
-  .tab-session.online {
+  .tab-state {
     color: var(--accent);
+    font-size: 0.58rem;
+    font-weight: 700;
   }
 
-  .tab-session.error {
+  .tab-state.error {
     color: var(--danger);
-    font-weight: 800;
-  }
-
-  .tab-session.opening {
-    color: var(--accent);
   }
 
   details {

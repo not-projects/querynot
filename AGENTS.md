@@ -47,7 +47,7 @@ The approved support and publication envelope is Windows 11 x86-64 only. WSL2/br
 - `npm install` — install the exact frontend/Tauri CLI lockfile.
 - `npm run check` — Svelte and TypeScript diagnostics.
 - `npm run test` — frontend/policy unit tests with a repository-local temporary directory.
-- `npm run test:ui-layout` — Chromium regression checks for 720–2048px and 100–150% layout geometry, PostNot theme names, opaque themed dialogs, stable CodeMirror node/focus behavior, readable connection rows, scoped tabs, populated results and 20–70% splits, plus History overlay/focus behavior; install the pinned browser once with `npx playwright install chromium`.
+- `npm run test:ui-layout` — Chromium regression checks for 720–2048px and 100–150% layout geometry, PostNot theme names, opaque themed dialogs, stable CodeMirror node/focus behavior, dark completion contrast and Enter/Tab behavior, readable connection rows, scoped tabs, synchronized wide results and 20–70% splits, plus History overlay/focus behavior; install the pinned browser once with `npx playwright install chromium`.
 - `npm run build` — production frontend build.
 - `npm run test:contracts` — generated Rust/TypeScript command contract drift check.
 - `npm run test:traceability` — PRD/matrix coverage and evidence invariant check.

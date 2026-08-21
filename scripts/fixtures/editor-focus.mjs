@@ -5,7 +5,7 @@ import App from '../../src/App.svelte';
 import '../../src/styles/app.css';
 
 const settings = {
-  theme: 'system',
+  theme: 'dark',
   ui_scale_percent: 100,
   editor_word_wrap: false,
   formatter_uppercase_keywords: true,
@@ -59,7 +59,7 @@ mockIPC(
           settings,
           workspace
         };
-      case 'drain_pending_sql_files':
+      case 'take_pending_sql_files':
         return { files: [] };
       case 'check_for_updates':
         return { configured: false, update: null };

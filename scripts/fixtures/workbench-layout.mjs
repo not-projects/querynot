@@ -166,13 +166,23 @@ async function emitOneRowResult() {
       statement_index: 0,
       columns: [
         { name: 'id', declared_type: 'INTEGER', nullable: false },
-        { name: 'name', declared_type: 'TEXT', nullable: true }
+        { name: 'created_at', declared_type: 'TEXT', nullable: false },
+        { name: 'updated_at', declared_type: 'TEXT', nullable: false },
+        { name: 'deleted_at', declared_type: 'TEXT', nullable: true },
+        { name: 'name', declared_type: 'TEXT', nullable: true },
+        { name: 'armor', declared_type: 'TEXT', nullable: true },
+        { name: 'sequence_id', declared_type: 'INTEGER', nullable: false }
       ],
       rows: [
         {
           values: [
             taggedValue('integer', '1'),
-            taggedValue('text', 'Knights of the Fraction Table')
+            taggedValue('text', '2026-08-21 12:00:00'),
+            taggedValue('text', '2026-08-21 12:01:00'),
+            taggedValue('null', null),
+            taggedValue('text', 'Knights of the Fraction Table'),
+            taggedValue('text', '{"helmet":"Bronze","shield":true}'),
+            taggedValue('integer', '42')
           ]
         }
       ],

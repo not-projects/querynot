@@ -318,10 +318,9 @@ describe('Connection-scoped workbench tabs', () => {
       () => commandCount(commands, 'open_tab_session', 'query-1') === 1
     );
     await waitFor(
-      () =>
-        document.querySelector('.workspace-tab-item .tab-session.online') !==
-        null
+      () => document.querySelector('.context-state.online') !== null
     );
+    expect(document.querySelector('.tab-session')).toBeNull();
     expect(commandCount(commands, 'open_tab_session', 'query-2')).toBe(0);
     expect(commandCount(commands, 'open_tab_session', 'query-3')).toBe(0);
   });
@@ -355,10 +354,8 @@ describe('Connection-scoped workbench tabs', () => {
     pendingSecond.resolve(session('profile-1', 'query-2'));
     await waitFor(
       () =>
-        document
-          .querySelector('[title="Primary query 2"]')
-          ?.closest('.workspace-tab-item')
-          ?.querySelector('.tab-session.online') !== null
+        document.querySelector('.context-state.online')?.textContent?.trim() ===
+        'Online'
     );
 
     tabButton('Primary query 3').click();

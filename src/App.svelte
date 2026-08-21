@@ -3452,7 +3452,6 @@
           tabs={activeGroupTabs}
           activeTabId={workspace.active_tab_id}
           groupLabel={activeGroupLabel}
-          {sessions}
           sessionOpening={tabSessionOperations}
           sessionErrors={tabSessionErrors}
           onnewquery={() => void createOfflineTab(activeTab.profile_id)}

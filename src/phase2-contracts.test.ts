@@ -151,6 +151,13 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(editor).toContain('schemaCompletionSource');
     expect(editor).toContain("dialect === 'mysql' ? MySQL : SQLite");
     expect(editor).toContain('syntaxTree(editor.state)');
+    expect(editor).toContain('defaultKeymap: false');
+    expect(editor).toContain("{ key: 'Tab', run: acceptCompletion }");
+    expect(editor).toContain("key: 'Enter'");
+    expect(editor).toContain('return insertNewlineAndIndent(editor)');
+    expect(editor).toContain(
+      "'.cm-tooltip-autocomplete > ul > li[aria-selected]'"
+    );
     expect(editor).toContain("key: 'Mod-Enter'");
     expect(editor).toContain("key: 'Mod-Shift-Enter'");
     expect(editor).toContain("key: 'Mod-.'");
@@ -173,6 +180,9 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(app).toContain('aria-valuemax="70"');
     expect(css).toMatch(/\.results-separator\s*\{[^}]*cursor:\s*row-resize/s);
     expect(css).toMatch(/\.results-workspace\s*\{[^}]*overflow:\s*hidden/s);
+    expect(read('src/lib/components/ResultGrid.svelte')).toContain(
+      'style:transform={`translateX(${-scrollLeft}px)`}'
+    );
   });
 
   it('quotes structural TSV characters and opens only one large value on demand', async () => {

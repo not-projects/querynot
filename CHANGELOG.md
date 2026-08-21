@@ -9,11 +9,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - Defined explicit context, scoped-tab, editor, splitter, and result tracks so result headings, column headers, and received rows render directly below the persisted 20–70% separator without changing virtualization, multiple-result, error, or backpressure behavior.
+- The dark SQL-completion popup now uses QueryNot theme tokens; Tab accepts the highlighted completion or indents, while Enter inserts a new SQL line instead of accepting a completion.
+- Wide results now use one horizontal scrollbar and keep column headers synchronized with virtualized rows instead of clipping the first column between competing scroll surfaces.
 
 ### Changed
 
 - Restored a horizontal tab strip above the editor that shows only the selected connection or Offline group's tabs, remembers the most recent tab per group for the current session, and keeps tab keyboard navigation group-local.
 - Simplified the left sidebar to readable profile rows with direct connection state actions and compact secondary menus, and moved the complete local History workflow into a non-resizing right-side overlay drawer with managed focus.
+- Replaced unexplained online/offline tab dots with explicit Unsaved, Opening, or Error labels only when a tab needs attention; connection and session state remains available in the context bar.
 
 ## [0.1.3] - 2026-08-20
 

@@ -46,6 +46,7 @@
   let sortDirection = $state<1 | -1>(1);
   let selectedRows = $state<number[]>([]);
   let scrollTop = $state(0);
+  let scrollLeft = $state(0);
   let viewportHeight = $state(320);
   let widths = $state<Record<number, number>>({});
   let nullToken = $state('\\N');
@@ -107,6 +108,7 @@
   function handleScroll(event: Event) {
     const element = event.currentTarget as HTMLElement;
     scrollTop = element.scrollTop;
+    scrollLeft = element.scrollLeft;
     viewportHeight = element.clientHeight;
   }
 
@@ -253,31 +255,34 @@
   </div>
 
   <div class="grid-shell">
-    <div
-      class="grid-header"
-      style:grid-template-columns={gridColumns}
-      role="row"
-    >
-      {#each columns as column, index (`${index}-${column.name}`)}
-        <div
-          role="columnheader"
-          title={`${column.name} · ${column.declared_type}`}
-        >
-          <button type="button" onclick={() => toggleSort(index)}>
-            {column.name}
-            {#if sortColumn === index}<span
-                aria-label={sortDirection === 1 ? 'ascending' : 'descending'}
-                >{sortDirection === 1 ? '↑' : '↓'}</span
-              >{/if}
-          </button>
-          <button
-            type="button"
-            class="resize-handle"
-            aria-label={`Resize ${column.name} column`}
-            onpointerdown={(event) => resizeColumn(event, index)}
-          ></button>
-        </div>
-      {/each}
+    <div class="grid-header-viewport">
+      <div
+        class="grid-header"
+        style:grid-template-columns={gridColumns}
+        style:transform={`translateX(${-scrollLeft}px)`}
+        role="row"
+      >
+        {#each columns as column, index (`${index}-${column.name}`)}
+          <div
+            role="columnheader"
+            title={`${column.name} · ${column.declared_type}`}
+          >
+            <button type="button" onclick={() => toggleSort(index)}>
+              {column.name}
+              {#if sortColumn === index}<span
+                  aria-label={sortDirection === 1 ? 'ascending' : 'descending'}
+                  >{sortDirection === 1 ? '↑' : '↓'}</span
+                >{/if}
+            </button>
+            <button
+              type="button"
+              class="resize-handle"
+              aria-label={`Resize ${column.name} column`}
+              onpointerdown={(event) => resizeColumn(event, index)}
+            ></button>
+          </div>
+        {/each}
+      </div>
     </div>
     <div
       class="grid-viewport"
@@ -450,8 +455,7 @@
     display: grid;
     min-height: 0;
     grid-template-rows: auto minmax(0, 1fr);
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: hidden;
     border: 1px solid var(--divider);
     border-radius: 10px;
     background: var(--surface-raised);
@@ -462,6 +466,13 @@
     display: grid;
     width: max-content;
     min-width: 100%;
+  }
+
+  .grid-header-viewport {
+    min-width: 0;
+    overflow: hidden;
+    border-bottom: 1px solid var(--divider);
+    background: var(--surface);
   }
 
   .grid-row [role='gridcell'] {
@@ -495,7 +506,7 @@
   .grid-header {
     min-height: 2.2rem;
     background: var(--surface);
-    border-bottom: 1px solid var(--divider);
+    will-change: transform;
   }
 
   .grid-header > div {
@@ -531,8 +542,7 @@
 
   .grid-viewport {
     min-height: 0;
-    overflow-x: visible;
-    overflow-y: auto;
+    overflow: auto;
   }
 
   .grid-canvas {

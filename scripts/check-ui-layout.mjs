@@ -18,6 +18,11 @@ const workbenchScreenshotPath = resolve(
   'artifacts',
   'ui-layout-workbench.png'
 );
+const autocompleteScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-autocomplete.png'
+);
 const historyScreenshotPath = resolve(
   root,
   'artifacts',
@@ -287,6 +292,69 @@ try {
     editorFocus.recovery_banner === null,
     `normal typing displayed a recovery banner (${editorFocus.recovery_banner})`
   );
+
+  await content.click();
+  await content.press('Control+a');
+  await content.press('Backspace');
+  await content.pressSequentially('sel', { delay: 45 });
+  const completion = editorPage.locator('.cm-tooltip-autocomplete');
+  await completion.waitFor();
+  await editorPage.waitForTimeout(100);
+  const completionTheme = await completion.evaluate((element) => {
+    const selected = element.querySelector('[aria-selected="true"]');
+    if (!selected) throw new Error('completion has no selected option');
+    const popupStyle = getComputedStyle(element);
+    const selectedStyle = getComputedStyle(selected);
+    return {
+      popup_background: popupStyle.backgroundColor,
+      popup_color: popupStyle.color,
+      selected_background: selectedStyle.backgroundColor,
+      selected_color: selectedStyle.color
+    };
+  });
+  assert(
+    completionTheme.popup_background !== completionTheme.popup_color,
+    'dark completion popup foreground and background are indistinguishable'
+  );
+  assert(
+    completionTheme.selected_background !== completionTheme.selected_color,
+    'dark selected completion foreground and background are indistinguishable'
+  );
+  await editorPage.screenshot({ path: autocompleteScreenshotPath });
+
+  await content.press('Enter');
+  await completion.waitFor({ state: 'detached' });
+  const enterBehavior = await editorPage.evaluate(() => ({
+    lines: Array.from(document.querySelectorAll('.cm-line')).map(
+      (element) => element.textContent ?? ''
+    ),
+    focused: document.querySelector('.cm-content') === document.activeElement
+  }));
+  assert(
+    enterBehavior.lines.length === 2 && enterBehavior.lines[0] === 'sel',
+    `Enter accepted a completion instead of inserting a line (${JSON.stringify(enterBehavior.lines)})`
+  );
+  assert(enterBehavior.focused, 'Enter moved focus out of the SQL editor');
+
+  await content.press('Control+a');
+  await content.press('Backspace');
+  await content.pressSequentially('sel', { delay: 45 });
+  await completion.waitFor();
+  await editorPage.waitForTimeout(100);
+  await content.press('Tab');
+  await completion.waitFor({ state: 'detached' });
+  const tabBehavior = await editorPage.evaluate(() => ({
+    text: document.querySelector('.cm-content')?.textContent ?? '',
+    focused: document.querySelector('.cm-content') === document.activeElement
+  }));
+  assert(
+    tabBehavior.text.toLocaleLowerCase() === 'select',
+    `Tab did not accept the selected SQL completion (${JSON.stringify(tabBehavior.text)})`
+  );
+  assert(tabBehavior.focused, 'Tab moved focus out of the SQL editor');
+  editorFocus.completion_theme = completionTheme;
+  editorFocus.enter_completion_behavior = enterBehavior;
+  editorFocus.tab_completion_behavior = tabBehavior;
   await editorPage.close();
 
   const workbenchPage = await browser.newPage({
@@ -400,6 +468,79 @@ try {
     populatedWorkbench.results.bottom <= populatedWorkbench.footer.top,
     'results overlap the status bar'
   );
+
+  const horizontalScrollers = await workbenchPage.evaluate(() =>
+    ['.grid-shell', '.grid-header-viewport', '.grid-viewport']
+      .map((selector) => {
+        const element = document.querySelector(selector);
+        if (!(element instanceof HTMLElement))
+          throw new Error(`Missing result scroll surface ${selector}`);
+        return {
+          selector,
+          overflow_x: getComputedStyle(element).overflowX,
+          client_width: element.clientWidth,
+          scroll_width: element.scrollWidth
+        };
+      })
+      .filter(
+        (surface) =>
+          ['auto', 'scroll'].includes(surface.overflow_x) &&
+          surface.scroll_width > surface.client_width
+      )
+  );
+  assert(
+    JSON.stringify(horizontalScrollers.map((surface) => surface.selector)) ===
+      JSON.stringify(['.grid-viewport']),
+    `result grid exposes competing horizontal scrollers (${JSON.stringify(horizontalScrollers)})`
+  );
+  await workbenchPage.locator('.grid-viewport').evaluate((element) => {
+    element.scrollLeft = 280;
+    element.dispatchEvent(new Event('scroll'));
+  });
+  await workbenchPage.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      )
+  );
+  const scrolledGridAlignment = await workbenchPage.evaluate(() => {
+    const header = document.querySelector(
+      '.grid-header [role="columnheader"]:nth-child(3)'
+    );
+    const cell = document.querySelector(
+      '.grid-row [role="gridcell"]:nth-child(3)'
+    );
+    const viewport = document.querySelector('.grid-viewport');
+    const headerRow = document.querySelector('.grid-header');
+    if (!header || !cell || !(viewport instanceof HTMLElement) || !headerRow)
+      throw new Error('result alignment geometry is incomplete');
+    const headerRect = header.getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    return {
+      scroll_left: viewport.scrollLeft,
+      header_left: headerRect.left,
+      header_width: headerRect.width,
+      cell_left: cellRect.left,
+      cell_width: cellRect.width,
+      header_transform: getComputedStyle(headerRow).transform
+    };
+  });
+  assert(
+    scrolledGridAlignment.scroll_left > 0 &&
+      Math.abs(
+        scrolledGridAlignment.header_left - scrolledGridAlignment.cell_left
+      ) < 1 &&
+      Math.abs(
+        scrolledGridAlignment.header_width - scrolledGridAlignment.cell_width
+      ) < 1,
+    `result header and rows drift after horizontal scrolling (${JSON.stringify(scrolledGridAlignment)})`
+  );
+  await workbenchPage.locator('.grid-viewport').evaluate((element) => {
+    element.scrollLeft = 0;
+    element.dispatchEvent(new Event('scroll'));
+  });
+  populatedWorkbench.horizontal_scrollers = horizontalScrollers;
+  populatedWorkbench.scrolled_grid_alignment = scrolledGridAlignment;
 
   const separator = workbenchPage.locator('.results-separator');
   const measureSplit = () =>
@@ -634,6 +775,7 @@ try {
     theme_labels: options,
     screenshots: [
       'artifacts/ui-layout-settings.png',
+      'artifacts/ui-layout-autocomplete.png',
       'artifacts/ui-layout-workbench.png',
       'artifacts/ui-layout-history.png'
     ]

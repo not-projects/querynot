@@ -1,10 +1,13 @@
 <script lang="ts">
   import { basicSetup } from 'codemirror';
   import {
+    acceptCompletion,
     autocompletion,
+    closeCompletion,
     type CompletionContext,
     type CompletionResult
   } from '@codemirror/autocomplete';
+  import { indentWithTab, insertNewlineAndIndent } from '@codemirror/commands';
   import { syntaxTree } from '@codemirror/language';
   import {
     MySQL,
@@ -14,7 +17,7 @@
     sql
   } from '@codemirror/lang-sql';
   import { linter, type Diagnostic } from '@codemirror/lint';
-  import { Compartment, EditorState } from '@codemirror/state';
+  import { Compartment, EditorState, Prec } from '@codemirror/state';
   import { EditorView, keymap } from '@codemirror/view';
   import { openSearchPanel } from '@codemirror/search';
   import { untrack } from 'svelte';
@@ -103,6 +106,7 @@
     return [
       sql(config),
       autocompletion({
+        defaultKeymap: false,
         override: [
           aliasCompletion,
           schemaCompletionSource(config),
@@ -152,6 +156,19 @@
           wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
           editableCompartment.of(EditorView.editable.of(!disabled)),
           parseDiagnostics,
+          Prec.highest(
+            keymap.of([
+              {
+                key: 'Enter',
+                run: (editor) => {
+                  closeCompletion(editor);
+                  return insertNewlineAndIndent(editor);
+                }
+              },
+              { key: 'Tab', run: acceptCompletion },
+              indentWithTab
+            ])
+          ),
           keymap.of([
             { key: 'Mod-Enter', run: () => run(false) },
             { key: 'Mod-Shift-Enter', run: () => run(true) },
@@ -203,6 +220,34 @@
             '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
               backgroundColor:
                 'color-mix(in srgb, var(--accent) 28%, transparent)'
+            },
+            '.cm-tooltip': {
+              color: 'var(--text)',
+              border: '1px solid var(--divider)',
+              backgroundColor: 'var(--surface-raised)',
+              boxShadow: 'var(--shadow)'
+            },
+            '.cm-tooltip-autocomplete > ul > li': {
+              padding: '0.3rem 0.5rem',
+              color: 'var(--text)',
+              backgroundColor: 'transparent'
+            },
+            '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+              color: 'var(--accent-text)',
+              backgroundColor: 'var(--accent)'
+            },
+            '.cm-completionIcon, .cm-completionDetail': {
+              color: 'var(--muted)',
+              opacity: '1'
+            },
+            '.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionIcon, .cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail':
+              {
+                color: 'var(--accent-text)'
+              },
+            '.cm-completionMatchedText': {
+              color: 'inherit',
+              fontWeight: '750',
+              textDecorationColor: 'var(--accent-strong)'
             },
             '&.cm-focused': { outline: '2px solid var(--accent)' }
           })
@@ -265,7 +310,7 @@
 <div
   class="sql-editor-host"
   aria-label={`${dialect === 'mysql' ? 'MySQL-family' : 'SQLite'} SQL editor`}
-  aria-keyshortcuts="Control+Enter Meta+Enter Control+Shift+Enter Meta+Shift+Enter Control+Period Meta+Period"
+  aria-keyshortcuts="Tab Control+Enter Meta+Enter Control+Shift+Enter Meta+Shift+Enter Control+Period Meta+Period"
   {@attach mountEditor}
 ></div>
 
