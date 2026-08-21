@@ -264,9 +264,9 @@ The default journey is:
 
 **SCH-4 — Search/filter.** Users can filter visible schema objects by name from the keyboard.
 
-**SCH-5 — Object detail.** Selecting an object shows its supported metadata without implying unavailable engine features. Adapter capability flags determine which detail sections appear.
+**SCH-5 — Object detail.** Selecting an object shows its supported structural metadata first: columns, declared types, primary-key order, nullability, defaults, generated fields, indexes, and foreign keys where reported. Missing sections state that the adapter reported no entries without implying unavailable engine features; adapter capability flags determine which additional detail appears.
 
-**SCH-6 — Entry actions.** Tables and views offer relevant actions such as open data, copy qualified name, and start a query. Write actions appear only when the adapter and object support them.
+**SCH-6 — Entry actions.** Tables and views offer explicit actions such as **Open rows**, copy qualified name, and start a query. Row browsing is separated from structure inspection, and write actions appear only when the adapter and object support them.
 
 **SCH-7 — Cache semantics.** Cached metadata is keyed by profile, detected engine/version, and namespace, contains no row data, and is labelled stale until refreshed after reconnect. Permission failures must not erase previously cached metadata silently. Deleting a profile removes its schema cache.
 
@@ -603,8 +603,8 @@ Targets are measured from production builds on an otherwise idle reference machi
 - Meet WCAG 2.2 AA for applicable desktop-web content and controls.
 - All functionality is keyboard operable with visible focus.
 - Tabs implement expected tablist keyboard behavior; trees, menus, dialogs, and drawers expose correct roles and focus handling.
-- Status and selection never depend on color alone.
-- Text and controls remain usable from 80% through 200% UI scale.
+- Status and selection never depend on color alone; icon-only controls use vector artwork inside explicitly labelled interactive elements rather than font symbols.
+- Text and controls remain usable from 80% through 200% UI scale; every dialog remains bounded to the current viewport and can scroll back to both its title controls and bottom actions.
 - Reduced-motion preferences are respected.
 - The workspace remains operable at 1280px, 960px, and 720px viewport widths without page-level horizontal scrolling; the editor and grid may scroll within their own bounded regions.
 
