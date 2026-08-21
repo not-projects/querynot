@@ -33,6 +33,7 @@
     WorkspaceView
   } from './lib/generated/contracts';
   import ConnectionList from './lib/components/ConnectionList.svelte';
+  import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
   import ResultGrid from './lib/components/ResultGrid.svelte';
   import TableDataGrid from './lib/components/TableDataGrid.svelte';
   import WorkspaceTabs from './lib/components/WorkspaceTabs.svelte';
@@ -219,9 +220,10 @@
   let executionEventQueue = Promise.resolve();
   let closingWindow = $state(false);
   let fileMenuOpen = $state(false);
-  let fileMenuButton = $state<HTMLButtonElement>();
-  let fileMenuElement = $state<HTMLElement>();
-  let mainElement = $state<HTMLElement>();
+  let fileMenuButton: HTMLButtonElement | undefined;
+  let fileMenuElement: HTMLElement | undefined;
+  let mainElement: HTMLElement | undefined;
+  let historyButton: HTMLButtonElement | undefined;
 
   const activeTab = $derived(
     workspace.tabs.find((tab) => tab.id === workspace.active_tab_id) ?? null
@@ -852,6 +854,34 @@
     dialogElement = element;
     return () => {
       if (dialogElement === element) dialogElement = undefined;
+    };
+  };
+
+  const captureFileMenu: Attachment<HTMLElement> = (element) => {
+    fileMenuElement = element;
+    return () => {
+      if (fileMenuElement === element) fileMenuElement = undefined;
+    };
+  };
+
+  const captureFileMenuButton: Attachment<HTMLButtonElement> = (element) => {
+    fileMenuButton = element;
+    return () => {
+      if (fileMenuButton === element) fileMenuButton = undefined;
+    };
+  };
+
+  const captureMain: Attachment<HTMLElement> = (element) => {
+    mainElement = element;
+    return () => {
+      if (mainElement === element) mainElement = undefined;
+    };
+  };
+
+  const captureHistoryButton: Attachment<HTMLButtonElement> = (element) => {
+    historyButton = element;
+    return () => {
+      if (historyButton === element) historyButton = undefined;
     };
   };
 
@@ -2683,9 +2713,24 @@
     });
   }
 
+  function openHistory() {
+    if (historyOpen) return;
+    historyOpen = true;
+    clearHistoryConfirmation = false;
+    void loadHistory();
+  }
+
+  async function closeHistory(returnFocus = true) {
+    if (!historyOpen) return;
+    historyOpen = false;
+    clearHistoryConfirmation = false;
+    await tick();
+    if (returnFocus) historyButton?.focus();
+  }
+
   function toggleHistory() {
-    historyOpen = !historyOpen;
-    if (historyOpen) void loadHistory();
+    if (historyOpen) void closeHistory();
+    else openHistory();
   }
 
   async function deleteHistoryItem(entry: HistoryEntryView) {
@@ -2733,11 +2778,14 @@
       workspace.active_tab_id = tab.id;
       rememberActiveTab(tab);
       historyOpen = false;
+      clearHistoryConfirmation = false;
       const session =
         profileId && connections[profileId]
           ? await ensureTabSession(tab)
           : null;
       await saveWorkspaceNow();
+      await tick();
+      editorApi?.focus();
       if (session) {
         statusMessage =
           'Reopened history in a new query tab with its own dedicated session. No execution was started.';
@@ -2991,13 +3039,13 @@
       <span class="phase-badge">Common database adapter</span>
     </div>
     <div class="topbar-actions">
-      <div class="file-menu" bind:this={fileMenuElement}>
+      <div class="file-menu" {@attach captureFileMenu}>
         <button
           type="button"
           class="quiet"
           aria-haspopup="menu"
           aria-expanded={fileMenuOpen}
-          bind:this={fileMenuButton}
+          {@attach captureFileMenuButton}
           onclick={() => (fileMenuOpen = !fileMenuOpen)}>File</button
         >
         {#if fileMenuOpen}
@@ -3034,6 +3082,14 @@
           ? `${Object.keys(connections).length} connected`
           : 'Offline'}
       </span>
+      <button
+        type="button"
+        class="quiet"
+        aria-controls="history-drawer"
+        aria-expanded={historyOpen}
+        {@attach captureHistoryButton}
+        onclick={toggleHistory}>History</button
+      >
       <button type="button" class="quiet" onclick={openSettings}
         >Settings{updater.availableUpdate ? ' · Update ready' : ''}</button
       >
@@ -3337,97 +3393,12 @@
           {/if}
         </section>
       {/if}
-
-      <section class="history-panel" aria-labelledby="history-heading">
-        <div class="pane-heading compact">
-          <div>
-            <p class="eyebrow">Local execution record</p>
-            <h2 id="history-heading">History</h2>
-          </div>
-          <button type="button" onclick={toggleHistory}>
-            {historyOpen ? 'Hide' : 'Open'}
-          </button>
-        </div>
-        {#if historyOpen}
-          <form
-            class="history-search"
-            onsubmit={(event) => {
-              event.preventDefault();
-              void loadHistory();
-            }}
-          >
-            <label>
-              <span class="sr-only">Search local query history</span>
-              <input
-                type="search"
-                placeholder="Search SQL or metadata"
-                bind:value={historySearch}
-              />
-            </label>
-            <button type="submit">Search</button>
-          </form>
-          {#if historyWarning}<p class="schema-state">{historyWarning}</p>{/if}
-          <ul class="history-list">
-            {#each historyEntries as entry (entry.id)}
-              <li>
-                <button
-                  type="button"
-                  class="history-main"
-                  onclick={() => void reopenHistoryEntry(entry)}
-                >
-                  <strong>{entry.status} · {entry.profile_label}</strong>
-                  <code>{entry.sql.slice(0, 160)}</code>
-                  <small>
-                    {new Date(entry.timestamp_ms).toLocaleString()} · {entry.duration_ms}
-                    ms ·
-                    {entry.received_rows} rows
-                  </small>
-                </button>
-                <button
-                  type="button"
-                  class="history-delete"
-                  aria-label={`Delete history entry from ${new Date(entry.timestamp_ms).toLocaleString()}`}
-                  onclick={() => void deleteHistoryItem(entry)}>×</button
-                >
-              </li>
-            {/each}
-          </ul>
-          {#if historyEntries.length === 0}
-            <p class="schema-state">No matching local history entries.</p>
-          {/if}
-          {#if clearHistoryConfirmation}
-            <div class="confirm-strip" role="alert">
-              <span>Clear all active local history entries?</span>
-              <button
-                type="button"
-                onclick={() => (clearHistoryConfirmation = false)}>Keep</button
-              >
-              <button type="button" onclick={() => void clearAllHistory()}
-                >Clear</button
-              >
-            </div>
-          {:else}
-            <button
-              type="button"
-              class="quiet"
-              onclick={() => (clearHistoryConfirmation = true)}
-            >
-              Clear all history…
-            </button>
-          {/if}
-          <p class="sidebar-note">
-            History never stores result rows, credentials, certificate contents,
-            staged edits, or raw driver logs. Backup and storage-forensics
-            deletion is outside QueryNot’s guarantee.
-          </p>
-        {/if}
-      </section>
     </aside>
 
     <main
       class:has-query-results={queryResultsVisible}
       style:grid-template-rows={mainGridRows}
-      bind:this={mainElement}
+      {@attach captureMain}
     >
       <div class="context-bar" aria-label="Active query context">
         <span class="context-state" class:online={Boolean(activeSession)}>
@@ -3809,6 +3780,23 @@
         </section>
       {/if}
     </main>
+
+    {#if historyOpen}
+      <HistoryDrawer
+        entries={historyEntries}
+        search={historySearch}
+        warning={historyWarning}
+        clearConfirmation={clearHistoryConfirmation}
+        onsearchchange={(value) => (historySearch = value)}
+        onsearch={() => void loadHistory()}
+        onreopen={(entry) => void reopenHistoryEntry(entry)}
+        ondelete={(entry) => void deleteHistoryItem(entry)}
+        onrequestclear={() => (clearHistoryConfirmation = true)}
+        onkeep={() => (clearHistoryConfirmation = false)}
+        onclear={() => void clearAllHistory()}
+        onclose={() => void closeHistory()}
+      />
+    {/if}
   </div>
 
   <footer>

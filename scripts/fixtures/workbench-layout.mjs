@@ -260,7 +260,25 @@ mockIPC(
       case 'ack_result_batch':
         return { completed: true, cancelled: false, message: 'Acknowledged.' };
       case 'list_history':
-        return { entries: [], warning: null };
+        return {
+          entries: [
+            {
+              id: 'layout-history-entry',
+              sql: 'SELECT id, name FROM fractions ORDER BY id;',
+              timestamp_ms: 1_786_569_600_000,
+              profile_id: 'emissary',
+              profile_label: 'Emissary',
+              engine: 'SQLite',
+              context: 'main',
+              duration_ms: 16,
+              status: 'completed',
+              affected_rows: 0,
+              received_rows: 1,
+              error_category: null
+            }
+          ],
+          warning: null
+        };
       default:
         return null;
     }

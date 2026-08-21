@@ -18,6 +18,11 @@ const workbenchScreenshotPath = resolve(
   'artifacts',
   'ui-layout-workbench.png'
 );
+const historyScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-history.png'
+);
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
 
@@ -448,6 +453,168 @@ try {
     results_70_percent: split70
   };
   await workbenchPage.screenshot({ path: workbenchScreenshotPath });
+
+  const mainBeforeHistory = await workbenchPage
+    .locator('main')
+    .evaluate((element) => element.getBoundingClientRect().toJSON());
+  const historyTrigger = workbenchPage.getByRole('button', {
+    name: 'History',
+    exact: true
+  });
+  await historyTrigger.click();
+  const historyDrawer = workbenchPage.locator('#history-drawer');
+  await historyDrawer.waitFor();
+  await workbenchPage
+    .getByRole('button', { name: /completed · Emissary/i })
+    .waitFor();
+  const historyOverlay = await workbenchPage.evaluate(() => {
+    const main = document.querySelector('main')?.getBoundingClientRect();
+    const workbench = document
+      .querySelector('.workbench')
+      ?.getBoundingClientRect();
+    const drawer = document
+      .querySelector('#history-drawer')
+      ?.getBoundingClientRect();
+    const search = document.querySelector(
+      '#history-drawer input[type="search"]'
+    );
+    if (!main || !workbench || !drawer || !search)
+      throw new Error('history overlay geometry is incomplete');
+    return {
+      main: main.toJSON(),
+      workbench: workbench.toJSON(),
+      drawer: drawer.toJSON(),
+      search_focused: document.activeElement === search,
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth
+    };
+  });
+  assert(
+    Math.abs(historyOverlay.main.width - mainBeforeHistory.width) < 1 &&
+      Math.abs(historyOverlay.main.left - mainBeforeHistory.left) < 1,
+    'opening History resized the main workbench pane'
+  );
+  assert(
+    Math.abs(historyOverlay.drawer.right - historyOverlay.workbench.right) <
+      1 &&
+      historyOverlay.drawer.top >= historyOverlay.workbench.top &&
+      historyOverlay.drawer.bottom <= historyOverlay.workbench.bottom,
+    'History drawer escaped the workbench right edge'
+  );
+  assert(historyOverlay.search_focused, 'History did not focus search on open');
+  assert(
+    historyOverlay.document_scroll_width <= historyOverlay.viewport_width,
+    'History drawer introduced page-level horizontal overflow'
+  );
+  await workbenchPage.screenshot({ path: historyScreenshotPath });
+  await workbenchPage
+    .locator('#history-drawer input[type="search"]')
+    .press('Escape');
+  await historyDrawer.waitFor({ state: 'detached' });
+  assert(
+    await historyTrigger.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'Escape did not return focus to the History trigger'
+  );
+  await historyTrigger.click();
+  await historyDrawer.waitFor();
+  await workbenchPage
+    .locator('.history-scrim')
+    .click({ position: { x: 8, y: 8 } });
+  await historyDrawer.waitFor({ state: 'detached' });
+  assert(
+    await historyTrigger.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'backdrop click did not return focus to the History trigger'
+  );
+  populatedWorkbench.history_overlay = historyOverlay;
+
+  const populatedResponsiveLayouts = [];
+  for (const width of widths) {
+    await workbenchPage.setViewportSize({ width, height: 800 });
+    const layout = await workbenchPage.evaluate(() => {
+      const main = document.querySelector('main')?.getBoundingClientRect();
+      const results = document
+        .querySelector('#query-results')
+        ?.getBoundingClientRect();
+      const firstRow = document
+        .querySelector('.grid-row')
+        ?.getBoundingClientRect();
+      const footer = document.querySelector('footer')?.getBoundingClientRect();
+      if (!main || !results || !firstRow || !footer)
+        throw new Error('responsive workbench geometry is incomplete');
+      return {
+        viewport_width: window.innerWidth,
+        document_scroll_width: document.documentElement.scrollWidth,
+        main: main.toJSON(),
+        results: results.toJSON(),
+        first_row: firstRow.toJSON(),
+        footer: footer.toJSON(),
+        visible_tabs: Array.from(
+          document.querySelectorAll('[role="tab"] .tab-title')
+        ).map((element) => element.textContent?.trim() ?? '')
+      };
+    });
+    assert(
+      layout.document_scroll_width <= layout.viewport_width,
+      `${width}px populated workbench has page-level horizontal overflow`
+    );
+    assert(
+      layout.results.bottom <= layout.footer.top &&
+        layout.first_row.bottom <= layout.results.bottom,
+      `${width}px populated result escaped its workbench pane`
+    );
+    assert(
+      JSON.stringify(layout.visible_tabs) ===
+        JSON.stringify(['fractions query', 'armors query']),
+      `${width}px populated tabs lost connection scope`
+    );
+    populatedResponsiveLayouts.push(layout);
+  }
+
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+  const populatedScale150 = await workbenchPage.evaluate(async () => {
+    const shell = document.querySelector('.app-shell');
+    if (!(shell instanceof HTMLElement))
+      throw new Error('scaled workbench shell is missing');
+    shell.style.setProperty('--ui-scale', '1.5');
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    const main = document.querySelector('main')?.getBoundingClientRect();
+    const results = document
+      .querySelector('#query-results')
+      ?.getBoundingClientRect();
+    const footer = document.querySelector('footer')?.getBoundingClientRect();
+    if (!main || !results || !footer)
+      throw new Error('150% workbench geometry is incomplete');
+    const layout = {
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth,
+      main: main.toJSON(),
+      results: results.toJSON(),
+      footer: footer.toJSON(),
+      transform: getComputedStyle(shell).transform
+    };
+    shell.style.setProperty('--ui-scale', '1');
+    return layout;
+  });
+  assert(
+    populatedScale150.transform.startsWith('matrix(1.5'),
+    `populated workbench did not render at 150% (${populatedScale150.transform})`
+  );
+  assert(
+    populatedScale150.document_scroll_width <= populatedScale150.viewport_width,
+    '150% populated workbench has page-level horizontal overflow'
+  );
+  assert(
+    populatedScale150.results.bottom <= populatedScale150.footer.top,
+    '150% populated results overlap the status bar'
+  );
+  populatedWorkbench.responsive_layouts = populatedResponsiveLayouts;
+  populatedWorkbench.scale_150_percent = populatedScale150;
   await workbenchPage.close();
 
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -467,7 +634,8 @@ try {
     theme_labels: options,
     screenshots: [
       'artifacts/ui-layout-settings.png',
-      'artifacts/ui-layout-workbench.png'
+      'artifacts/ui-layout-workbench.png',
+      'artifacts/ui-layout-history.png'
     ]
   };
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);

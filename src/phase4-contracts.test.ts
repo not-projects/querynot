@@ -216,9 +216,9 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
     expect(mysql).toContain('MAX_METADATA_BYTES');
   });
 
-  it('opens schema starter queries on the existing connection and keeps compact history below schema', () => {
+  it('opens schema starter queries on the existing connection and presents history as a workbench drawer', () => {
     const app = read('src/App.svelte');
-    const css = read('src/styles/app.css');
+    const historyDrawer = read('src/lib/components/HistoryDrawer.svelte');
     const starter = app.slice(
       app.indexOf('async function startQueryForObject'),
       app.indexOf('function handleEditorChange')
@@ -228,12 +228,15 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
     expect(starter).toContain('await ensureTabSession(tab)');
     expect(starter).toContain('tab.context_label = object.namespace');
     expect(starter).toContain("invokeCommand('open_tab_session'");
-    expect(app.indexOf('id="schema-heading"')).toBeLessThan(
-      app.indexOf('id="history-heading"')
+    expect(app).toContain('aria-controls="history-drawer"');
+    expect(app).toContain('<HistoryDrawer');
+    expect(app).toContain(
+      'await tick();\n    if (returnFocus) historyButton?.focus()'
     );
-    expect(css).toMatch(
-      /\.history-main\s*\{[^}]*min-height:\s*0;[^}]*background:\s*transparent;/s
-    );
+    expect(historyDrawer).toContain('role="dialog"');
+    expect(historyDrawer).toContain('aria-modal="true"');
+    expect(historyDrawer).toContain("if (event.key === 'Escape')");
+    expect(historyDrawer).toContain('History never stores result rows');
   });
 
   it('runs daily history maintenance and tests the Phase 4 migration rollback boundary', () => {
