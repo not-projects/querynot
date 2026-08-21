@@ -156,10 +156,10 @@
   .workspace-tab-strip {
     display: flex;
     min-width: 0;
-    min-height: 2.35rem;
-    align-items: end;
-    padding: 0.25rem 0.5rem 0;
-    gap: 0.25rem;
+    min-height: 2.2rem;
+    align-items: stretch;
+    padding: 0 0.45rem;
+    gap: 0.2rem;
     overflow: hidden;
     border-bottom: 1px solid var(--divider);
     background: var(--surface-subtle);
@@ -169,35 +169,32 @@
     display: flex;
     min-width: 0;
     flex: 1;
-    align-items: end;
-    gap: 0.2rem;
+    align-items: stretch;
+    gap: 0;
     overflow-x: auto;
     overflow-y: hidden;
   }
 
   .workspace-tab-item {
     display: flex;
-    min-width: 8.5rem;
-    max-width: 17rem;
-    height: 2rem;
-    flex: 0 1 13rem;
+    min-width: 7.5rem;
+    max-width: 15rem;
+    height: 2.15rem;
+    flex: 0 1 12rem;
     align-items: center;
-    border: 1px solid transparent;
-    border-bottom: 0;
-    border-radius: 6px 6px 0 0;
+    border-inline-end: 1px solid
+      color-mix(in srgb, var(--divider) 72%, transparent);
     background: transparent;
   }
 
   .workspace-tab-item:hover,
   .workspace-tab-item:focus-within {
-    border-color: var(--divider);
-    background: color-mix(in srgb, var(--surface-raised) 64%, transparent);
+    background: color-mix(in srgb, var(--surface-raised) 60%, transparent);
   }
 
   .workspace-tab-item.active {
-    border-color: var(--divider);
     background: var(--surface-raised);
-    box-shadow: inset 0 2px var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
   }
 
   .workspace-tab-main {
@@ -293,7 +290,20 @@
   }
 
   .tab-close {
-    width: 1.45rem;
+    width: 1.35rem;
+  }
+
+  .tab-overflow summary,
+  .tab-close {
+    opacity: 0;
+  }
+
+  .workspace-tab-item:hover .tab-overflow summary,
+  .workspace-tab-item:focus-within .tab-overflow summary,
+  .workspace-tab-item:hover .tab-close,
+  .workspace-tab-item:focus-within .tab-close,
+  .workspace-tab-item.active .tab-close {
+    opacity: 1;
   }
 
   .new-tab {

@@ -223,34 +223,6 @@ try {
       element.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
-  const sidebarOverflow = await page.evaluate(() => {
-    const aside = document.querySelector('aside');
-    if (!aside) throw new Error('sidebar is missing');
-    const list = document.createElement('ul');
-    list.className = 'profile-list';
-    list.innerHTML = `<li><button class="profile-main"><span class="engine-mark">SQ</span><span><strong>Very long synthetic connection name that must be clipped</strong><small>very-long-synthetic-database-file-name.sqlite3</small></span><span class="status-dot"></span></button><div class="profile-actions"><button>Test</button><button>Disconnect</button><button>Edit</button><button>Duplicate</button><button>Delete</button></div></li>`;
-    aside.append(list);
-    const result = {
-      aside_client_width: aside.clientWidth,
-      aside_scroll_width: aside.scrollWidth,
-      actions_client_width:
-        list.querySelector('.profile-actions')?.clientWidth ?? 0,
-      actions_scroll_width:
-        list.querySelector('.profile-actions')?.scrollWidth ?? 0
-    };
-    list.remove();
-    return result;
-  });
-  assert(
-    sidebarOverflow.aside_scroll_width <= sidebarOverflow.aside_client_width,
-    'connection content overflows the sidebar'
-  );
-  assert(
-    sidebarOverflow.actions_scroll_width <=
-      sidebarOverflow.actions_client_width,
-    'connection actions overflow their profile card'
-  );
-
   const editorPage = await browser.newPage({
     viewport: { width: 1280, height: 800 },
     reducedMotion: 'reduce'
@@ -410,6 +382,14 @@ try {
         Boolean(emissaryAction) &&
         emissaryAction.scrollWidth <= emissaryAction.clientWidth,
       visible_tabs: visibleTabs,
+      topbar: rect('.topbar'),
+      toolbar_group_count: document.querySelectorAll(
+        '.query-toolbar > .toolbar-group'
+      ).length,
+      footer_shortcuts:
+        document
+          .querySelector('footer > span:last-child')
+          ?.textContent?.trim() ?? '',
       editor: rect('#query-editor-pane'),
       separator: rect('.results-separator'),
       results: rect('#query-results'),
@@ -442,6 +422,19 @@ try {
     JSON.stringify(populatedWorkbench.visible_tabs) ===
       JSON.stringify(['fractions query', 'armors query']),
     `top tabs are not connection-scoped (${JSON.stringify(populatedWorkbench.visible_tabs)})`
+  );
+  assert(
+    populatedWorkbench.topbar.height <= 56,
+    'main header exceeds the compact 56px bound'
+  );
+  assert(
+    populatedWorkbench.toolbar_group_count === 2,
+    'query actions are not split into two clear groups'
+  );
+  assert(
+    populatedWorkbench.footer_shortcuts ===
+      'Ctrl+Enter Run · Ctrl+Shift+Enter Run all · Ctrl+Tab Switch tabs',
+    'status bar shortcut help is not compact'
   );
   assert(
     populatedWorkbench.editor.bottom <= populatedWorkbench.separator.top + 1,
@@ -770,7 +763,6 @@ try {
     layouts,
     dialog_themes: dialogThemes,
     scale_preview: { baseline: baselineScale, scaled: scalePreview },
-    sidebar_overflow: sidebarOverflow,
     editor_focus: editorFocus,
     populated_workbench: populatedWorkbench,
     theme_labels: options,

@@ -76,7 +76,12 @@ describe('Phase 1 native boundaries', () => {
     expect(css).toMatch(
       /aside\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/s
     );
-    expect(css).toMatch(/\.profile-actions\s*\{[^}]*flex-wrap:\s*wrap;/s);
+    const connectionList = read('src/lib/components/ConnectionList.svelte');
+    expect(connectionList).toContain(
+      'grid-template-columns: minmax(0, 1fr) auto auto;'
+    );
+    expect(connectionList).toContain('text-overflow: ellipsis;');
+    expect(connectionList).toContain('class="connection-action"');
   });
 
   it('keeps query execution behind explicit native commands and grants no frontend filesystem or network capability', () => {

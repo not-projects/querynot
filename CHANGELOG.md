@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Flattened the main workbench hierarchy with a compact header and status bar, quieter connection and tab treatments, grouped query/document actions, one dominant Run action, and accurate query-draft status without changing safety or session context.
 - Restored a horizontal tab strip above the editor that shows only the selected connection or Offline group's tabs, remembers the most recent tab per group for the current session, and keeps tab keyboard navigation group-local.
 - Simplified the left sidebar to readable profile rows with direct connection state actions and compact secondary menus, and moved the complete local History workflow into a non-resizing right-side overlay drawer with managed focus.
 - Replaced unexplained online/offline tab dots with explicit Unsaved, Opening, or Error labels only when a tab needs attention; connection and session state remains available in the context bar.

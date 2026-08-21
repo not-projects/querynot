@@ -161,25 +161,24 @@
     position: relative;
     display: grid;
     min-width: 0;
-    min-height: 2.75rem;
+    min-height: 2.65rem;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 0.18rem;
-    padding: 0.2rem;
+    gap: 0.15rem;
+    padding: 0.15rem;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 4px;
   }
 
   .connection-row:hover,
   .connection-row:focus-within {
-    border-color: var(--divider);
-    background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+    background: color-mix(in srgb, var(--surface-raised) 58%, transparent);
   }
 
   .connection-row.active {
-    border-color: color-mix(in srgb, var(--accent) 38%, var(--divider));
-    background: color-mix(in srgb, var(--accent) 11%, var(--surface-raised));
-    box-shadow: inset 3px 0 var(--accent);
+    border-color: transparent;
+    background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
+    box-shadow: inset 2px 0 var(--accent);
   }
 
   .connection-main {
@@ -219,14 +218,15 @@
 
   .engine-mark {
     display: grid;
-    width: 1.7rem;
-    height: 1.7rem;
+    width: 1.65rem;
+    height: 1.65rem;
     flex: 0 0 auto;
     place-items: center;
-    border-radius: 5px;
-    color: var(--accent-text);
-    background: var(--accent);
-    font-size: 0.56rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--divider));
+    border-radius: 4px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    font-size: 0.54rem;
     font-weight: 800;
   }
 
@@ -249,8 +249,11 @@
 
   .connection-action {
     min-width: 3.7rem;
-    min-height: 1.8rem;
+    min-height: 1.75rem;
     padding: 0.2rem 0.4rem;
+    border-color: transparent;
+    color: var(--muted);
+    background: transparent;
     font-size: 0.62rem;
   }
 

@@ -425,7 +425,7 @@ The check must be dialect-aware and resilient to whitespace and comments. For `U
 
 ### 8.9 Settings and diagnostics
 
-**SET-1 — Settings.** Initial settings cover theme, UI scale, editor preferences, formatter behavior, connection timeout, default result tranche, table page size, history retention, session restoration, reconnect preference, and local-log retention/clearing.
+**SET-1 — Settings.** Initial settings cover theme, UI scale, editor preferences, formatter behavior, connection timeout, default result tranche, table page size, history retention, session restoration, reconnect preference, and local-log retention/clearing. UI-scale changes preview on the main application immediately, while an already-open Settings dialog keeps its opening scale so the control remains stable; reopening Settings adopts the saved scale.
 
 **SET-2 — Themes.** Light, dark, and forest themes must use the same semantic roles and meet accessibility requirements. Theme changes apply without restarting.
 

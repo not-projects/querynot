@@ -3029,9 +3029,8 @@
 >
   <header class="topbar">
     <div class="brand">
-      <p class="eyebrow">Not Projects</p>
       <h1>QueryNot</h1>
-      <span class="phase-badge">Common database adapter</span>
+      <span class="brand-context">Not Projects · local SQL client</span>
     </div>
     <div class="topbar-actions">
       <div class="file-menu" {@attach captureFileMenu}>
@@ -3072,10 +3071,17 @@
           </div>
         {/if}
       </div>
-      <span class="offline-badge">
-        {Object.keys(connections).length
-          ? `${Object.keys(connections).length} connected`
-          : 'Offline'}
+      <span class="connection-summary">
+        <span
+          class="summary-status"
+          class:online={Object.keys(connections).length > 0}
+          aria-hidden="true"
+        ></span>
+        <span>
+          {Object.keys(connections).length
+            ? `${Object.keys(connections).length} connected`
+            : 'Offline'}
+        </span>
       </span>
       <button
         type="button"
@@ -3122,7 +3128,6 @@
     <aside aria-labelledby="connections-heading">
       <div class="pane-heading">
         <div>
-          <p class="eyebrow">Workspace</p>
           <h2 id="connections-heading" tabindex="-1">Connections</h2>
         </div>
         <button
@@ -3169,7 +3174,6 @@
         <section class="schema-explorer" aria-labelledby="schema-heading">
           <div class="pane-heading compact">
             <div>
-              <p class="eyebrow">Progressive metadata</p>
               <h2 id="schema-heading">Schema</h2>
             </div>
             {#if activeConnection}
@@ -3524,10 +3528,9 @@
           >
             <div class="editor-heading-row">
               <div>
-                <p class="eyebrow">SQL draft</p>
                 <h2 id="editor-heading">{activeTab?.title}</h2>
               </div>
-              <span class="safety-label"
+              <span class="execution-context"
                 >{activeSession
                   ? `${activeConnection?.engine ?? 'Database'} · explicit execution only`
                   : activeTab && tabSessionOperations[activeTab.id]
@@ -3536,106 +3539,119 @@
               >
             </div>
             <div class="query-toolbar" aria-label="Query actions">
-              {#if activeSession}
-                <button
-                  type="button"
-                  class="primary"
-                  disabled={activeExecution &&
-                    ['queued', 'running', 'paused', 'cancelling'].includes(
-                      activeExecution.state
-                    )}
-                  onclick={() => {
-                    const selection = editorApi?.selection();
-                    void runEditorRequest({
-                      selectionStart:
-                        selection && selection.start !== selection.end
-                          ? selection.start
-                          : null,
-                      selectionEnd:
-                        selection && selection.start !== selection.end
-                          ? selection.end
-                          : null,
-                      cursor: selection?.cursor ?? 0,
-                      runAll: false
-                    });
-                  }}>Run</button
-                >
-                <button
-                  type="button"
-                  disabled={activeExecution &&
-                    ['queued', 'running', 'paused', 'cancelling'].includes(
-                      activeExecution.state
-                    )}
-                  onclick={() => {
-                    const selection = editorApi?.selection();
-                    void runEditorRequest({
-                      selectionStart: null,
-                      selectionEnd: null,
-                      cursor: selection?.cursor ?? 0,
-                      runAll: true
-                    });
-                  }}>Run all</button
-                >
-                <button
-                  type="button"
-                  disabled={!activeExecution ||
-                    !['queued', 'running', 'paused', 'cancelling'].includes(
-                      activeExecution.state
-                    )}
-                  onclick={() => void cancelActiveExecution()}>Cancel</button
-                >
-                <label class="transaction-mode">
-                  <span>Mode</span>
-                  <select
-                    value={activeSession.transaction.automatic
-                      ? 'automatic'
-                      : 'manual'}
-                    onchange={(event) =>
-                      void setAutomaticTransaction(
-                        (event.currentTarget as HTMLSelectElement).value ===
-                          'automatic'
+              <div class="toolbar-group toolbar-execution">
+                {#if activeSession}
+                  <button
+                    type="button"
+                    class="primary"
+                    title="Run current statement (Ctrl+Enter)"
+                    aria-keyshortcuts="Control+Enter"
+                    disabled={activeExecution &&
+                      ['queued', 'running', 'paused', 'cancelling'].includes(
+                        activeExecution.state
                       )}
+                    onclick={() => {
+                      const selection = editorApi?.selection();
+                      void runEditorRequest({
+                        selectionStart:
+                          selection && selection.start !== selection.end
+                            ? selection.start
+                            : null,
+                        selectionEnd:
+                          selection && selection.start !== selection.end
+                            ? selection.end
+                            : null,
+                        cursor: selection?.cursor ?? 0,
+                        runAll: false
+                      });
+                    }}>Run</button
                   >
-                    <option value="automatic">Auto-commit</option>
-                    <option value="manual">Manual</option>
-                  </select>
-                </label>
-                {#if activeSession.transaction.certainty !== 'clean'}
                   <button
                     type="button"
-                    onclick={() => void resolveTransaction('commit')}
-                    >Commit</button
+                    title="Run all statements (Ctrl+Shift+Enter)"
+                    aria-keyshortcuts="Control+Shift+Enter"
+                    disabled={activeExecution &&
+                      ['queued', 'running', 'paused', 'cancelling'].includes(
+                        activeExecution.state
+                      )}
+                    onclick={() => {
+                      const selection = editorApi?.selection();
+                      void runEditorRequest({
+                        selectionStart: null,
+                        selectionEnd: null,
+                        cursor: selection?.cursor ?? 0,
+                        runAll: true
+                      });
+                    }}>Run all</button
                   >
                   <button
                     type="button"
-                    onclick={() => void resolveTransaction('rollback')}
-                    >Rollback</button
+                    disabled={!activeExecution ||
+                      !['queued', 'running', 'paused', 'cancelling'].includes(
+                        activeExecution.state
+                      )}
+                    title="Cancel execution (Ctrl+.)"
+                    aria-keyshortcuts="Control+."
+                    onclick={() => void cancelActiveExecution()}>Cancel</button
                   >
+                  <label class="transaction-mode">
+                    <span>Mode</span>
+                    <select
+                      value={activeSession.transaction.automatic
+                        ? 'automatic'
+                        : 'manual'}
+                      onchange={(event) =>
+                        void setAutomaticTransaction(
+                          (event.currentTarget as HTMLSelectElement).value ===
+                            'automatic'
+                        )}
+                    >
+                      <option value="automatic">Auto-commit</option>
+                      <option value="manual">Manual</option>
+                    </select>
+                  </label>
+                  {#if activeSession.transaction.certainty !== 'clean'}
+                    <button
+                      type="button"
+                      onclick={() => void resolveTransaction('commit')}
+                      >Commit</button
+                    >
+                    <button
+                      type="button"
+                      onclick={() => void resolveTransaction('rollback')}
+                      >Rollback</button
+                    >
+                  {/if}
                 {/if}
-              {/if}
-              <button type="button" onclick={() => void formatEditor()}
-                >Format</button
-              >
-              <button
-                type="button"
-                onclick={() => void saveActiveSqlFile(false)}
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onclick={() => void saveActiveSqlFile(true)}
-              >
-                Save as…
-              </button>
-              {#if activeTab?.source_file_grant_id}
+              </div>
+              <div class="toolbar-group toolbar-document">
                 <button
                   type="button"
-                  onclick={() => void reviewActiveSqlFile()}
+                  title="Format SQL (Shift+Alt+F)"
+                  aria-keyshortcuts="Shift+Alt+F"
+                  onclick={() => void formatEditor()}>Format</button
                 >
-                  Review disk version
+                <button
+                  type="button"
+                  onclick={() => void saveActiveSqlFile(false)}
+                >
+                  Save
                 </button>
-              {/if}
+                <button
+                  type="button"
+                  onclick={() => void saveActiveSqlFile(true)}
+                >
+                  Save as…
+                </button>
+                {#if activeTab?.source_file_grant_id}
+                  <button
+                    type="button"
+                    onclick={() => void reviewActiveSqlFile()}
+                  >
+                    Review disk version
+                  </button>
+                {/if}
+              </div>
             </div>
             {#key activeTab?.id}
               <div id="sql-editor" class="code-editor-frame">
@@ -3664,7 +3680,11 @@
                   ? activeTab.dirty
                     ? 'Source file changed'
                     : 'Source file saved'
-                  : 'Offline draft'}
+                  : activeTab?.profile_id
+                    ? activeTab.dirty
+                      ? 'Edited query'
+                      : 'Query draft'
+                    : 'Offline draft'}
               </span>
               <span>{activeTab?.profile_label ?? 'Unbound offline file'}</span>
               <span>
@@ -3696,11 +3716,9 @@
             >
               <div class="editor-heading-row">
                 <div>
-                  <p class="eyebrow">Received rows and messages</p>
                   <h2 id="results-heading">Results</h2>
                 </div>
-                <span class="safety-label">No hidden fetch or re-execution</span
-                >
+                <span class="results-context">Loaded rows only</span>
               </div>
               {#if activeExecution?.error}
                 <div class="result-error" role="alert">
@@ -3795,10 +3813,7 @@
 
   <footer>
     <span class="status-message" aria-live="polite">{statusMessage}</span>
-    <span
-      >Ctrl+N New · Ctrl+O Open · Ctrl+S Save · Ctrl+Enter Run ·
-      Ctrl+Shift+Enter Run all · Ctrl+. Cancel · Shift+Alt+F Format · Ctrl+1/2/3
-      Focus · Ctrl+F Find · Ctrl+Tab / Ctrl+Shift+Tab Switch visible tab</span
+    <span>Ctrl+Enter Run · Ctrl+Shift+Enter Run all · Ctrl+Tab Switch tabs</span
     >
   </footer>
 </div>
