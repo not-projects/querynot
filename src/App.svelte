@@ -32,9 +32,10 @@
     WorkspaceTabView,
     WorkspaceView
   } from './lib/generated/contracts';
-  import ConnectionTabs from './lib/components/ConnectionTabs.svelte';
+  import ConnectionList from './lib/components/ConnectionList.svelte';
   import ResultGrid from './lib/components/ResultGrid.svelte';
   import TableDataGrid from './lib/components/TableDataGrid.svelte';
+  import WorkspaceTabs from './lib/components/WorkspaceTabs.svelte';
   import SqlEditor, {
     type EditorRunRequest,
     type SqlEditorApi
@@ -179,8 +180,7 @@
   let connectionOperations = $state<Record<string, 'test' | 'connect'>>({});
   let tabSessionOperations = $state<Record<string, boolean>>({});
   let tabSessionErrors = $state<Record<string, string>>({});
-  let expandedProfiles = $state<Record<string, boolean>>({});
-  let offlineTabsExpanded = $state(true);
+  let lastActiveTabIds = $state<Record<string, string>>({});
   let sessions = $state<Record<string, SessionView>>({});
   const tabSessionOpenPromises = new SvelteMap<
     string,
@@ -229,6 +229,10 @@
   const activeProfile = $derived(
     profiles.find((profile) => profile.id === activeTab?.profile_id) ?? null
   );
+  const activeGroupTabs = $derived(
+    activeTab ? tabsInGroup(activeTab.profile_id) : []
+  );
+  const activeGroupLabel = $derived(activeProfile?.name ?? 'Offline');
   const activeConnection = $derived(
     activeProfile ? (connections[activeProfile.id] ?? null) : null
   );
@@ -257,11 +261,18 @@
   const resultsPercent = $derived(
     clampResultsPercent(workspace.panel_sizes.results_percent)
   );
-  const queryGridRows = $derived(
-    queryResultsVisible
-      ? `auto auto minmax(10rem, ${100 - resultsPercent}fr) 7px minmax(8rem, ${resultsPercent}fr)`
-      : undefined
+  const tabSessionErrorVisible = $derived(
+    Boolean(
+      activeTab?.profile_id && !activeSession && tabSessionErrors[activeTab.id]
+    )
   );
+  const mainGridRows = $derived.by(() => {
+    if (!activeTab) return undefined;
+    const leadingRows = tabSessionErrorVisible ? 'auto auto auto' : 'auto auto';
+    return queryResultsVisible
+      ? `${leadingRows} minmax(10rem, ${100 - resultsPercent}fr) 7px minmax(8rem, ${resultsPercent}fr)`
+      : `${leadingRows} minmax(18rem, 1fr)`;
+  });
   const activeTableUi = $derived(
     activeTab?.kind === 'table_data' ? (tableTabs[activeTab.id] ?? null) : null
   );
@@ -438,13 +449,11 @@
     tabSessionErrors = {};
     tabSessionOpenPromises.clear();
     sessions = {};
+    lastActiveTabIds = {};
     const restoredActiveTab = workspace.tabs.find(
       (tab) => tab.id === workspace.active_tab_id
     );
-    expandedProfiles = restoredActiveTab?.profile_id
-      ? { [restoredActiveTab.profile_id]: true }
-      : {};
-    offlineTabsExpanded = !restoredActiveTab?.profile_id;
+    if (restoredActiveTab) rememberActiveTab(restoredActiveTab);
     executions = {};
     results = {};
     selectedResultIds = {};
@@ -525,7 +534,7 @@
     const openingTab = pendingTabForProfile(profileId);
     if (openingTab) {
       workspace.active_tab_id = openingTab.id;
-      expandTabGroup(openingTab);
+      rememberActiveTab(openingTab);
       statusMessage =
         'Wait for this tab’s dedicated session to finish opening before disconnecting the profile.';
       return true;
@@ -591,16 +600,25 @@
     return workspace.tabs.filter((tab) => tab.profile_id === profileId);
   }
 
-  function expandTabGroup(tab: WorkspaceTabView) {
-    if (tab.profile_id) expandedProfiles[tab.profile_id] = true;
-    else offlineTabsExpanded = true;
+  function tabGroupKey(profileId: string | null) {
+    return profileId ?? '__offline__';
+  }
+
+  function rememberActiveTab(tab: WorkspaceTabView) {
+    lastActiveTabIds[tabGroupKey(tab.profile_id)] = tab.id;
+  }
+
+  function lastActiveTabInGroup(profileId: string | null) {
+    const tabs = tabsInGroup(profileId);
+    const rememberedId = lastActiveTabIds[tabGroupKey(profileId)];
+    return tabs.find((tab) => tab.id === rememberedId) ?? tabs[0] ?? null;
   }
 
   async function activateTab(tabId: string, focusEditor = true) {
     const tab = workspace.tabs.find((candidate) => candidate.id === tabId);
     if (!tab) return;
     workspace.active_tab_id = tab.id;
-    expandTabGroup(tab);
+    rememberActiveTab(tab);
     queueWorkspaceSave();
     if (tab.profile_id && connections[tab.profile_id] && !sessions[tab.id]) {
       await ensureTabSession(tab);
@@ -616,25 +634,15 @@
   }
 
   async function selectProfileGroup(profile: ProfileView) {
-    expandedProfiles[profile.id] = true;
-    const firstTab = tabsInGroup(profile.id)[0];
-    if (firstTab) await activateTab(firstTab.id);
+    const rememberedTab = lastActiveTabInGroup(profile.id);
+    if (rememberedTab) await activateTab(rememberedTab.id);
     else await createOfflineTab(profile.id);
   }
 
   async function selectOfflineGroup() {
-    offlineTabsExpanded = true;
-    const firstTab = tabsInGroup(null)[0];
-    if (firstTab) await activateTab(firstTab.id);
+    const rememberedTab = lastActiveTabInGroup(null);
+    if (rememberedTab) await activateTab(rememberedTab.id);
     else await createOfflineTab(null);
-  }
-
-  function toggleProfileGroup(profileId: string) {
-    expandedProfiles[profileId] = !expandedProfiles[profileId];
-  }
-
-  function toggleOfflineGroup() {
-    offlineTabsExpanded = !offlineTabsExpanded;
   }
 
   function pendingTabForProfile(profileId: string) {
@@ -1239,7 +1247,7 @@
           (tab) => tab.id === workspace.active_tab_id
         );
         if (survivingActiveTab) {
-          expandTabGroup(survivingActiveTab);
+          rememberActiveTab(survivingActiveTab);
         } else {
           workspace.active_tab_id = null;
           const fallbackTab = workspace.tabs[0];
@@ -1264,7 +1272,7 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
-      expandTabGroup(tab);
+      rememberActiveTab(tab);
       if (profileId && connections[profileId]) {
         const session = await ensureTabSession(tab);
         if (session) {
@@ -1323,7 +1331,7 @@
     };
     workspace.tabs.push(tab);
     workspace.active_tab_id = tab.id;
-    offlineTabsExpanded = true;
+    rememberActiveTab(tab);
     return tab;
   }
 
@@ -1465,7 +1473,7 @@
       duplicate.position = workspace.tabs.length;
       workspace.tabs.push(duplicate);
       workspace.active_tab_id = duplicate.id;
-      expandTabGroup(duplicate);
+      rememberActiveTab(duplicate);
       const session = duplicate.profile_id
         ? await ensureTabSession(duplicate)
         : null;
@@ -1509,7 +1517,7 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
-      expandTabGroup(tab);
+      rememberActiveTab(tab);
       tableTabs[tab.id] = newTableUi();
       await ensureTabSession(tab);
       await saveWorkspaceNow();
@@ -1899,7 +1907,7 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
-      expandTabGroup(tab);
+      rememberActiveTab(tab);
       const session = connections[profileId]
         ? await ensureTabSession(tab)
         : null;
@@ -2460,7 +2468,7 @@
   function requestCloseTab(tab: WorkspaceTabView) {
     if (tabSessionOperations[tab.id]) {
       workspace.active_tab_id = tab.id;
-      expandTabGroup(tab);
+      rememberActiveTab(tab);
       statusMessage =
         'Wait for this tab’s dedicated session to finish opening before closing it.';
       return;
@@ -2591,7 +2599,7 @@
     if (blocker.tabId) {
       workspace.active_tab_id = blocker.tabId;
       const blockerTab = workspace.tabs.find((tab) => tab.id === blocker.tabId);
-      if (blockerTab) expandTabGroup(blockerTab);
+      if (blockerTab) rememberActiveTab(blockerTab);
       await tick();
       if (
         workspace.tabs.find((tab) => tab.id === blocker.tabId)?.kind === 'query'
@@ -2723,7 +2731,7 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
-      expandTabGroup(tab);
+      rememberActiveTab(tab);
       historyOpen = false;
       const session =
         profileId && connections[profileId]
@@ -2946,15 +2954,15 @@
     ) {
       event.preventDefault();
       editorApi?.openSearch();
-    } else if (event.ctrlKey && event.key === 'Tab' && workspace.tabs.length) {
+    } else if (event.ctrlKey && event.key === 'Tab' && activeGroupTabs.length) {
       event.preventDefault();
-      const current = workspace.tabs.findIndex(
+      const current = activeGroupTabs.findIndex(
         (tab) => tab.id === workspace.active_tab_id
       );
       const direction = event.shiftKey ? -1 : 1;
       const next =
-        (current + direction + workspace.tabs.length) % workspace.tabs.length;
-      void activateTab(workspace.tabs[next].id);
+        (current + direction + activeGroupTabs.length) % activeGroupTabs.length;
+      void activateTab(activeGroupTabs[next].id);
     }
   }
 </script>
@@ -3084,22 +3092,14 @@
         </div>
       {/if}
 
-      <ConnectionTabs
+      <ConnectionList
         {profiles}
-        tabs={workspace.tabs}
-        activeTabId={workspace.active_tab_id}
+        activeProfileId={activeProfile?.id ?? null}
+        offlineActive={Boolean(activeTab && !activeTab.profile_id)}
         {connections}
         {connectionOperations}
-        {sessions}
-        sessionOpening={tabSessionOperations}
-        sessionErrors={tabSessionErrors}
-        {expandedProfiles}
-        offlineExpanded={offlineTabsExpanded}
         onselectprofile={(profile) => void selectProfileGroup(profile)}
         onselectoffline={() => void selectOfflineGroup()}
-        ontoggleprofile={toggleProfileGroup}
-        ontoggleoffline={toggleOfflineGroup}
-        onnewquery={(profileId) => void createOfflineTab(profileId)}
         onconnect={(profile) => void connectProfile(profile)}
         ondisconnect={(profile) => void disconnectProfile(profile)}
         ontest={(profile) => void testProfile(profile)}
@@ -3107,12 +3107,6 @@
         oneditprofile={editProfile}
         onduplicateprofile={(profile) => void duplicateProfile(profile)}
         ondeleteprofile={confirmDeleteProfile}
-        onactivatetab={(tab) => void activateTab(tab.id)}
-        onclosetab={requestCloseTab}
-        onrenametab={renameTab}
-        onduplicatetab={(tab) => void duplicateQueryTab(tab)}
-        onpintab={togglePinTab}
-        onmovetab={(tab, direction) => moveTab(tab.id, direction)}
       />
 
       <p class="sidebar-note">
@@ -3432,7 +3426,7 @@
 
     <main
       class:has-query-results={queryResultsVisible}
-      style:grid-template-rows={queryGridRows}
+      style:grid-template-rows={mainGridRows}
       bind:this={mainElement}
     >
       <div class="context-bar" aria-label="Active query context">
@@ -3482,7 +3476,23 @@
         <span>{activeExecution?.state ?? 'Idle'}</span>
       </div>
 
-      {#if workspace.tabs.length > 0}
+      {#if activeTab}
+        <WorkspaceTabs
+          tabs={activeGroupTabs}
+          activeTabId={workspace.active_tab_id}
+          groupLabel={activeGroupLabel}
+          {sessions}
+          sessionOpening={tabSessionOperations}
+          sessionErrors={tabSessionErrors}
+          onnewquery={() => void createOfflineTab(activeTab.profile_id)}
+          onactivatetab={(tab) => void activateTab(tab.id)}
+          onclosetab={requestCloseTab}
+          onrenametab={renameTab}
+          onduplicatetab={(tab) => void duplicateQueryTab(tab)}
+          onpintab={togglePinTab}
+          onmovetab={(tab, direction) => moveTab(tab.id, direction)}
+        />
+
         {#if activeTab?.profile_id && !activeSession && tabSessionErrors[activeTab.id]}
           <div class="recovery-banner tab-session-error" role="alert">
             <strong>Tab session unavailable</strong>
@@ -3806,7 +3816,7 @@
     <span
       >Mod+N New · Mod+O Open · Mod+S Save · Mod+Enter Run · Mod+Shift+Enter Run
       all · Mod+. Cancel · Shift+Alt+F Format · Mod+1/2/3 Focus · Mod+F Find ·
-      Ctrl+Tab / Ctrl+Shift+Tab Switch tab</span
+      Ctrl+Tab / Ctrl+Shift+Tab Switch visible tab</span
     >
   </footer>
 </div>

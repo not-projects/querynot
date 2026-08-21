@@ -13,6 +13,11 @@ process.env.TMP = queryNotBrowserTemp;
 const { chromium } = await import('playwright');
 const reportPath = resolve(root, 'artifacts', 'ui-layout-report.json');
 const screenshotPath = resolve(root, 'artifacts', 'ui-layout-settings.png');
+const workbenchScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-workbench.png'
+);
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
 
@@ -279,6 +284,172 @@ try {
   );
   await editorPage.close();
 
+  const workbenchPage = await browser.newPage({
+    viewport: { width: 1280, height: 800 },
+    reducedMotion: 'reduce'
+  });
+  await workbenchPage.goto(
+    `http://127.0.0.1:${address.port}/scripts/fixtures/workbench-layout.html`,
+    { waitUntil: 'networkidle' }
+  );
+  const emissaryRow = workbenchPage.locator('[data-profile-id="emissary"]');
+  await emissaryRow.waitFor();
+  await emissaryRow.locator('.connection-action').click();
+  await workbenchPage
+    .getByRole('button', { name: 'Disconnect', exact: true })
+    .waitFor();
+  await workbenchPage.getByRole('button', { name: 'Run', exact: true }).click();
+  await workbenchPage.locator('.grid-row').waitFor();
+
+  const populatedWorkbench = await workbenchPage.evaluate(() => {
+    const rect = (selector) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing populated workbench ${selector}`);
+      const bounds = element.getBoundingClientRect();
+      return {
+        top: bounds.top,
+        right: bounds.right,
+        bottom: bounds.bottom,
+        left: bounds.left,
+        width: bounds.width,
+        height: bounds.height
+      };
+    };
+    const emissaryName = document.querySelector(
+      '[data-profile-id="emissary"] .connection-copy strong'
+    );
+    const emissaryAction = document.querySelector(
+      '[data-profile-id="emissary"] .connection-action'
+    );
+    const visibleTabs = Array.from(
+      document.querySelectorAll('[role="tab"] .tab-title')
+    ).map((element) => element.textContent?.trim() ?? '');
+    return {
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth,
+      aside_client_width: document.querySelector('aside')?.clientWidth ?? 0,
+      aside_scroll_width: document.querySelector('aside')?.scrollWidth ?? 0,
+      emissary_name_fits:
+        Boolean(emissaryName) &&
+        emissaryName.scrollWidth <= emissaryName.clientWidth,
+      emissary_action_fits:
+        Boolean(emissaryAction) &&
+        emissaryAction.scrollWidth <= emissaryAction.clientWidth,
+      visible_tabs: visibleTabs,
+      editor: rect('#query-editor-pane'),
+      separator: rect('.results-separator'),
+      results: rect('#query-results'),
+      results_heading: rect('#results-heading'),
+      grid_header: rect('.grid-header'),
+      grid_viewport: rect('.grid-viewport'),
+      first_row: rect('.grid-row'),
+      footer: rect('footer')
+    };
+  });
+  assert(
+    populatedWorkbench.document_scroll_width <=
+      populatedWorkbench.viewport_width,
+    'populated workbench has page-level horizontal overflow'
+  );
+  assert(
+    populatedWorkbench.aside_scroll_width <=
+      populatedWorkbench.aside_client_width,
+    'current connection list overflows the sidebar'
+  );
+  assert(
+    populatedWorkbench.emissary_name_fits,
+    'ordinary connection name is clipped'
+  );
+  assert(
+    populatedWorkbench.emissary_action_fits,
+    'connection action text is clipped'
+  );
+  assert(
+    JSON.stringify(populatedWorkbench.visible_tabs) ===
+      JSON.stringify(['fractions query', 'armors query']),
+    `top tabs are not connection-scoped (${JSON.stringify(populatedWorkbench.visible_tabs)})`
+  );
+  assert(
+    populatedWorkbench.editor.bottom <= populatedWorkbench.separator.top + 1,
+    'editor overlaps the result separator'
+  );
+  assert(
+    populatedWorkbench.results.top >= populatedWorkbench.separator.bottom - 1,
+    'results do not begin directly below the separator'
+  );
+  assert(
+    populatedWorkbench.results_heading.top < populatedWorkbench.grid_header.top,
+    'result heading is not above the grid'
+  );
+  assert(
+    populatedWorkbench.grid_viewport.height >= 34,
+    'populated result viewport cannot display one complete row'
+  );
+  assert(
+    populatedWorkbench.first_row.top >=
+      populatedWorkbench.grid_header.bottom - 1 &&
+      populatedWorkbench.first_row.bottom <= populatedWorkbench.results.bottom,
+    'first received result row is outside the visible results pane'
+  );
+  assert(
+    populatedWorkbench.results.bottom <= populatedWorkbench.footer.top,
+    'results overlap the status bar'
+  );
+
+  const separator = workbenchPage.locator('.results-separator');
+  const measureSplit = () =>
+    workbenchPage.evaluate(() => {
+      const editor = document
+        .querySelector('#query-editor-pane')
+        ?.getBoundingClientRect();
+      const results = document
+        .querySelector('#query-results')
+        ?.getBoundingClientRect();
+      const footer = document.querySelector('footer')?.getBoundingClientRect();
+      if (!editor || !results || !footer)
+        throw new Error('split geometry is incomplete');
+      return {
+        editor_height: editor.height,
+        results_height: results.height,
+        editor_bottom: editor.bottom,
+        results_top: results.top,
+        results_bottom: results.bottom,
+        footer_top: footer.top
+      };
+    });
+  await separator.focus();
+  await separator.press('Home');
+  const split20 = await measureSplit();
+  await separator.press('End');
+  const split70 = await measureSplit();
+  await separator.dblclick();
+  const split35 = await measureSplit();
+  assert(
+    split20.results_height < split35.results_height &&
+      split35.results_height < split70.results_height,
+    `result split bounds are not ordered (${split20.results_height}, ${split35.results_height}, ${split70.results_height})`
+  );
+  for (const [label, split] of [
+    ['20%', split20],
+    ['35%', split35],
+    ['70%', split70]
+  ]) {
+    assert(
+      split.editor_height > 0 &&
+        split.results_height > 0 &&
+        split.editor_bottom <= split.results_top &&
+        split.results_bottom <= split.footer_top,
+      `${label} result split escaped the workbench`
+    );
+  }
+  populatedWorkbench.split_geometry = {
+    results_20_percent: split20,
+    results_35_percent: split35,
+    results_70_percent: split70
+  };
+  await workbenchPage.screenshot({ path: workbenchScreenshotPath });
+  await workbenchPage.close();
+
   mkdirSync(dirname(reportPath), { recursive: true });
   await page.screenshot({ path: screenshotPath, fullPage: true });
   const report = {
@@ -292,8 +463,12 @@ try {
     scale_preview: { baseline: baselineScale, scaled: scalePreview },
     sidebar_overflow: sidebarOverflow,
     editor_focus: editorFocus,
+    populated_workbench: populatedWorkbench,
     theme_labels: options,
-    screenshot: 'artifacts/ui-layout-settings.png'
+    screenshots: [
+      'artifacts/ui-layout-settings.png',
+      'artifacts/ui-layout-workbench.png'
+    ]
   };
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   process.stdout.write(

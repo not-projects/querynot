@@ -259,35 +259,68 @@ function commandCount(
   ).length;
 }
 
-describe('Connection-grouped workbench', () => {
-  it('groups profile children and Offline drafts without a global tab strip, then lazily opens only the selected child', async () => {
+describe('Connection-scoped workbench tabs', () => {
+  it('remembers the last tab per connection and cycles only visible tabs', async () => {
+    setupNativeWorkspace();
+    await renderNativeWorkbench();
+
+    click('[data-profile-id="profile-1"] .connection-main');
+    tabButton('Primary query 2').click();
+    flushSync();
+    click('[data-profile-id="offline"] .connection-main');
+    expect(tabButton('Offline draft').getAttribute('aria-selected')).toBe(
+      'true'
+    );
+
+    click('[data-profile-id="profile-1"] .connection-main');
+    await waitFor(
+      () =>
+        tabButton('Primary query 2').getAttribute('aria-selected') === 'true'
+    );
+    expect(document.querySelector('[title="Offline draft"]')).toBeNull();
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'Tab',
+        ctrlKey: true,
+        bubbles: true
+      })
+    );
+    await waitFor(
+      () =>
+        tabButton('Primary query 3').getAttribute('aria-selected') === 'true'
+    );
+    expect(document.querySelector('[title="Offline draft"]')).toBeNull();
+  });
+
+  it('shows only the selected connection group in the top strip, then lazily opens only its selected child', async () => {
     const { commands } = setupNativeWorkspace();
     await renderNativeWorkbench();
 
-    expect(document.querySelector('.tab-strip')).toBeNull();
     expect(
       document.querySelector('[aria-label="Offline tabs"]')?.textContent
     ).toContain('Offline draft');
+    expect(document.querySelector('[title="Primary query 1"]')).toBeNull();
     expect(
       document.querySelector('[data-profile-id="profile-1"]')
     ).not.toBeNull();
 
-    click('[data-profile-id="profile-1"] .group-main');
+    click('[data-profile-id="profile-1"] .connection-main');
     await waitFor(
       () =>
         tabButton('Primary query 1').getAttribute('aria-selected') === 'true'
     );
+    expect(document.querySelector('[title="Offline draft"]')).toBeNull();
     expect(commandCount(commands, 'open_tab_session')).toBe(0);
 
-    click('[data-profile-id="profile-1"] .connection-control');
+    click('[data-profile-id="profile-1"] .connection-action');
     await waitFor(
       () => commandCount(commands, 'open_tab_session', 'query-1') === 1
     );
     await waitFor(
       () =>
-        document.querySelector(
-          '[data-profile-id="profile-1"] .tab-session.online'
-        ) !== null
+        document.querySelector('.workspace-tab-item .tab-session.online') !==
+        null
     );
     expect(commandCount(commands, 'open_tab_session', 'query-2')).toBe(0);
     expect(commandCount(commands, 'open_tab_session', 'query-3')).toBe(0);
@@ -296,8 +329,8 @@ describe('Connection-grouped workbench', () => {
   it('deduplicates rapid opens, blocks disconnect and window close while pending, and retries a failed child without dropping the profile', async () => {
     const { commands, pendingSecond } = setupNativeWorkspace();
     await renderNativeWorkbench();
-    click('[data-profile-id="profile-1"] .group-main');
-    click('[data-profile-id="profile-1"] .connection-control');
+    click('[data-profile-id="profile-1"] .connection-main');
+    click('[data-profile-id="profile-1"] .connection-action');
     await waitFor(
       () => commandCount(commands, 'open_tab_session', 'query-1') === 1
     );
@@ -309,7 +342,7 @@ describe('Connection-grouped workbench', () => {
       () => commandCount(commands, 'open_tab_session', 'query-2') === 1
     );
 
-    click('[data-profile-id="profile-1"] .connection-control');
+    click('[data-profile-id="profile-1"] .connection-action');
     expect(document.body.textContent).toContain(
       'Wait for this tab’s dedicated session to finish opening'
     );
@@ -324,7 +357,7 @@ describe('Connection-grouped workbench', () => {
       () =>
         document
           .querySelector('[title="Primary query 2"]')
-          ?.closest('.connection-tab-row')
+          ?.closest('.workspace-tab-item')
           ?.querySelector('.tab-session.online') !== null
     );
 
@@ -342,7 +375,7 @@ describe('Connection-grouped workbench', () => {
     await waitFor(() => document.querySelector('.tab-session-error') === null);
     expect(
       document
-        .querySelector('[data-profile-id="profile-1"] .connection-control')
+        .querySelector('[data-profile-id="profile-1"] .connection-action')
         ?.textContent?.trim()
     ).toBe('Disconnect');
   });
@@ -350,18 +383,18 @@ describe('Connection-grouped workbench', () => {
   it('creates a child only for an empty selected group and opens new children immediately under an established connection', async () => {
     const { commands } = setupNativeWorkspace();
     await renderNativeWorkbench();
-    click('[data-profile-id="profile-1"] .group-main');
-    click('[data-profile-id="profile-1"] .connection-control');
+    click('[data-profile-id="profile-1"] .connection-main');
+    click('[data-profile-id="profile-1"] .connection-action');
     await waitFor(
       () => commandCount(commands, 'open_tab_session', 'query-1') === 1
     );
 
-    click('[aria-label="New query for Primary"]');
+    click('[aria-label="New query in Primary"]');
     await waitFor(
       () => commandCount(commands, 'open_tab_session', 'created-1') === 1
     );
 
-    click('[data-profile-id="profile-2"] .group-main');
+    click('[data-profile-id="profile-2"] .connection-main');
     await waitFor(() => document.querySelector('[title="Query 2"]') !== null);
     expect(commandCount(commands, 'open_tab_session', 'created-2')).toBe(0);
   });
