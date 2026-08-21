@@ -158,6 +158,22 @@
           parseDiagnostics,
           Prec.highest(
             keymap.of([
+              { key: 'Ctrl-Enter', run: () => run(false) },
+              { key: 'Ctrl-Shift-Enter', run: () => run(true) },
+              {
+                key: 'Ctrl-.',
+                run: () => {
+                  oncancel();
+                  return true;
+                }
+              },
+              {
+                key: 'Shift-Alt-f',
+                run: () => {
+                  onformat();
+                  return true;
+                }
+              },
               {
                 key: 'Enter',
                 run: (editor) => {
@@ -169,24 +185,6 @@
               indentWithTab
             ])
           ),
-          keymap.of([
-            { key: 'Mod-Enter', run: () => run(false) },
-            { key: 'Mod-Shift-Enter', run: () => run(true) },
-            {
-              key: 'Mod-.',
-              run: () => {
-                oncancel();
-                return true;
-              }
-            },
-            {
-              key: 'Shift-Alt-f',
-              run: () => {
-                onformat();
-                return true;
-              }
-            }
-          ]),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !applyingExternal) {
               onchange(update.state.doc.toString());
@@ -310,7 +308,7 @@
 <div
   class="sql-editor-host"
   aria-label={`${dialect === 'mysql' ? 'MySQL-family' : 'SQLite'} SQL editor`}
-  aria-keyshortcuts="Tab Control+Enter Meta+Enter Control+Shift+Enter Meta+Shift+Enter Control+Period Meta+Period"
+  aria-keyshortcuts="Tab Control+Enter Control+Shift+Enter Control+Period"
   {@attach mountEditor}
 ></div>
 

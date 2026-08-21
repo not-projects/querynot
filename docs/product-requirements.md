@@ -4,7 +4,7 @@ Date: 2026-08-14
 Status: Approved for implementation — revision 2
 Product: QueryNot  
 Initial release: Everyday developer workflow  
-Decision owner: QueryNot product owner  
+Decision owner: QueryNot product owner
 
 > Query your data, not your patience.
 
@@ -37,19 +37,19 @@ This baseline is ready to decompose into architecture decisions, issues, and ver
 
 ### 1.3 Glossary
 
-| Term | Meaning |
-| --- | --- |
-| Profile | Non-secret saved connection configuration plus an opaque reference to an optional saved credential. |
-| Connection | A live logical association between a profile and its native database resources. |
-| Native session | One adapter-owned database session with isolated session variables, current database/schema, transaction state, and active job. |
-| Query tab | An editor document bound to one profile and, while connected, one dedicated native session. |
-| Table-data tab | A single-table browse/edit surface with its own native session and staged changes. |
-| Execution | One user-authorized run attempt with a stable execution ID and one or more ordered statement outcomes. |
-| Received rows | Rows already transferred from the driver into QueryNot; this excludes rows that still exist only on the server or native cursor. |
-| Result tranche | The additional row budget authorized by the initial run or one explicit **Load more** action. |
-| Usable row identity | A primary key or adapter-approved unique, non-null key that identifies exactly one base-table row. |
-| Effective predicate | A top-level target-row predicate the dialect parser can classify as restrictive; missing, constant-true, malformed, or uncertain predicates are not considered effective. |
-| Sensitive product data | Credentials, connection endpoints, SQL text, database metadata, result values, file paths, certificates, and diagnostic context that may identify a user or system. |
+| Term                   | Meaning                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Profile                | Non-secret saved connection configuration plus an opaque reference to an optional saved credential.                                                                       |
+| Connection             | A live logical association between a profile and its native database resources.                                                                                           |
+| Native session         | One adapter-owned database session with isolated session variables, current database/schema, transaction state, and active job.                                           |
+| Query tab              | An editor document bound to one profile and, while connected, one dedicated native session.                                                                               |
+| Table-data tab         | A single-table browse/edit surface with its own native session and staged changes.                                                                                        |
+| Execution              | One user-authorized run attempt with a stable execution ID and one or more ordered statement outcomes.                                                                    |
+| Received rows          | Rows already transferred from the driver into QueryNot; this excludes rows that still exist only on the server or native cursor.                                          |
+| Result tranche         | The additional row budget authorized by the initial run or one explicit **Load more** action.                                                                             |
+| Usable row identity    | A primary key or adapter-approved unique, non-null key that identifies exactly one base-table row.                                                                        |
+| Effective predicate    | A top-level target-row predicate the dialect parser can classify as restrictive; missing, constant-true, malformed, or uncertain predicates are not considered effective. |
+| Sensitive product data | Credentials, connection endpoints, SQL text, database metadata, result values, file paths, certificates, and diagnostic context that may identify a user or system.       |
 
 ## 2. Product summary
 
@@ -288,7 +288,7 @@ The default journey is:
 
 **EDT-7 — Multiple statements.** A script may contain multiple statements. By default, QueryNot executes them in order and stops on the first error. The results area preserves statement order and identifies which statement produced each result or message.
 
-**EDT-8 — Keyboard-first operation.** New query, open file, save, run, run all, cancel, format, focus schema, focus editor, focus results, find, and switch tab must have documented cross-platform shortcuts. Platform conventions determine Command versus Control.
+**EDT-8 — Keyboard-first operation.** New query, open file, save, run, run all, cancel, format, focus schema, focus editor, focus results, find, and switch tab must have documented shortcuts. The supported Windows desktop uses literal Control bindings so the Windows key is never mistaken for Command.
 
 **EDT-9 — Parser fidelity.** Statement splitting and safety classification must handle the tested dialect's comments, quoted identifiers, string literals, delimiters, and routine bodies. When the editor parser and server dialect cannot be reconciled safely, QueryNot must require an explicit selection rather than guessing a narrower execution range.
 
@@ -296,22 +296,22 @@ The default journey is:
 
 #### Default shortcuts
 
-`Mod` means Command on macOS and Control on Windows/Linux. Shortcuts are fixed in the initial release and displayed in menus/tooltips.
+Shortcuts use the literal Control key on the supported Windows desktop and are displayed in menus/tooltips.
 
-| Action | Shortcut |
-| --- | --- |
-| New query | `Mod+N` |
-| Open SQL file | `Mod+O` |
-| Save | `Mod+S` |
-| Run execution unit | `Mod+Enter` |
-| Run all | `Mod+Shift+Enter` |
-| Cancel active execution | `Mod+.` |
-| Format document/selection | `Shift+Alt+F` |
-| Focus schema | `Mod+1` |
-| Focus editor | `Mod+2` |
-| Focus results | `Mod+3` |
-| Find | `Mod+F` |
-| Next/previous tab | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
+| Action                    | Shortcut                      |
+| ------------------------- | ----------------------------- |
+| New query                 | `Ctrl+N`                      |
+| Open SQL file             | `Ctrl+O`                      |
+| Save                      | `Ctrl+S`                      |
+| Run execution unit        | `Ctrl+Enter`                  |
+| Run all                   | `Ctrl+Shift+Enter`            |
+| Cancel active execution   | `Ctrl+.`                      |
+| Format document/selection | `Shift+Alt+F`                 |
+| Focus schema              | `Ctrl+1`                      |
+| Focus editor              | `Ctrl+2`                      |
+| Focus results             | `Ctrl+3`                      |
+| Find                      | `Ctrl+F`                      |
+| Next/previous tab         | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
 
 ### 8.5 Query execution and transactions
 
@@ -439,18 +439,18 @@ The check must be dialect-aware and resilient to whitespace and comments. For `U
 
 ### 8.10 Initial defaults
 
-| Setting | Default | Scope |
-| --- | --- | --- |
-| Theme | Follow OS light/dark; forest is manual | Global |
-| UI scale | 100% | Global |
-| Editor word wrap | Off | Global |
-| Connection timeout | 15 seconds | Per profile, inherited from global |
-| Result tranche | 10,000 rows | Global |
-| Table page | 200 rows | Global |
-| Query history | Enabled, 90 days | Global |
-| Draft/session restoration | Enabled | Global |
-| Automatic reconnect | Disabled | Per profile opt-in and only with a saved credential |
-| Local operational log | Enabled, 5 MiB/seven-day cap | Global |
+| Setting                   | Default                                | Scope                                               |
+| ------------------------- | -------------------------------------- | --------------------------------------------------- |
+| Theme                     | Follow OS light/dark; forest is manual | Global                                              |
+| UI scale                  | 100%                                   | Global                                              |
+| Editor word wrap          | Off                                    | Global                                              |
+| Connection timeout        | 15 seconds                             | Per profile, inherited from global                  |
+| Result tranche            | 10,000 rows                            | Global                                              |
+| Table page                | 200 rows                               | Global                                              |
+| Query history             | Enabled, 90 days                       | Global                                              |
+| Draft/session restoration | Enabled                                | Global                                              |
+| Automatic reconnect       | Disabled                               | Per profile opt-in and only with a saved credential |
+| Local operational log     | Enabled, 5 MiB/seven-day cap           | Global                                              |
 
 Changing a default affects future operations and tabs; it does not mutate an active execution, result, transaction, export, or staged edit.
 
@@ -737,17 +737,17 @@ After `0.1.0`, the project owner passes the fixed checklist in section 14.3 over
 
 This checklist remains the fixed definition of routine development work for post-release owner validation. The project owner records a redacted daily result for each applicable item, including date, engine/profile category, outcome, fallback used, and an evidence link. The record must not contain credentials, connection endpoints, SQL text containing sensitive literals, database metadata, or result values.
 
-| ID | Dogfood task | Required frequency during the five-day period |
-| --- | --- | --- |
-| DOG-1 | Select a saved profile or create and test one, obtain its saved or session-only credential as applicable, and connect without exposing secret material. | Connect to an authorized working database every day; create or edit and test at least one profile during the period. |
-| DOG-2 | Navigate progressively loaded schema metadata, refresh an object or namespace, and reach the intended table, view, column, key, index, or routine context. | Every day. |
-| DOG-3 | Open a connection-bound query tab and confirm the visible engine, connection, database/schema, transaction, and running/idle context before execution. | Every day. |
-| DOG-4 | Write or revise dialect-appropriate SQL using the editor, then deliberately run a selection, the statement at the cursor, or explicit Run all as appropriate. | Execute an intentional query workflow every day; exercise selection, cursor-statement, and Run all at least once each during the period. |
-| DOG-5 | Observe execution lifecycle and cancel work that is deliberately made long-running in a disposable fixture, confirming the adapter-reported cancellation outcome. | At least once during the period. |
-| DOG-6 | Inspect streamed results and statement messages, copy useful data, and work with loaded-row filtering or sorting. Use Load more when the fixture exceeds one tranche and export received rows through an explicit file chooser. | Inspect results every day; exercise copy, filter/sort, Load more, and CSV or JSON export at least once each during the period. |
-| DOG-7 | Browse a keyed table, stage a deliberate insert, update, or delete in synthetic or otherwise safe authorized data, review the immutable preview, and apply or roll back the batch deliberately. | At least one successful staged edit and one rollback or injected-conflict path during the period. |
-| DOG-8 | End the day with restorable tabs or drafts, then relaunch on the next working day and confirm the workspace returns without executing SQL or restoring an open transaction automatically. | At each boundary between the five working days. |
-| DOG-9 | Complete every other in-scope routine database task that actually arises without falling back to MySQL Workbench or DBeaver. Record out-of-scope tasks separately without treating them as failures. | Continuously throughout all five days. |
+| ID    | Dogfood task                                                                                                                                                                                                                    | Required frequency during the five-day period                                                                                            |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| DOG-1 | Select a saved profile or create and test one, obtain its saved or session-only credential as applicable, and connect without exposing secret material.                                                                         | Connect to an authorized working database every day; create or edit and test at least one profile during the period.                     |
+| DOG-2 | Navigate progressively loaded schema metadata, refresh an object or namespace, and reach the intended table, view, column, key, index, or routine context.                                                                      | Every day.                                                                                                                               |
+| DOG-3 | Open a connection-bound query tab and confirm the visible engine, connection, database/schema, transaction, and running/idle context before execution.                                                                          | Every day.                                                                                                                               |
+| DOG-4 | Write or revise dialect-appropriate SQL using the editor, then deliberately run a selection, the statement at the cursor, or explicit Run all as appropriate.                                                                   | Execute an intentional query workflow every day; exercise selection, cursor-statement, and Run all at least once each during the period. |
+| DOG-5 | Observe execution lifecycle and cancel work that is deliberately made long-running in a disposable fixture, confirming the adapter-reported cancellation outcome.                                                               | At least once during the period.                                                                                                         |
+| DOG-6 | Inspect streamed results and statement messages, copy useful data, and work with loaded-row filtering or sorting. Use Load more when the fixture exceeds one tranche and export received rows through an explicit file chooser. | Inspect results every day; exercise copy, filter/sort, Load more, and CSV or JSON export at least once each during the period.           |
+| DOG-7 | Browse a keyed table, stage a deliberate insert, update, or delete in synthetic or otherwise safe authorized data, review the immutable preview, and apply or roll back the batch deliberately.                                 | At least one successful staged edit and one rollback or injected-conflict path during the period.                                        |
+| DOG-8 | End the day with restorable tabs or drafts, then relaunch on the next working day and confirm the workspace returns without executing SQL or restoring an open transaction automatically.                                       | At each boundary between the five working days.                                                                                          |
+| DOG-9 | Complete every other in-scope routine database task that actually arises without falling back to MySQL Workbench or DBeaver. Record out-of-scope tasks separately without treating them as failures.                            | Continuously throughout all five days.                                                                                                   |
 
 The checklist passes only when every required frequency is satisfied, no in-scope task uses a fallback client, no unrecoverable workspace loss occurs, and every failure found during the period is either resolved and rerun successfully or recorded as a release-blocking defect. The checklist is fixed for the approved initial-release baseline; changing its tasks or pass rule requires product approval and a PRD revision.
 
@@ -851,23 +851,23 @@ Roadmap items are directional and do not constitute shipped promises.
 
 ## 17. Principal risks and mitigations
 
-| Risk | Impact | Mitigation |
-| --- | --- | --- |
-| The adapter abstraction collapses into engine checks | New engines become expensive and inconsistent | Capability-based contract, conformance suite, PostgreSQL as the first post-release proof |
-| MySQL/MariaDB differences are hidden incorrectly | Wrong metadata, SQL, or edit behavior | Detect identity, expose it visibly, isolate difference modules, test both engines |
-| MySQL 5.7 compatibility normalizes unsafe legacy operation | Users mistake compatibility for security maintenance or TLS/authentication is weakened | Test only final 5.7.44, show persistent lifecycle warning, require TLS 1.2 for protected connections, never downgrade safeguards |
-| Large results exhaust memory or freeze the UI | Lost work and poor trust | Native streaming, bounded batches, backpressure, configurable cap, virtualization, cleanup tests |
-| Paused cursors hold locks or server resources | Other work is blocked unexpectedly | Visible paused state, five-minute expiry, explicit discard, disconnect/close cleanup |
-| Cancellation is weaker than the UI implies | Queries continue unexpectedly | Adapter-specific cancellation state, confirmed/pending/unsupported messaging, resource lifecycle tests |
-| Generated row edits target the wrong data | Data corruption | Unique row identity requirement, parameterization, preview, transaction, affected-row/conflict checks |
-| Destructive SQL detection produces false confidence | Accidental broad changes | Dialect-aware parsing, uncertainty state, targeted confirmation, database permissions remain authoritative |
-| Local history or diagnostics reveal sensitive data | Privacy/security incident | Minimize persisted fields, redaction, retention controls, no result persistence, explicit clear/disable |
-| OS vault behavior differs by platform | Failed or insecure credential storage | Platform abstraction, native integration tests, no plaintext fallback |
-| A hostile server or database value crosses the desktop trust boundary | UI compromise, resource exhaustion, or unsafe files | Treat all data as untrusted, length/byte limits, text rendering, CSP, ownership checks, fuzz and security tests |
-| Supported database/OS lines age during development | Release promises are obsolete before launch | Maintained LTS baselines, external validation date, exact RC matrix, conformance on latest selected patches |
-| Unsigned packages reduce trust and installability | Adoption friction and warnings | Clear documentation, checksums, transparent limitation, no prompt bypass |
-| Cross-platform scope delays usability | Slow feedback | Replacement-first vertical slices, one workflow and adapter contract, staged release gates |
-| Premature UI sharing couples QueryNot to PostNot | Slower independent product iteration | Align principles and tokens conceptually; extract only through a later dedicated project |
+| Risk                                                                  | Impact                                                                                 | Mitigation                                                                                                                       |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| The adapter abstraction collapses into engine checks                  | New engines become expensive and inconsistent                                          | Capability-based contract, conformance suite, PostgreSQL as the first post-release proof                                         |
+| MySQL/MariaDB differences are hidden incorrectly                      | Wrong metadata, SQL, or edit behavior                                                  | Detect identity, expose it visibly, isolate difference modules, test both engines                                                |
+| MySQL 5.7 compatibility normalizes unsafe legacy operation            | Users mistake compatibility for security maintenance or TLS/authentication is weakened | Test only final 5.7.44, show persistent lifecycle warning, require TLS 1.2 for protected connections, never downgrade safeguards |
+| Large results exhaust memory or freeze the UI                         | Lost work and poor trust                                                               | Native streaming, bounded batches, backpressure, configurable cap, virtualization, cleanup tests                                 |
+| Paused cursors hold locks or server resources                         | Other work is blocked unexpectedly                                                     | Visible paused state, five-minute expiry, explicit discard, disconnect/close cleanup                                             |
+| Cancellation is weaker than the UI implies                            | Queries continue unexpectedly                                                          | Adapter-specific cancellation state, confirmed/pending/unsupported messaging, resource lifecycle tests                           |
+| Generated row edits target the wrong data                             | Data corruption                                                                        | Unique row identity requirement, parameterization, preview, transaction, affected-row/conflict checks                            |
+| Destructive SQL detection produces false confidence                   | Accidental broad changes                                                               | Dialect-aware parsing, uncertainty state, targeted confirmation, database permissions remain authoritative                       |
+| Local history or diagnostics reveal sensitive data                    | Privacy/security incident                                                              | Minimize persisted fields, redaction, retention controls, no result persistence, explicit clear/disable                          |
+| OS vault behavior differs by platform                                 | Failed or insecure credential storage                                                  | Platform abstraction, native integration tests, no plaintext fallback                                                            |
+| A hostile server or database value crosses the desktop trust boundary | UI compromise, resource exhaustion, or unsafe files                                    | Treat all data as untrusted, length/byte limits, text rendering, CSP, ownership checks, fuzz and security tests                  |
+| Supported database/OS lines age during development                    | Release promises are obsolete before launch                                            | Maintained LTS baselines, external validation date, exact RC matrix, conformance on latest selected patches                      |
+| Unsigned packages reduce trust and installability                     | Adoption friction and warnings                                                         | Clear documentation, checksums, transparent limitation, no prompt bypass                                                         |
+| Cross-platform scope delays usability                                 | Slow feedback                                                                          | Replacement-first vertical slices, one workflow and adapter contract, staged release gates                                       |
+| Premature UI sharing couples QueryNot to PostNot                      | Slower independent product iteration                                                   | Align principles and tokens conceptually; extract only through a later dedicated project                                         |
 
 ## 18. Decision record
 
@@ -928,17 +928,17 @@ This PRD intentionally delegates library selection, internal module names, exact
 
 ## 20. Validation record
 
-| Area | Result | Evidence or resolution |
-| --- | --- | --- |
-| Repository status claims | Pass | The PRD continues to state that no scaffold or usable release exists, matching README and AGENTS.md. |
-| Product name and tagline | Pass | Matches the approved QueryNot brand decision. |
-| Planned stack and native boundary | Pass | Matches README/AGENTS.md: Rust, Tauri 2, Svelte, TypeScript, and Rust-owned database/secret operations. |
-| Local-first and prohibited services | Pass | No account, telemetry, cloud sync, hosted storage, hidden endpoint, or remote diagnostics are permitted. |
-| Secret, TLS, destructive SQL, export, and fixture safety | Pass | Requirements align with SECURITY.md and add explicit failure/ownership/evidence behavior. |
-| Engine baseline currency | Corrected | MariaDB 10.6 was EOL before this document date; maintained 10.11/11.4 LTS baselines now replace it. MySQL 5.7+ begins with exact conformance fixtures for legacy 5.7.44 plus selected 8.0 and maintained 8.4 LTS patches. |
-| Session and transaction semantics | Corrected | Dedicated tab sessions, state reconciliation, implicit commits, unknown state, loss, and close behavior are defined. |
-| Results and data fidelity | Corrected | Tranches, hard byte/row limits, cursor expiry, event integrity, exact export shapes, and lossy-number avoidance are defined. |
-| Table-data mutation safety | Corrected | Identity eligibility, paging, filtering, editable types, optimistic predicates, preview invalidation, and rollback semantics are defined. |
-| Measurability and traceability | Corrected | Fixtures, sample rules, performance targets, evidence bundle, requirement matrix, and definitions of ready/done are specified. |
-| Product approval | Pass | The QueryNot product owner approved the full workflow baseline on 2026-08-13, then approved revision 2 on 2026-08-14: Windows 11 x86-64 is the sole `0.1.0` support/publication row; WSL2 and automated browser evidence are accepted release inputs; native manual checks, fixed dogfood, and external beta are post-release; unperformed results remain explicit rather than being fabricated as passes. |
-| Remaining blocking product questions | None | Implementation can begin without inventing scope or safety behavior; changes to fixed decisions follow the product-review rule in section 19.3. |
+| Area                                                     | Result    | Evidence or resolution                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository status claims                                 | Pass      | The PRD continues to state that no scaffold or usable release exists, matching README and AGENTS.md.                                                                                                                                                                                                                                                                                                       |
+| Product name and tagline                                 | Pass      | Matches the approved QueryNot brand decision.                                                                                                                                                                                                                                                                                                                                                              |
+| Planned stack and native boundary                        | Pass      | Matches README/AGENTS.md: Rust, Tauri 2, Svelte, TypeScript, and Rust-owned database/secret operations.                                                                                                                                                                                                                                                                                                    |
+| Local-first and prohibited services                      | Pass      | No account, telemetry, cloud sync, hosted storage, hidden endpoint, or remote diagnostics are permitted.                                                                                                                                                                                                                                                                                                   |
+| Secret, TLS, destructive SQL, export, and fixture safety | Pass      | Requirements align with SECURITY.md and add explicit failure/ownership/evidence behavior.                                                                                                                                                                                                                                                                                                                  |
+| Engine baseline currency                                 | Corrected | MariaDB 10.6 was EOL before this document date; maintained 10.11/11.4 LTS baselines now replace it. MySQL 5.7+ begins with exact conformance fixtures for legacy 5.7.44 plus selected 8.0 and maintained 8.4 LTS patches.                                                                                                                                                                                  |
+| Session and transaction semantics                        | Corrected | Dedicated tab sessions, state reconciliation, implicit commits, unknown state, loss, and close behavior are defined.                                                                                                                                                                                                                                                                                       |
+| Results and data fidelity                                | Corrected | Tranches, hard byte/row limits, cursor expiry, event integrity, exact export shapes, and lossy-number avoidance are defined.                                                                                                                                                                                                                                                                               |
+| Table-data mutation safety                               | Corrected | Identity eligibility, paging, filtering, editable types, optimistic predicates, preview invalidation, and rollback semantics are defined.                                                                                                                                                                                                                                                                  |
+| Measurability and traceability                           | Corrected | Fixtures, sample rules, performance targets, evidence bundle, requirement matrix, and definitions of ready/done are specified.                                                                                                                                                                                                                                                                             |
+| Product approval                                         | Pass      | The QueryNot product owner approved the full workflow baseline on 2026-08-13, then approved revision 2 on 2026-08-14: Windows 11 x86-64 is the sole `0.1.0` support/publication row; WSL2 and automated browser evidence are accepted release inputs; native manual checks, fixed dogfood, and external beta are post-release; unperformed results remain explicit rather than being fabricated as passes. |
+| Remaining blocking product questions                     | None      | Implementation can begin without inventing scope or safety behavior; changes to fixed decisions follow the product-review rule in section 19.3.                                                                                                                                                                                                                                                            |

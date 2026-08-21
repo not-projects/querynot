@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Defined explicit context, scoped-tab, editor, splitter, and result tracks so result headings, column headers, and received rows render directly below the persisted 20–70% separator without changing virtualization, multiple-result, error, or backpressure behavior.
 - The dark SQL-completion popup now uses QueryNot theme tokens; Tab accepts the highlighted completion or indents, while Enter inserts a new SQL line instead of accepting a completion.
 - Wide results now use one horizontal scrollbar and keep column headers synchronized with virtualized rows instead of clipping the first column between competing scroll surfaces.
+- Replaced platform-dependent `Mod` aliases with explicit Windows `Ctrl` shortcuts so `Ctrl+Enter`, `Ctrl+Shift+Enter`, and related file, focus, find, and cancel actions route reliably without treating the Windows key as Command.
 
 ### Changed
 

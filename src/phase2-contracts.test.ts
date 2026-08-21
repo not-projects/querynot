@@ -158,9 +158,9 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(editor).toContain(
       "'.cm-tooltip-autocomplete > ul > li[aria-selected]'"
     );
-    expect(editor).toContain("key: 'Mod-Enter'");
-    expect(editor).toContain("key: 'Mod-Shift-Enter'");
-    expect(editor).toContain("key: 'Mod-.'");
+    expect(editor).toContain("key: 'Ctrl-Enter'");
+    expect(editor).toContain("key: 'Ctrl-Shift-Enter'");
+    expect(editor).toContain("key: 'Ctrl-.'");
     expect(editor).toContain("key: 'Shift-Alt-f'");
   });
 

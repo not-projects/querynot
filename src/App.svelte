@@ -2966,40 +2966,28 @@
     if (fileMenuOpen && event.key === 'Escape') {
       event.preventDefault();
       closeFileMenu(true);
-    } else if ((event.metaKey || event.ctrlKey) && event.key === '1') {
+    } else if (event.ctrlKey && event.key === '1') {
       event.preventDefault();
       document.getElementById('connections-heading')?.focus();
-    } else if ((event.metaKey || event.ctrlKey) && event.key === '2') {
+    } else if (event.ctrlKey && event.key === '2') {
       event.preventDefault();
       editorApi?.focus();
-    } else if ((event.metaKey || event.ctrlKey) && event.key === '3') {
+    } else if (event.ctrlKey && event.key === '3') {
       event.preventDefault();
       document.getElementById('query-results')?.focus();
-    } else if ((event.metaKey || event.ctrlKey) && event.key === ',') {
+    } else if (event.ctrlKey && event.key === ',') {
       event.preventDefault();
       openSettings();
-    } else if (
-      (event.metaKey || event.ctrlKey) &&
-      event.key.toLowerCase() === 'n'
-    ) {
+    } else if (event.ctrlKey && event.key.toLowerCase() === 'n') {
       event.preventDefault();
       void createOfflineTab(activeProfile?.id ?? null);
-    } else if (
-      (event.metaKey || event.ctrlKey) &&
-      event.key.toLowerCase() === 'o'
-    ) {
+    } else if (event.ctrlKey && event.key.toLowerCase() === 'o') {
       event.preventDefault();
       void openSqlFile();
-    } else if (
-      (event.metaKey || event.ctrlKey) &&
-      event.key.toLowerCase() === 's'
-    ) {
+    } else if (event.ctrlKey && event.key.toLowerCase() === 's') {
       event.preventDefault();
       void saveActiveSqlFile(event.shiftKey);
-    } else if (
-      (event.metaKey || event.ctrlKey) &&
-      event.key.toLowerCase() === 'f'
-    ) {
+    } else if (event.ctrlKey && event.key.toLowerCase() === 'f') {
       event.preventDefault();
       editorApi?.openSearch();
     } else if (event.ctrlKey && event.key === 'Tab' && activeGroupTabs.length) {
@@ -3054,10 +3042,10 @@
               type="button"
               role="menuitem"
               onclick={createQueryFromFileMenu}
-              >New query <kbd>Mod+N</kbd></button
+              >New query <kbd>Ctrl+N</kbd></button
             >
             <button type="button" role="menuitem" onclick={openSqlFromFileMenu}
-              >Open SQL file… <kbd>Mod+O</kbd></button
+              >Open SQL file… <kbd>Ctrl+O</kbd></button
             >
             <span class="menu-divider" aria-hidden="true"></span>
             <button
@@ -3065,14 +3053,14 @@
               role="menuitem"
               disabled={activeTab?.kind !== 'query'}
               onclick={() => saveSqlFromFileMenu(false)}
-              >Save <kbd>Mod+S</kbd></button
+              >Save <kbd>Ctrl+S</kbd></button
             >
             <button
               type="button"
               role="menuitem"
               disabled={activeTab?.kind !== 'query'}
               onclick={() => saveSqlFromFileMenu(true)}
-              >Save as… <kbd>Mod+Shift+S</kbd></button
+              >Save as… <kbd>Ctrl+Shift+S</kbd></button
             >
           </div>
         {/if}
@@ -3675,7 +3663,7 @@
               <span>
                 {activeExecution
                   ? `${activeExecution.state} · ${activeExecution.statementsCompleted} statements · ${activeExecution.receivedRows} rows · ${executionElapsedMs(activeExecution, nowMs)} ms`
-                  : 'Idle · Mod+Enter run · Mod+Shift+Enter run all'}
+                  : 'Idle · Ctrl+Enter run · Ctrl+Shift+Enter run all'}
               </span>
             </div>
           </section>
@@ -3801,9 +3789,9 @@
   <footer>
     <span class="status-message" aria-live="polite">{statusMessage}</span>
     <span
-      >Mod+N New · Mod+O Open · Mod+S Save · Mod+Enter Run · Mod+Shift+Enter Run
-      all · Mod+. Cancel · Shift+Alt+F Format · Mod+1/2/3 Focus · Mod+F Find ·
-      Ctrl+Tab / Ctrl+Shift+Tab Switch visible tab</span
+      >Ctrl+N New · Ctrl+O Open · Ctrl+S Save · Ctrl+Enter Run ·
+      Ctrl+Shift+Enter Run all · Ctrl+. Cancel · Shift+Alt+F Format · Ctrl+1/2/3
+      Focus · Ctrl+F Find · Ctrl+Tab / Ctrl+Shift+Tab Switch visible tab</span
     >
   </footer>
 </div>

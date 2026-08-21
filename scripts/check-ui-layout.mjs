@@ -371,7 +371,8 @@ try {
   await workbenchPage
     .getByRole('button', { name: 'Disconnect', exact: true })
     .waitFor();
-  await workbenchPage.getByRole('button', { name: 'Run', exact: true }).click();
+  await workbenchPage.locator('.cm-content').click();
+  await workbenchPage.locator('.cm-content').press('Control+Enter');
   await workbenchPage.locator('.grid-row').waitFor();
 
   const populatedWorkbench = await workbenchPage.evaluate(() => {
