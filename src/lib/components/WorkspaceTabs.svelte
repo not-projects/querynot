@@ -3,6 +3,7 @@
   import type { Attachment } from 'svelte/attachments';
 
   import type { WorkspaceTabView } from '../generated/contracts';
+  import Icon from './Icon.svelte';
 
   interface Props {
     tabs: WorkspaceTabView[];
@@ -79,10 +80,16 @@
           <span class="tab-title">{tab.title}</span>
           {#if tab.pinned || tab.kind === 'table_data' || tab.dirty || sessionOpening[tab.id] || sessionErrors[tab.id]}
             <span class="tab-indicators">
-              {#if tab.pinned}<span aria-label="Pinned tab">◆</span>{/if}
-              {#if tab.kind === 'table_data'}<span aria-label="Table-data tab"
-                  >▦</span
-                >{/if}
+              {#if tab.pinned}
+                <span role="img" aria-label="Pinned tab"
+                  ><Icon name="pin" size={12} /></span
+                >
+              {/if}
+              {#if tab.kind === 'table_data'}
+                <span role="img" aria-label="Table-data tab"
+                  ><Icon name="table" size={12} /></span
+                >
+              {/if}
               {#if tab.dirty}<span class="tab-state" title="Unsaved draft"
                   >Unsaved</span
                 >{/if}
@@ -101,7 +108,9 @@
         </button>
 
         <details class="tab-overflow">
-          <summary aria-label={`More actions for ${tab.title}`}>⋯</summary>
+          <summary aria-label={`More actions for ${tab.title}`}
+            ><Icon name="more" /></summary
+          >
           <div>
             <label>
               <span>Rename</span>
@@ -137,7 +146,8 @@
           type="button"
           class="tab-close"
           aria-label={`Close ${tab.title}`}
-          onclick={() => onclosetab(tab)}>×</button
+          onclick={() => onclosetab(tab)}
+          ><Icon name="close" size={14} /></button
         >
       </div>
     {/each}
@@ -148,7 +158,7 @@
     class="new-tab"
     aria-label={`New query in ${groupLabel}`}
     title={`New query in ${groupLabel}`}
-    onclick={onnewquery}>+</button
+    onclick={onnewquery}><Icon name="plus" /></button
   >
 </div>
 

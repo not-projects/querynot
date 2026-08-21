@@ -256,6 +256,72 @@ mockIPC(
           namespaces: [{ name: 'main', state: 'loaded' }],
           stale: false
         };
+      case 'load_schema_objects':
+        return {
+          profile_id: request.profile_id,
+          namespace: request.namespace,
+          objects: [
+            { namespace: 'main', name: 'fractions', kind: 'table' },
+            { namespace: 'main', name: 'fraction_totals', kind: 'view' }
+          ],
+          stale: false
+        };
+      case 'load_schema_object_detail':
+        return {
+          object: {
+            namespace: request.namespace,
+            name: request.object_name,
+            kind: request.object_name === 'fractions' ? 'table' : 'view'
+          },
+          columns: [
+            {
+              name: 'id',
+              declared_type: 'INTEGER',
+              nullable: false,
+              primary_key_position: 1,
+              default_expression: null,
+              generated: false
+            },
+            {
+              name: 'name',
+              declared_type: 'TEXT',
+              nullable: false,
+              primary_key_position: 0,
+              default_expression: null,
+              generated: false
+            },
+            {
+              name: 'created_at',
+              declared_type: 'DATETIME',
+              nullable: false,
+              primary_key_position: 0,
+              default_expression: 'CURRENT_TIMESTAMP',
+              generated: false
+            }
+          ],
+          foreign_keys: [
+            {
+              id: 0,
+              sequence: 0,
+              referenced_table: 'armors',
+              from_column: 'armor_id',
+              to_column: 'id',
+              on_update: 'NO ACTION',
+              on_delete: 'RESTRICT'
+            }
+          ],
+          indexes: [
+            {
+              name: 'fractions_name_idx',
+              unique: true,
+              origin: 'created',
+              columns: ['name']
+            }
+          ],
+          definition: 'CREATE TABLE fractions (...);',
+          routines_supported: false,
+          stale: false
+        };
       case 'open_tab_session':
         return session(request.profile_id, request.tab_id);
       case 'start_execution':

@@ -4,6 +4,7 @@
     ResultRowView,
     TaggedValueView
   } from '../generated/contracts';
+  import Icon from './Icon.svelte';
 
   interface Props {
     resultSetId: string;
@@ -269,10 +270,17 @@
           >
             <button type="button" onclick={() => toggleSort(index)}>
               {column.name}
-              {#if sortColumn === index}<span
+              {#if sortColumn === index}
+                <span
+                  role="img"
                   aria-label={sortDirection === 1 ? 'ascending' : 'descending'}
-                  >{sortDirection === 1 ? '↑' : '↓'}</span
-                >{/if}
+                >
+                  <Icon
+                    name={sortDirection === 1 ? 'arrow-up' : 'arrow-down'}
+                    size={13}
+                  />
+                </span>
+              {/if}
             </button>
             <button
               type="button"

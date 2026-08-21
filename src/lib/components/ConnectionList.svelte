@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ConnectionInfoView, ProfileView } from '../generated/contracts';
+  import Icon from './Icon.svelte';
 
   interface Props {
     profiles: ProfileView[];
@@ -107,7 +108,9 @@
       {/if}
 
       <details class="connection-overflow">
-        <summary aria-label={`More actions for ${profile.name}`}>⋯</summary>
+        <summary aria-label={`More actions for ${profile.name}`}
+          ><Icon name="more" /></summary
+        >
         <div>
           <button type="button" onclick={() => ontest(profile)}>Test</button>
           <button type="button" onclick={() => oneditprofile(profile)}
@@ -135,7 +138,9 @@
       aria-pressed={offlineActive}
       onclick={onselectoffline}
     >
-      <span class="engine-mark offline-mark" aria-hidden="true">—</span>
+      <span class="engine-mark offline-mark" aria-hidden="true"
+        ><Icon name="offline" size={15} /></span
+      >
       <span class="connection-copy">
         <strong>Offline</strong>
         <small>SQL files and detached drafts</small>

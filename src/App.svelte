@@ -34,6 +34,7 @@
   } from './lib/generated/contracts';
   import ConnectionList from './lib/components/ConnectionList.svelte';
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
+  import Icon from './lib/components/Icon.svelte';
   import ResultGrid from './lib/components/ResultGrid.svelte';
   import TableDataGrid from './lib/components/TableDataGrid.svelte';
   import WorkspaceTabs from './lib/components/WorkspaceTabs.svelte';
@@ -3134,7 +3135,7 @@
           type="button"
           class="icon-button"
           aria-label="Create connection profile"
-          onclick={() => openConnectionProfile()}>+</button
+          onclick={() => openConnectionProfile()}><Icon name="plus" /></button
         >
       </div>
 
@@ -3230,13 +3231,16 @@
                     title={namespace.name}
                     onclick={() => void toggleNamespace(namespace.name)}
                   >
-                    <span aria-hidden="true"
-                      >{expandedNamespaces[
-                        `${activeProfile.id}:${namespace.name}`
-                      ]
-                        ? '▾'
-                        : '▸'}</span
-                    >
+                    <span class="schema-icon" aria-hidden="true">
+                      <Icon
+                        name={expandedNamespaces[
+                          `${activeProfile.id}:${namespace.name}`
+                        ]
+                          ? 'chevron-down'
+                          : 'chevron-right'}
+                        size={14}
+                      />
+                    </span>
                     {denseMetadataText(namespace.name)}
                     <small>{namespace.state}</small>
                   </button>
@@ -3258,15 +3262,18 @@
                         >
                           <button
                             type="button"
+                            aria-label={`Inspect structure for ${object.name}`}
                             onclick={() => void inspectSchemaObject(object)}
                           >
-                            <span aria-hidden="true"
-                              >{object.kind === 'table'
-                                ? '▦'
-                                : object.kind === 'routine'
-                                  ? 'ƒ'
-                                  : '◇'}</span
-                            >
+                            <span class="schema-icon" aria-hidden="true">
+                              {#if object.kind === 'table'}
+                                <Icon name="table" size={14} />
+                              {:else if object.kind === 'routine'}
+                                <Icon name="routine" size={14} />
+                              {:else}
+                                <Icon name="view" size={14} />
+                              {/if}
+                            </span>
                             <span title={object.name}
                               >{denseMetadataText(object.name)}</span
                             >
@@ -3279,13 +3286,6 @@
                             >Copy</button
                           >
                           {#if object.kind === 'table' || object.kind === 'view'}
-                            <button
-                              type="button"
-                              class="schema-copy"
-                              aria-label={`Open data for ${object.name}`}
-                              onclick={() => void openTableData(object)}
-                              >Data</button
-                            >
                             <button
                               type="button"
                               class="schema-copy"
@@ -3303,65 +3303,104 @@
             </div>
           {/if}
           {#if selectedSchemaObject}
-            <details class="object-detail" open>
-              <summary>
-                {selectedSchemaObject.object.name} details{selectedSchemaObject.stale
-                  ? ' · stale'
-                  : ''}
-              </summary>
-              <button
-                type="button"
-                class="schema-refresh"
-                onclick={refreshSelectedSchemaObject}>Refresh object</button
-              >
-              <p>
-                {selectedSchemaObject.object.kind} · {selectedSchemaObject
-                  .columns.length} columns
-              </p>
-              <ul>
-                {#each selectedSchemaObject.columns as column (`${column.name}:${column.primary_key_position}`)}
-                  <li title={column.name}>
-                    <code>{column.name}</code>
-                    <span
-                      >{column.declared_type ||
-                        'untyped'}{column.primary_key_position
-                        ? ' · PK'
-                        : ''}{column.nullable
-                        ? ' · nullable'
-                        : ' · required'}{column.generated
-                        ? ' · generated'
-                        : ''}</span
-                    >
-                    {#if column.default_expression}
-                      <small>Default: {column.default_expression}</small>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
-              {#if selectedSchemaObject.indexes.length > 0}
-                <details>
-                  <summary
-                    >{selectedSchemaObject.indexes.length} indexes</summary
+            <section
+              class="object-detail"
+              aria-labelledby="schema-object-detail-heading"
+            >
+              <div class="object-detail-header">
+                <div>
+                  <h3
+                    id="schema-object-detail-heading"
+                    title={selectedSchemaObject.object.name}
                   >
+                    {selectedSchemaObject.object.name}
+                  </h3>
+                  <p>
+                    {selectedSchemaObject.object.kind} · {selectedSchemaObject
+                      .columns.length} columns{selectedSchemaObject.stale
+                      ? ' · stale cache'
+                      : ''}
+                  </p>
+                </div>
+                <div class="object-detail-actions">
+                  {#if selectedSchemaObject.object.kind === 'table' || selectedSchemaObject.object.kind === 'view'}
+                    <button
+                      type="button"
+                      class="schema-refresh"
+                      disabled={busy}
+                      onclick={() =>
+                        void openTableData(selectedSchemaObject!.object)}
+                    >
+                      <Icon name="table" size={13} />
+                      Open rows
+                    </button>
+                  {/if}
+                  <button
+                    type="button"
+                    class="schema-refresh"
+                    disabled={busy}
+                    onclick={refreshSelectedSchemaObject}>Refresh</button
+                  >
+                </div>
+              </div>
+
+              <section
+                class="object-detail-section"
+                aria-labelledby="schema-columns-heading"
+              >
+                <h4 id="schema-columns-heading">Columns</h4>
+                {#if selectedSchemaObject.columns.length > 0}
+                  <ul>
+                    {#each selectedSchemaObject.columns as column (`${column.name}:${column.primary_key_position}`)}
+                      <li title={column.name}>
+                        <code>{column.name}</code>
+                        <span>
+                          {column.declared_type || 'untyped'}
+                          {column.primary_key_position
+                            ? ` · primary key ${column.primary_key_position}`
+                            : ''}
+                          {column.nullable ? ' · nullable' : ' · required'}
+                          {column.generated ? ' · generated' : ''}
+                        </span>
+                        {#if column.default_expression}
+                          <small>Default: {column.default_expression}</small>
+                        {/if}
+                      </li>
+                    {/each}
+                  </ul>
+                {:else}
+                  <p>No column metadata was reported.</p>
+                {/if}
+              </section>
+
+              <section
+                class="object-detail-section"
+                aria-labelledby="schema-indexes-heading"
+              >
+                <h4 id="schema-indexes-heading">Indexes</h4>
+                {#if selectedSchemaObject.indexes.length > 0}
                   <ul>
                     {#each selectedSchemaObject.indexes as index (index.name)}
                       <li>
                         <code>{index.name}</code>
-                        <span
-                          >{index.unique ? 'unique' : 'non-unique'} · {index.origin}
-                          ·
-                          {index.columns.join(', ')}</span
-                        >
+                        <span>
+                          {index.unique ? 'unique' : 'non-unique'} · {index.origin}
+                          · {index.columns.join(', ')}
+                        </span>
                       </li>
                     {/each}
                   </ul>
-                </details>
-              {/if}
-              {#if selectedSchemaObject.foreign_keys.length > 0}
-                <details>
-                  <summary>
-                    {selectedSchemaObject.foreign_keys.length} foreign-key columns
-                  </summary>
+                {:else}
+                  <p>No indexes were reported.</p>
+                {/if}
+              </section>
+
+              <section
+                class="object-detail-section"
+                aria-labelledby="schema-foreign-keys-heading"
+              >
+                <h4 id="schema-foreign-keys-heading">Foreign keys</h4>
+                {#if selectedSchemaObject.foreign_keys.length > 0}
                   <ul>
                     {#each selectedSchemaObject.foreign_keys as foreignKey (`${foreignKey.id}:${foreignKey.sequence}`)}
                       <li>
@@ -3369,26 +3408,35 @@
                         <span>
                           references {foreignKey.referenced_table}.{foreignKey.to_column ??
                             '(adapter default)'} · update {foreignKey.on_update} ·
-                          delete
-                          {foreignKey.on_delete}
+                          delete {foreignKey.on_delete}
                         </span>
                       </li>
                     {/each}
                   </ul>
-                </details>
-              {/if}
+                {:else}
+                  <p>No foreign keys were reported.</p>
+                {/if}
+              </section>
+
               {#if selectedSchemaObject.definition}
                 <details>
                   <summary>Full engine-provided definition</summary>
                   <pre>{selectedSchemaObject.definition}</pre>
                 </details>
               {/if}
-              <p>
-                {selectedSchemaObject.routines_supported
-                  ? 'Routine metadata is supported by this adapter.'
-                  : 'Routine metadata is unavailable for this adapter or object.'}
-              </p>
-            </details>
+              {#if selectedSchemaObject.object.kind === 'routine'}
+                <p class="object-detail-note">
+                  {selectedSchemaObject.routines_supported
+                    ? 'Routine metadata is supported by this adapter.'
+                    : 'Routine metadata is unavailable for this adapter.'}
+                </p>
+              {/if}
+            </section>
+          {:else if activeConnection}
+            <p class="object-detail-empty">
+              Select a table or view to inspect columns, primary keys, indexes,
+              foreign keys, types, defaults, and generated fields.
+            </p>
           {/if}
         </section>
       {/if}
@@ -3850,7 +3898,7 @@
               type="button"
               class="icon-button"
               aria-label="Close"
-              onclick={closeModal}>×</button
+              onclick={closeModal}><Icon name="close" /></button
             >
           </div>
 
@@ -4172,7 +4220,7 @@
             type="button"
             class="icon-button"
             aria-label="Close"
-            onclick={closeModal}>×</button
+            onclick={closeModal}><Icon name="close" /></button
           >
         </div>
         <p class="modal-copy">
@@ -4217,7 +4265,7 @@
               type="button"
               class="icon-button"
               aria-label="Close"
-              onclick={closeModal}>×</button
+              onclick={closeModal}><Icon name="close" /></button
             >
           </div>
           <div class="settings-grid">
@@ -4535,7 +4583,7 @@
             type="button"
             class="icon-button"
             aria-label="Close"
-            onclick={closeModal}>×</button
+            onclick={closeModal}><Icon name="close" /></button
           >
         </div>
         <p class="modal-copy">
@@ -4576,7 +4624,7 @@
             type="button"
             class="icon-button"
             aria-label="Close"
-            onclick={closeModal}>×</button
+            onclick={closeModal}><Icon name="close" /></button
           >
         </div>
         <p class="modal-copy">
@@ -4634,7 +4682,7 @@
             type="button"
             class="icon-button"
             aria-label="Cancel execution confirmation"
-            onclick={closeModal}>×</button
+            onclick={closeModal}><Icon name="close" /></button
           >
         </div>
         <p class="modal-copy">

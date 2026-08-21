@@ -3,6 +3,7 @@
   import type { Attachment } from 'svelte/attachments';
 
   import type { HistoryEntryView } from '../generated/contracts';
+  import Icon from './Icon.svelte';
 
   interface Props {
     entries: HistoryEntryView[];
@@ -97,7 +98,7 @@
         type="button"
         class="close-button"
         aria-label="Close query history"
-        onclick={onclose}>×</button
+        onclick={onclose}><Icon name="close" /></button
       >
     </header>
 
@@ -143,7 +144,8 @@
               type="button"
               class="history-delete"
               aria-label={`Delete history entry from ${new Date(entry.timestamp_ms).toLocaleString()}`}
-              onclick={() => ondelete(entry)}>×</button
+              onclick={() => ondelete(entry)}
+              ><Icon name="close" size={14} /></button
             >
           </li>
         {/each}

@@ -219,9 +219,81 @@ try {
     .locator('.modal-card input[type="range"]')
     .first()
     .evaluate((element) => {
+      element.value = '200';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await page.locator('.modal-card').waitFor({ state: 'detached' });
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.getByRole('button', { name: 'Settings' }).first().click();
+  await page.locator('.modal-card').waitFor();
+
+  const highScaleDialog = await page.evaluate(() => {
+    const backdrop = document.querySelector('.modal-backdrop');
+    const card = document.querySelector('.modal-card');
+    if (!(backdrop instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+      throw new Error('high-scale Settings dialog is missing');
+    }
+    const backdropBounds = backdrop.getBoundingClientRect();
+    const cardBounds = card.getBoundingClientRect();
+    return {
+      backdrop_transform: getComputedStyle(backdrop).transform,
+      backdrop_top: backdropBounds.top,
+      backdrop_bottom: backdropBounds.bottom,
+      card_top: cardBounds.top,
+      card_bottom: cardBounds.bottom,
+      card_client_height: card.clientHeight,
+      card_scroll_height: card.scrollHeight,
+      viewport_height: window.innerHeight
+    };
+  });
+  assert(
+    highScaleDialog.backdrop_transform.startsWith('matrix(2,'),
+    `reopened Settings dialog did not adopt 200% scale (${highScaleDialog.backdrop_transform})`
+  );
+  assert(
+    highScaleDialog.card_top >= -1 &&
+      highScaleDialog.card_bottom <= highScaleDialog.viewport_height + 1,
+    `200% Settings dialog escaped the viewport (${highScaleDialog.card_top}..${highScaleDialog.card_bottom} of ${highScaleDialog.viewport_height})`
+  );
+  assert(
+    highScaleDialog.card_scroll_height > highScaleDialog.card_client_height,
+    '200% Settings dialog does not expose an internal scroll range'
+  );
+
+  const highScaleSave = page.getByRole('button', { name: 'Save settings' });
+  await highScaleSave.scrollIntoViewIfNeeded();
+  const highScaleSaveBounds = await highScaleSave.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return { top: bounds.top, bottom: bounds.bottom };
+  });
+  assert(
+    highScaleSaveBounds.top >= 0 && highScaleSaveBounds.bottom <= 600,
+    'bottom Settings action cannot be scrolled into the 200% viewport'
+  );
+  const highScaleClose = page.getByRole('button', { name: 'Close' });
+  await highScaleClose.scrollIntoViewIfNeeded();
+  const highScaleCloseBounds = await highScaleClose.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return { top: bounds.top, bottom: bounds.bottom };
+  });
+  assert(
+    highScaleCloseBounds.top >= 0 && highScaleCloseBounds.bottom <= 600,
+    'top Settings action cannot be scrolled back into the 200% viewport'
+  );
+
+  await page
+    .locator('.modal-card input[type="range"]')
+    .first()
+    .evaluate((element) => {
       element.value = '100';
       element.dispatchEvent(new Event('input', { bubbles: true }));
     });
+  await highScaleSave.scrollIntoViewIfNeeded();
+  await highScaleSave.click();
+  await page.locator('.modal-card').waitFor({ state: 'detached' });
+  await page.setViewportSize({ width: widths[0], height: 1068 });
+  await page.getByRole('button', { name: 'Settings' }).first().click();
 
   const editorPage = await browser.newPage({
     viewport: { width: 1280, height: 800 },
@@ -343,6 +415,56 @@ try {
   await workbenchPage
     .getByRole('button', { name: 'Disconnect', exact: true })
     .waitFor();
+
+  await workbenchPage
+    .locator('.schema-tree > div > button:first-child')
+    .click();
+  const inspectFractions = workbenchPage.getByRole('button', {
+    name: 'Inspect structure for fractions',
+    exact: true
+  });
+  await inspectFractions.waitFor();
+  await inspectFractions.click();
+  await workbenchPage.locator('#schema-columns-heading').waitFor();
+  const schemaStructure = await workbenchPage.evaluate(() => {
+    const detail = document.querySelector('.object-detail');
+    if (!detail) throw new Error('schema structure detail is missing');
+    const text = detail.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    return {
+      text,
+      headings: Array.from(detail.querySelectorAll('h4')).map(
+        (heading) => heading.textContent?.trim() ?? ''
+      ),
+      open_rows: Boolean(
+        Array.from(detail.querySelectorAll('button')).find(
+          (button) => button.textContent?.trim() === 'Open rows'
+        )
+      ),
+      data_button_count: Array.from(document.querySelectorAll('button')).filter(
+        (button) => button.textContent?.trim() === 'Data'
+      ).length
+    };
+  });
+  assert(
+    JSON.stringify(schemaStructure.headings) ===
+      JSON.stringify(['Columns', 'Indexes', 'Foreign keys']),
+    `schema detail headings are incomplete (${JSON.stringify(schemaStructure.headings)})`
+  );
+  assert(
+    schemaStructure.text.includes('INTEGER · primary key 1 · required') &&
+      schemaStructure.text.includes('fractions_name_idx') &&
+      schemaStructure.text.includes('references armors.id'),
+    `schema detail omitted structural metadata (${schemaStructure.text})`
+  );
+  assert(
+    schemaStructure.open_rows,
+    'selected table has no explicit Open rows action'
+  );
+  assert(
+    schemaStructure.data_button_count === 0,
+    'ambiguous Data action remains in the schema tree'
+  );
+
   await workbenchPage.locator('.cm-content').click();
   await workbenchPage.locator('.cm-content').press('Control+Enter');
   await workbenchPage.locator('.grid-row').waitFor();
@@ -750,6 +872,7 @@ try {
   );
   populatedWorkbench.responsive_layouts = populatedResponsiveLayouts;
   populatedWorkbench.scale_150_percent = populatedScale150;
+  populatedWorkbench.schema_structure = schemaStructure;
   await workbenchPage.close();
 
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -762,7 +885,11 @@ try {
     viewport_height: 1068,
     layouts,
     dialog_themes: dialogThemes,
-    scale_preview: { baseline: baselineScale, scaled: scalePreview },
+    scale_preview: {
+      baseline: baselineScale,
+      scaled: scalePreview,
+      reopened_200_percent: highScaleDialog
+    },
     editor_focus: editorFocus,
     populated_workbench: populatedWorkbench,
     theme_labels: options,

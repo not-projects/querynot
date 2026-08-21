@@ -211,6 +211,11 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
     expect(app).toContain('Full engine-provided definition');
     expect(app).toContain('foreignKey.referenced_table');
     expect(app).toContain('index.columns.join');
+    expect(app).toContain('primary key ${column.primary_key_position}');
+    expect(app).toContain('No indexes were reported.');
+    expect(app).toContain('No foreign keys were reported.');
+    expect(app).toContain('Open rows');
+    expect(app).not.toContain('>Data</button');
     expect(app).not.toContain('{@html');
     expect(sqlite).toContain('MAX_METADATA_NAME_BYTES');
     expect(mysql).toContain('MAX_METADATA_BYTES');

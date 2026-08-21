@@ -82,6 +82,28 @@ describe('Phase 1 native boundaries', () => {
     );
     expect(connectionList).toContain('text-overflow: ellipsis;');
     expect(connectionList).toContain('class="connection-action"');
+    expect(css).toMatch(
+      /\.modal-backdrop\s*\{[^}]*height:\s*calc\(100vh \/ var\(--ui-scale\)\);[^}]*overflow:\s*auto;/s
+    );
+    expect(css).toMatch(
+      /\.modal-card\s*\{[^}]*max-height:\s*min\(820px, 100%\);[^}]*overflow:\s*auto;/s
+    );
+  });
+
+  it('uses shared SVG icons instead of font symbols for icon-only controls', () => {
+    const icon = read('src/lib/components/Icon.svelte');
+    const controls = [
+      read('src/App.svelte'),
+      read('src/lib/components/ConnectionList.svelte'),
+      read('src/lib/components/HistoryDrawer.svelte'),
+      read('src/lib/components/ResultGrid.svelte'),
+      read('src/lib/components/WorkspaceTabs.svelte')
+    ].join('\n');
+
+    expect(icon).toContain('<svg');
+    expect(icon).toContain('aria-hidden="true"');
+    expect(icon).toContain('stroke="currentColor"');
+    expect(controls).not.toMatch(/>\s*(?:\+|×|⋯|—|◆|▦|◇|ƒ|↑|↓|▾|▸)\s*</u);
   });
 
   it('keeps query execution behind explicit native commands and grants no frontend filesystem or network capability', () => {
