@@ -4,6 +4,8 @@
 - Date: 2026-08-20
 - Scope: Released in `0.1.3`
 
+> [ADR 0014](0014-connection-scoped-tabs-and-history-drawer.md) supersedes only this ADR's sidebar-grouped presentation. The stable editor attachment, flat workspace, export disclosure, profile-level connection lifecycle, and isolated lazy per-tab sessions remain in force.
+
 ## Context
 
 The SQL editor was mounted through a Svelte attachment whose one-time CodeMirror construction synchronously read reactive component props. Svelte therefore treated normal `value` updates as attachment dependencies, ran the teardown after every character, destroyed the editor view, and mounted another one. The outer host element survived, which hid the remount from shallow DOM checks, but the CodeMirror node and editor focus did not.

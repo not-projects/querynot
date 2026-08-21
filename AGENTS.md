@@ -38,7 +38,7 @@ The repository contains the completed Phase 0–6 implementation and release evi
 
 Connection creation uses one immutable Server/File choice. One explicitly selected database file is probed read-only and detected as SQLite behind an opaque native grant; it is never discovered by scanning. SQL document actions live in the File menu. Safe window close is silent, while actionable native work keeps the window open and focuses its blocker. The persisted query/results split is pointer- and keyboard-resizable from 20–70%.
 
-Version 0.1.3 keeps the CodeMirror instance mounted through normal typing and derives connection-grouped sidebar tabs from the unchanged flat workspace. Connect/Disconnect remain profile-level; selecting a child under a connected profile lazily opens that child's isolated native session, while unused restored children remain offline. CSV safety guidance is disclosed inside Export.
+Version 0.1.3 established stable CodeMirror editing, the unchanged flat workspace, and lazy isolated per-tab sessions. The current unreleased workbench presents readable profile rows in the left sidebar, shows only the selected profile or Offline group's tabs above the editor, opens local History in a right-side overlay drawer, and uses explicit editor/splitter/result tracks. Connect/Disconnect remain profile-level; selecting a tab under a connected profile lazily opens that tab's isolated native session, while unused restored tabs remain offline. CSV safety guidance remains inside Export.
 
 The approved support and publication envelope is Windows 11 x86-64 only. WSL2/browser automation and Linux engineering packages are release-development evidence, not application support claims. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011; version 0.1.3 is the current published release. Native owner checks, fixed dogfood, and external beta are explicit post-release validation under ADR 0010 and must never be represented as already performed.
 
@@ -47,7 +47,7 @@ The approved support and publication envelope is Windows 11 x86-64 only. WSL2/br
 - `npm install` — install the exact frontend/Tauri CLI lockfile.
 - `npm run check` — Svelte and TypeScript diagnostics.
 - `npm run test` — frontend/policy unit tests with a repository-local temporary directory.
-- `npm run test:ui-layout` — Chromium regression checks for large/narrow status-bar geometry, PostNot theme names, opaque themed dialogs, and stable CodeMirror node/focus behavior through typing and recovery debounce; install the pinned browser once with `npx playwright install chromium`.
+- `npm run test:ui-layout` — Chromium regression checks for 720–2048px and 100–150% layout geometry, PostNot theme names, opaque themed dialogs, stable CodeMirror node/focus behavior, readable connection rows, scoped tabs, populated results and 20–70% splits, plus History overlay/focus behavior; install the pinned browser once with `npx playwright install chromium`.
 - `npm run build` — production frontend build.
 - `npm run test:contracts` — generated Rust/TypeScript command contract drift check.
 - `npm run test:traceability` — PRD/matrix coverage and evidence invariant check.
