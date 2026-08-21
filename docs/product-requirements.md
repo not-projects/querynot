@@ -228,7 +228,7 @@ The default journey is:
 
 ### 8.2 Workspace and tabs
 
-**WKS-1 — Connection-bound tabs.** Every query and table-data tab is visibly nested under one connection profile and one current catalog/database/schema context. Unbound SQL files and detached drafts are visibly nested under Offline. Tabs from different connections may coexist in one window.
+**WKS-1 — Connection-bound tabs.** Every query and schema-object tab belongs visibly to one connection profile and one current catalog/database/schema context. Only the selected profile's tabs appear in the horizontal workspace strip; unbound SQL files and detached drafts appear under Offline. Tabs from different connections may coexist in one window without appearing in the same strip.
 
 **WKS-2 — Context visibility.** The active tab must show connection name, detected engine, database/schema, transaction mode, and running/idle state without requiring a menu.
 
@@ -240,7 +240,7 @@ The default journey is:
 
 **WKS-6 — Disconnect behavior.** Tabs survive a disconnect in an offline state. The user can reconnect and run again without losing editor content.
 
-**WKS-7 — Session isolation.** Each online query or table-data tab owns one dedicated native session, created lazily when that child is selected after its profile is connected or immediately when a new child is created under an established connection. Unused restored children do not eagerly open sessions. Tabs created from the same profile must not share transaction state, temporary objects, session variables, current database/schema, cancellation, or active results. Different tabs may execute concurrently; one tab permits at most one active execution.
+**WKS-7 — Session isolation.** Each online query tab and each schema-object tab that enters row-browsing mode owns one dedicated native session. Query sessions are created lazily when selected after their profile is connected or immediately when a new query is created under an established connection. A structure-only object tab uses the profile metadata session and does not allocate a table session or fetch rows; choosing **Browse rows** creates that isolated table session lazily. Unused restored children do not eagerly open sessions. Tabs created from the same profile must not share transaction state, temporary objects, session variables, current database/schema, cancellation, or active results. Different tabs may execute concurrently; one tab permits at most one active execution.
 
 **WKS-8 — Context changes.** Changing the active database/schema updates only the active tab's native session. A context change is blocked while that tab has an active execution, open transaction, or staged row edits. The resulting context must be confirmed by the adapter before the UI displays it as active.
 
@@ -264,9 +264,9 @@ The default journey is:
 
 **SCH-4 — Search/filter.** Users can filter visible schema objects by name from the keyboard.
 
-**SCH-5 — Object detail.** Selecting an object shows its supported structural metadata first: columns, declared types, primary-key order, nullability, defaults, generated fields, indexes, and foreign keys where reported. Missing sections state that the adapter reported no entries without implying unavailable engine features; adapter capability flags determine which additional detail appears.
+**SCH-5 — Object detail.** Selecting an object opens or activates a connection-scoped tab in the main workspace and shows its supported structural metadata first: columns, declared types, primary-key order, nullability, defaults, generated fields, indexes, and foreign keys where reported. The schema sidebar remains navigation-only. Missing sections state that the adapter reported no entries without implying unavailable engine features; adapter capability flags determine which additional detail appears.
 
-**SCH-6 — Entry actions.** Tables and views offer explicit actions such as **Open rows**, copy qualified name, and start a query. Row browsing is separated from structure inspection, and write actions appear only when the adapter and object support them.
+**SCH-6 — Entry actions.** Tables and views offer explicit actions such as **Browse rows**, copy qualified name, and start a query. Row browsing is a secondary mode separated from structure inspection: opening structure does not create a table session or fetch data, while **Browse rows** does both lazily. Write actions appear only when the adapter and object support them.
 
 **SCH-7 — Cache semantics.** Cached metadata is keyed by profile, detected engine/version, and namespace, contains no row data, and is labelled stale until refreshed after reconnect. Permission failures must not erase previously cached metadata silently. Deleting a profile removes its schema cache.
 

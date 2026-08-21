@@ -14,11 +14,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Replaced platform-dependent `Mod` aliases with explicit Windows `Ctrl` shortcuts so `Ctrl+Enter`, `Ctrl+Shift+Enter`, and related file, focus, find, and cancel actions route reliably without treating the Windows key as Command.
 - UI scale changes now preview on the application behind Settings while the open Settings dialog keeps its opening size, so the slider remains usable across the 75–200% range.
 - Dialogs now remain bounded to the current viewport at large UI scales, with an internal scroll range that can reach both the title controls and bottom actions.
+- Kept scaled workbench tabs compact instead of stretching them across the row, replaced repeated visible Unsaved text with labelled edit icons, attached the new-tab action to the strip, and aligned Offline document actions with the editor.
 
 ### Changed
 
 - Replaced font-symbol controls with a shared inline SVG icon set for close, add, overflow, pin, table, disclosure, status, and sort actions.
-- Made schema selection structure-first: columns, types, primary keys, defaults, generated fields, indexes, and foreign keys are visible immediately, while row browsing is the explicit **Open rows** action inside the selected object's detail panel.
+- Made the schema sidebar navigation-only. Selecting a table or view now opens a connection-scoped main-workspace structure tab with columns, types, primary keys, defaults, generated fields, indexes, and foreign keys; **Browse rows** is a secondary mode and creates no table session or row fetch until explicitly chosen.
 - Flattened the main workbench hierarchy with a compact header and status bar, quieter connection and tab treatments, grouped query/document actions, one dominant Run action, and accurate query-draft status without changing safety or session context.
 - Restored a horizontal tab strip above the editor that shows only the selected connection or Offline group's tabs, remembers the most recent tab per group for the current session, and keeps tab keyboard navigation group-local.
 - Simplified the left sidebar to readable profile rows with direct connection state actions and compact secondary menus, and moved the complete local History workflow into a non-resizing right-side overlay drawer with managed focus.
