@@ -204,16 +204,16 @@ try {
     `150% preview did not configure the complete application viewport (${scalePreview.app_transform}; variable ${scalePreview.app_scale}; input ${scalePreview.input_value}; style ${scalePreview.app_style})`
   );
   assert(
-    scalePreview.dialog_transform.startsWith('matrix(1.5'),
-    `150% preview did not configure the complete dialog viewport (${scalePreview.dialog_transform})`
+    scalePreview.dialog_transform.startsWith('matrix(1,'),
+    `150% preview resized the Settings dialog (${scalePreview.dialog_transform})`
   );
   assert(
     scalePreview.topbar_height >= baselineScale.topbar_height * 1.45,
     `150% preview did not scale the application chrome (${baselineScale.topbar_height} -> ${scalePreview.topbar_height})`
   );
   assert(
-    scalePreview.submit_height >= baselineScale.submit_height * 1.45,
-    `150% preview did not scale dialog controls (${baselineScale.submit_height} -> ${scalePreview.submit_height})`
+    Math.abs(scalePreview.submit_height - baselineScale.submit_height) < 1,
+    `150% preview resized the Settings controls (${baselineScale.submit_height} -> ${scalePreview.submit_height})`
   );
   await page
     .locator('.modal-card input[type="range"]')

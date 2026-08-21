@@ -100,6 +100,33 @@ describe('Phase 1 workbench', () => {
     expect(button('Save settings').disabled).toBe(false);
   });
 
+  it('previews application scale without resizing the open Settings dialog', async () => {
+    await renderWorkbench();
+    button('Settings').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flushSync();
+
+    const appShell = document.querySelector<HTMLElement>('.app-shell');
+    const backdrop = document.querySelector<HTMLElement>('.modal-backdrop');
+    const range = document.querySelector<HTMLInputElement>(
+      '.modal-card input[type="range"]'
+    );
+    expect(appShell?.style.getPropertyValue('--ui-scale')).toBe('1');
+    expect(backdrop?.style.getPropertyValue('--ui-scale')).toBe('1');
+
+    if (!range) throw new Error('UI scale control was not rendered');
+    range.value = '150';
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+    flushSync();
+
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+      'UI scale: 150%'
+    );
+    expect(appShell?.style.getPropertyValue('--ui-scale')).toBe('1.5');
+    expect(backdrop?.style.getPropertyValue('--ui-scale')).toBe('1');
+    expect(backdrop?.dataset.settingsScaleLocked).toBe('true');
+  });
+
   it('dismisses a dialog after its successful submit action', async () => {
     await renderWorkbench();
     button('Settings').click();

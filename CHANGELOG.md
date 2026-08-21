@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - The dark SQL-completion popup now uses QueryNot theme tokens; Tab accepts the highlighted completion or indents, while Enter inserts a new SQL line instead of accepting a completion.
 - Wide results now use one horizontal scrollbar and keep column headers synchronized with virtualized rows instead of clipping the first column between competing scroll surfaces.
 - Replaced platform-dependent `Mod` aliases with explicit Windows `Ctrl` shortcuts so `Ctrl+Enter`, `Ctrl+Shift+Enter`, and related file, focus, find, and cancel actions route reliably without treating the Windows key as Command.
+- UI scale changes now preview on the application behind Settings while the open Settings dialog keeps its opening size, so the slider remains usable across the 75–200% range.
 
 ### Changed
 

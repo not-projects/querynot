@@ -151,6 +151,7 @@
   let profiles = $state<ProfileView[]>([]);
   let settings = $state<SettingsView>(defaultSettings());
   let settingsDraft = $state<SettingsView>(defaultSettings());
+  let settingsDialogScalePercent = $state(100);
   let workspace = $state<WorkspaceView>(emptyWorkspace());
   let storeState = $state('starting');
   let storeMessage = $state<string | null>(null);
@@ -319,6 +320,11 @@
   }
   const displayedSettings = $derived(
     modal === 'settings' ? settingsDraft : settings
+  );
+  const modalScale = $derived(
+    (modal === 'settings'
+      ? settingsDialogScalePercent
+      : displayedSettings.ui_scale_percent) / 100
   );
   const diagnosticsText = $derived(
     diagnostics?.events.length
@@ -2694,6 +2700,7 @@
   }
 
   function openSettings() {
+    settingsDialogScalePercent = settings.ui_scale_percent;
     settingsDraft = structuredClone($state.snapshot(settings));
     void openModal('settings');
   }
@@ -3800,7 +3807,8 @@
   <div
     class="modal-backdrop theme-context"
     data-theme={displayedSettings.theme}
-    style:--ui-scale={displayedSettings.ui_scale_percent / 100}
+    style:--ui-scale={modalScale}
+    data-settings-scale-locked={modal === 'settings'}
   >
     <div
       class="modal-card"
@@ -4218,6 +4226,10 @@
                   step="5"
                   bind:value={settingsDraft.ui_scale_percent}
                 />
+                <small>
+                  The workspace previews this value. Settings keeps its opening
+                  size until it is reopened.
+                </small>
               </label>
               <label class="check-row">
                 <input
