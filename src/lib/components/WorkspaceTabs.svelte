@@ -86,13 +86,19 @@
                 >
               {/if}
               {#if tab.kind === 'table_data'}
-                <span role="img" aria-label="Table-data tab"
+                <span role="img" aria-label="Object structure tab"
                   ><Icon name="table" size={12} /></span
                 >
               {/if}
-              {#if tab.dirty}<span class="tab-state" title="Unsaved draft"
-                  >Unsaved</span
-                >{/if}
+              {#if tab.dirty}
+                <span
+                  role="img"
+                  aria-label="Unsaved changes"
+                  title="Unsaved changes"
+                >
+                  <Icon name="edited" size={12} />
+                </span>
+              {/if}
               {#if sessionOpening[tab.id]}
                 <span class="tab-state" title="Opening dedicated session"
                   >Opening…</span
@@ -178,7 +184,8 @@
   .workspace-tabs {
     display: flex;
     min-width: 0;
-    flex: 1;
+    max-width: calc(100% - 2.2rem);
+    flex: 0 1 auto;
     align-items: stretch;
     gap: 0;
     overflow-x: auto;
@@ -186,11 +193,13 @@
   }
 
   .workspace-tab-item {
+    position: relative;
     display: flex;
-    min-width: 7.5rem;
-    max-width: 15rem;
+    width: 9.25rem;
+    min-width: 7rem;
+    max-width: 9.25rem;
     height: 2.15rem;
-    flex: 0 1 12rem;
+    flex: 0 1 9.25rem;
     align-items: center;
     border-inline-end: 1px solid
       color-mix(in srgb, var(--divider) 72%, transparent);
@@ -213,8 +222,8 @@
     min-height: 1.9rem;
     flex: 1;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.25rem 0.4rem 0.2rem 0.5rem;
+    justify-content: flex-start;
+    padding: 0.25rem 2.85rem 0.2rem 0.5rem;
     gap: 0.4rem;
     border: 0;
     background: transparent;
@@ -232,6 +241,7 @@
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
+    margin-left: auto;
     gap: 0.2rem;
     color: var(--muted);
     font-size: 0.56rem;
@@ -249,6 +259,11 @@
 
   details {
     position: relative;
+  }
+
+  .workspace-tab-item > .tab-overflow {
+    position: absolute;
+    right: 1.35rem;
   }
 
   summary,
@@ -300,6 +315,8 @@
   }
 
   .tab-close {
+    position: absolute;
+    right: 0;
     width: 1.35rem;
   }
 

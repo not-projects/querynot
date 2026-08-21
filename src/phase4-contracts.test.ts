@@ -204,19 +204,22 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
 
   it('renders full supported schema detail as bounded untrusted text', () => {
     const app = read('src/App.svelte');
+    const detail = read('src/lib/components/SchemaObjectDetail.svelte');
     const sqlite = read('crates/querynot-core/src/sqlite.rs');
     const mysql = read('crates/querynot-core/src/mysql.rs');
 
     expect(app).toContain('denseMetadataText');
-    expect(app).toContain('Full engine-provided definition');
-    expect(app).toContain('foreignKey.referenced_table');
-    expect(app).toContain('index.columns.join');
-    expect(app).toContain('primary key ${column.primary_key_position}');
-    expect(app).toContain('No indexes were reported.');
-    expect(app).toContain('No foreign keys were reported.');
-    expect(app).toContain('Open rows');
+    expect(app).toContain("tableTabViews[tab.id] = 'structure'");
+    expect(app).toContain('loadSchemaObjectDetailForTab');
+    expect(detail).toContain('Engine definition');
+    expect(detail).toContain('foreignKey.referenced_table');
+    expect(detail).toContain("index.columns.join(', ')");
+    expect(detail).toContain('Primary ${column.primary_key_position}');
+    expect(detail).toContain('No indexes were reported.');
+    expect(detail).toContain('No foreign keys were reported.');
+    expect(detail).toContain('Browse rows');
     expect(app).not.toContain('>Data</button');
-    expect(app).not.toContain('{@html');
+    expect(detail).not.toContain('{@html');
     expect(sqlite).toContain('MAX_METADATA_NAME_BYTES');
     expect(mysql).toContain('MAX_METADATA_BYTES');
   });

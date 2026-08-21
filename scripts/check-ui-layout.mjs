@@ -18,6 +18,16 @@ const workbenchScreenshotPath = resolve(
   'artifacts',
   'ui-layout-workbench.png'
 );
+const largeScaleWorkbenchScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-workbench-150.png'
+);
+const schemaStructureScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-schema-150.png'
+);
 const autocompleteScreenshotPath = resolve(
   root,
   'artifacts',
@@ -411,6 +421,110 @@ try {
   );
   const emissaryRow = workbenchPage.locator('[data-profile-id="emissary"]');
   await emissaryRow.waitFor();
+  const initialWorkbenchAlignment = await workbenchPage.evaluate(() => {
+    const editor = document.querySelector('#query-editor-pane');
+    const documentActions = document.querySelector('.toolbar-document');
+    const tabs = document.querySelector('.workspace-tabs');
+    const newTab = document.querySelector('.new-tab');
+    if (!editor || !documentActions || !tabs || !newTab) {
+      throw new Error('initial workbench alignment controls are missing');
+    }
+    const editorBounds = editor.getBoundingClientRect();
+    const documentBounds = documentActions.getBoundingClientRect();
+    const tabsBounds = tabs.getBoundingClientRect();
+    const newTabBounds = newTab.getBoundingClientRect();
+    return {
+      document_action_offset: documentBounds.left - editorBounds.left,
+      new_tab_gap: newTabBounds.left - tabsBounds.right,
+      tab_widths: Array.from(
+        document.querySelectorAll('.workspace-tab-item')
+      ).map((element) => element.getBoundingClientRect().width),
+      unsaved_text_count: Array.from(
+        document.querySelectorAll('.workspace-tab-item')
+      ).filter((element) => element.textContent?.includes('Unsaved')).length,
+      edited_icon_count: document.querySelectorAll(
+        '.workspace-tab-item [aria-label="Unsaved changes"]'
+      ).length
+    };
+  });
+  assert(
+    initialWorkbenchAlignment.document_action_offset <= 24,
+    `offline document actions are stranded away from the editor (${initialWorkbenchAlignment.document_action_offset}px)`
+  );
+  assert(
+    initialWorkbenchAlignment.new_tab_gap >= 0 &&
+      initialWorkbenchAlignment.new_tab_gap <= 8,
+    `new-tab action is not adjacent to the visible tabs (${initialWorkbenchAlignment.new_tab_gap}px)`
+  );
+  assert(
+    initialWorkbenchAlignment.tab_widths.every((width) => width <= 150),
+    `workspace tabs are still stretched (${JSON.stringify(initialWorkbenchAlignment.tab_widths)})`
+  );
+  assert(
+    initialWorkbenchAlignment.unsaved_text_count === 0 &&
+      initialWorkbenchAlignment.edited_icon_count === 2,
+    'dirty tabs do not use compact labelled edit icons'
+  );
+  await workbenchPage.setViewportSize({ width: 1915, height: 1237 });
+  const largeScaleAlignment = await workbenchPage.evaluate(async () => {
+    const shell = document.querySelector('.app-shell');
+    if (!(shell instanceof HTMLElement)) {
+      throw new Error('large-scale workbench shell is missing');
+    }
+    shell.style.setProperty('--ui-scale', '1.5');
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    const tabs = document
+      .querySelector('.workspace-tabs')
+      ?.getBoundingClientRect();
+    const newTab = document.querySelector('.new-tab')?.getBoundingClientRect();
+    const footer = document.querySelector('footer')?.getBoundingClientRect();
+    if (!tabs || !newTab || !footer) {
+      throw new Error('large-scale workbench controls are incomplete');
+    }
+    return {
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight,
+      document_scroll_width: document.documentElement.scrollWidth,
+      document_scroll_height: document.documentElement.scrollHeight,
+      new_tab_gap: newTab.left - tabs.right,
+      tab_widths: Array.from(
+        document.querySelectorAll('.workspace-tab-item')
+      ).map((element) => element.getBoundingClientRect().width),
+      footer_bottom: footer.bottom,
+      transform: getComputedStyle(shell).transform
+    };
+  });
+  assert(
+    largeScaleAlignment.document_scroll_width <=
+      largeScaleAlignment.viewport_width &&
+      largeScaleAlignment.document_scroll_height <=
+        largeScaleAlignment.viewport_height,
+    '150% large workbench has page-level overflow'
+  );
+  assert(
+    largeScaleAlignment.new_tab_gap >= 0 &&
+      largeScaleAlignment.new_tab_gap <= 12,
+    `150% new-tab action is separated from its tabs (${largeScaleAlignment.new_tab_gap}px)`
+  );
+  assert(
+    largeScaleAlignment.tab_widths.every((width) => width <= 230),
+    `150% workspace tabs are still stretched (${JSON.stringify(largeScaleAlignment.tab_widths)})`
+  );
+  assert(
+    largeScaleAlignment.footer_bottom <= largeScaleAlignment.viewport_height,
+    '150% large workbench footer escaped the viewport'
+  );
+  await workbenchPage.screenshot({
+    path: largeScaleWorkbenchScreenshotPath,
+    fullPage: true
+  });
+  await workbenchPage.evaluate(() => {
+    document.querySelector('.app-shell')?.style.setProperty('--ui-scale', '1');
+  });
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+  initialWorkbenchAlignment.large_scale_150_percent = largeScaleAlignment;
   await emissaryRow.locator('.connection-action').click();
   await workbenchPage
     .getByRole('button', { name: 'Disconnect', exact: true })
@@ -424,24 +538,43 @@ try {
     exact: true
   });
   await inspectFractions.waitFor();
+  const sessionsBeforeStructure = await workbenchPage.evaluate(
+    () =>
+      window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+        (entry) => entry.command === 'open_tab_session'
+      ).length
+  );
   await inspectFractions.click();
-  await workbenchPage.locator('#schema-columns-heading').waitFor();
+  await workbenchPage.locator('#columns-heading').waitFor();
   const schemaStructure = await workbenchPage.evaluate(() => {
-    const detail = document.querySelector('.object-detail');
+    const detail = document.querySelector('.object-workspace');
     if (!detail) throw new Error('schema structure detail is missing');
     const text = detail.textContent?.replace(/\s+/g, ' ').trim() ?? '';
     return {
       text,
-      headings: Array.from(detail.querySelectorAll('h4')).map(
+      headings: Array.from(detail.querySelectorAll('.structure-panel h3')).map(
         (heading) => heading.textContent?.trim() ?? ''
       ),
-      open_rows: Boolean(
+      browse_rows: Boolean(
         Array.from(detail.querySelectorAll('button')).find(
-          (button) => button.textContent?.trim() === 'Open rows'
+          (button) => button.textContent?.trim() === 'Browse rows'
         )
       ),
+      active_tab:
+        document
+          .querySelector('.workspace-tab-item.active .tab-title')
+          ?.textContent?.trim() ?? '',
+      sidebar_detail_count: document.querySelectorAll(
+        'aside .object-workspace, aside .object-detail'
+      ).length,
       data_button_count: Array.from(document.querySelectorAll('button')).filter(
         (button) => button.textContent?.trim() === 'Data'
+      ).length,
+      sessions_after_structure: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+        (entry) => entry.command === 'open_tab_session'
+      ).length,
+      browse_calls: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+        (entry) => entry.command === 'browse_table'
       ).length
     };
   });
@@ -451,20 +584,98 @@ try {
     `schema detail headings are incomplete (${JSON.stringify(schemaStructure.headings)})`
   );
   assert(
-    schemaStructure.text.includes('INTEGER · primary key 1 · required') &&
+    schemaStructure.text.includes('INTEGER') &&
+      schemaStructure.text.includes('Primary 1') &&
       schemaStructure.text.includes('fractions_name_idx') &&
-      schemaStructure.text.includes('references armors.id'),
+      schemaStructure.text.includes('armors.id'),
     `schema detail omitted structural metadata (${schemaStructure.text})`
   );
   assert(
-    schemaStructure.open_rows,
-    'selected table has no explicit Open rows action'
+    schemaStructure.browse_rows,
+    'selected object tab has no secondary Browse rows action'
+  );
+  assert(
+    schemaStructure.active_tab === 'fractions' &&
+      schemaStructure.sidebar_detail_count === 0,
+    'structure did not open in its own main-workspace tab'
+  );
+  assert(
+    schemaStructure.sessions_after_structure === sessionsBeforeStructure &&
+      schemaStructure.browse_calls === 0,
+    'opening structure allocated a table session or fetched rows implicitly'
   );
   assert(
     schemaStructure.data_button_count === 0,
     'ambiguous Data action remains in the schema tree'
   );
+  await workbenchPage.setViewportSize({ width: 1915, height: 1237 });
+  const schemaScale150 = await workbenchPage.evaluate(async () => {
+    const shell = document.querySelector('.app-shell');
+    const workspace = document.querySelector('.object-workspace');
+    if (!(shell instanceof HTMLElement) || !workspace) {
+      throw new Error('scaled schema workspace is missing');
+    }
+    shell.style.setProperty('--ui-scale', '1.5');
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    const workspaceBounds = workspace.getBoundingClientRect();
+    const footerBounds = document
+      .querySelector('footer')
+      ?.getBoundingClientRect();
+    if (!footerBounds) throw new Error('scaled schema footer is missing');
+    return {
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight,
+      document_scroll_width: document.documentElement.scrollWidth,
+      document_scroll_height: document.documentElement.scrollHeight,
+      workspace: workspaceBounds.toJSON(),
+      footer: footerBounds.toJSON()
+    };
+  });
+  assert(
+    schemaScale150.document_scroll_width <= schemaScale150.viewport_width &&
+      schemaScale150.document_scroll_height <= schemaScale150.viewport_height,
+    '150% schema workspace has page-level overflow'
+  );
+  assert(
+    schemaScale150.workspace.bottom <= schemaScale150.footer.top,
+    '150% schema workspace overlaps the status bar'
+  );
+  await workbenchPage.screenshot({
+    path: schemaStructureScreenshotPath,
+    fullPage: true
+  });
+  await workbenchPage.evaluate(() => {
+    document.querySelector('.app-shell')?.style.setProperty('--ui-scale', '1');
+  });
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+  schemaStructure.scale_150_percent = schemaScale150;
 
+  await workbenchPage.getByRole('button', { name: 'Browse rows' }).click();
+  await workbenchPage.locator('#table-data-heading').waitFor();
+  const rowBrowserActivation = await workbenchPage.evaluate(() => ({
+    sessions: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+      (entry) => entry.command === 'open_tab_session'
+    ).length,
+    browse_calls: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+      (entry) => entry.command === 'browse_table'
+    ).length,
+    heading:
+      document.querySelector('#table-data-heading')?.textContent?.trim() ?? ''
+  }));
+  assert(
+    rowBrowserActivation.sessions === sessionsBeforeStructure + 1 &&
+      rowBrowserActivation.browse_calls === 1,
+    `Browse rows did not lazily allocate exactly one table session and fetch (${JSON.stringify(rowBrowserActivation)})`
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Structure', exact: true })
+    .click();
+  await workbenchPage.locator('#columns-heading').waitFor();
+  schemaStructure.row_browser_activation = rowBrowserActivation;
+
+  await workbenchPage.getByRole('tab', { name: /fractions query/i }).click();
   await workbenchPage.locator('.cm-content').click();
   await workbenchPage.locator('.cm-content').press('Control+Enter');
   await workbenchPage.locator('.grid-row').waitFor();
@@ -542,7 +753,7 @@ try {
   );
   assert(
     JSON.stringify(populatedWorkbench.visible_tabs) ===
-      JSON.stringify(['fractions query', 'armors query']),
+      JSON.stringify(['fractions query', 'armors query', 'fractions']),
     `top tabs are not connection-scoped (${JSON.stringify(populatedWorkbench.visible_tabs)})`
   );
   assert(
@@ -825,7 +1036,7 @@ try {
     );
     assert(
       JSON.stringify(layout.visible_tabs) ===
-        JSON.stringify(['fractions query', 'armors query']),
+        JSON.stringify(['fractions query', 'armors query', 'fractions']),
       `${width}px populated tabs lost connection scope`
     );
     populatedResponsiveLayouts.push(layout);
@@ -873,6 +1084,7 @@ try {
   populatedWorkbench.responsive_layouts = populatedResponsiveLayouts;
   populatedWorkbench.scale_150_percent = populatedScale150;
   populatedWorkbench.schema_structure = schemaStructure;
+  populatedWorkbench.initial_alignment = initialWorkbenchAlignment;
   await workbenchPage.close();
 
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -897,6 +1109,8 @@ try {
       'artifacts/ui-layout-settings.png',
       'artifacts/ui-layout-autocomplete.png',
       'artifacts/ui-layout-workbench.png',
+      'artifacts/ui-layout-workbench-150.png',
+      'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png'
     ]
   };

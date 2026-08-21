@@ -68,6 +68,11 @@ const tabs = [
   queryTab('report-query', 'report query', 'long-profile', 'Reporting', 2),
   queryTab('offline-query', 'offline notes', null, null, 3)
 ];
+tabs[0].dirty = true;
+tabs[1].dirty = true;
+const commandLog = [];
+let createdTabCount = 0;
+window.__QUERYNOT_FIXTURE_COMMANDS__ = commandLog;
 
 function queryTab(id, title, profileId, profileLabel, position) {
   return {
@@ -227,6 +232,7 @@ mockWindows('main');
 mockIPC(
   (command, payload) => {
     const request = payload?.request ?? {};
+    commandLog.push({ command, request: structuredClone(request) });
     switch (command) {
       case 'bootstrap_workspace':
         return {
@@ -248,6 +254,19 @@ mockIPC(
         return { configured: false, update: null };
       case 'save_workspace':
         return { saved: true, message: 'Saved in memory.' };
+      case 'create_offline_tab': {
+        createdTabCount += 1;
+        const profile = profiles.find(
+          (candidate) => candidate.id === request.profile_id
+        );
+        return queryTab(
+          `created-tab-${createdTabCount}`,
+          `Query ${createdTabCount}`,
+          request.profile_id ?? null,
+          profile?.name ?? null,
+          tabs.length + createdTabCount
+        );
+      }
       case 'connect_profile':
         return connection(request.profile_id);
       case 'load_schema_namespaces':
@@ -324,6 +343,51 @@ mockIPC(
         };
       case 'open_tab_session':
         return session(request.profile_id, request.tab_id);
+      case 'browse_table':
+        return {
+          definition: {
+            namespace: request.namespace,
+            table: request.table,
+            columns: [
+              {
+                name: 'id',
+                declared_type: 'INTEGER',
+                nullable: false,
+                primary_key_position: 1,
+                has_default: false,
+                generated: false,
+                editor: 'integer',
+                editable: true,
+                read_only_reason: null
+              },
+              {
+                name: 'name',
+                declared_type: 'TEXT',
+                nullable: false,
+                primary_key_position: 0,
+                has_default: false,
+                generated: false,
+                editor: 'text',
+                editable: true,
+                read_only_reason: null
+              }
+            ],
+            identity_source: 'primary_key',
+            identity_columns: ['id'],
+            editable: true,
+            read_only_reason: null
+          },
+          rows: [
+            {
+              values: [taggedValue('integer', '1'), taggedValue('text', 'half')]
+            }
+          ],
+          has_more: false,
+          next_cursor: [taggedValue('integer', '1')],
+          next_offset: 1,
+          unstable: false,
+          message: 'Loaded one deterministic row.'
+        };
       case 'start_execution':
         setTimeout(() => void emitOneRowResult(), 0);
         return {

@@ -510,8 +510,11 @@ main.has-query-results .editor-workspace {
 
 .schema-explorer {
   display: grid;
+  min-height: 0;
+  flex: 1;
   margin-top: 14px;
   padding-top: 12px;
+  grid-template-rows: auto auto auto minmax(8rem, 1fr);
   gap: 8px;
   border-top: 1px solid var(--divider);
 }
@@ -545,7 +548,7 @@ main.has-query-results .editor-workspace {
 .schema-tree {
   display: grid;
   min-width: 0;
-  max-height: 280px;
+  max-height: none;
   overflow-x: hidden;
   overflow-y: auto;
   font-size: 0.7rem;
@@ -619,113 +622,6 @@ main.has-query-results .editor-workspace {
 .schema-tree li[aria-selected='true'] {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   box-shadow: inset 2px 0 var(--accent);
-}
-
-.object-detail {
-  display: grid;
-  padding: 9px;
-  gap: 10px;
-  border: 1px solid var(--divider);
-  border-radius: 5px;
-  color: var(--muted);
-  font-size: 0.66rem;
-}
-
-.object-detail-header {
-  display: grid;
-  min-width: 0;
-  gap: 7px;
-}
-
-.object-detail-header h3 {
-  overflow: hidden;
-  color: var(--text);
-  font-size: 0.75rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.object-detail-header p,
-.object-detail-section p,
-.object-detail-note {
-  margin: 2px 0 0;
-  color: var(--muted);
-  line-height: 1.4;
-}
-
-.object-detail-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.object-detail-actions button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.object-detail-section {
-  display: grid;
-  padding-top: 8px;
-  gap: 5px;
-  border-top: 1px solid var(--divider);
-}
-
-.object-detail-section h4 {
-  margin: 0;
-  color: var(--text);
-  font-size: 0.67rem;
-}
-
-.object-detail ul {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  gap: 5px;
-  list-style: none;
-}
-
-.object-detail li {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-  overflow-wrap: anywhere;
-}
-
-.object-detail li > span,
-.object-detail li > small {
-  line-height: 1.35;
-}
-
-.object-detail details {
-  padding-top: 8px;
-  border-top: 1px solid var(--divider);
-}
-
-.object-detail summary {
-  color: var(--text);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.object-detail pre {
-  max-height: 180px;
-  padding: 8px;
-  overflow: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: var(--surface);
-}
-
-.object-detail-empty {
-  margin: 2px 0 0;
-  padding: 8px;
-  border: 1px dashed var(--divider);
-  border-radius: 5px;
-  color: var(--muted);
-  font-size: 0.64rem;
-  line-height: 1.45;
 }
 
 .safety-context {
@@ -1429,7 +1325,7 @@ main.has-query-results .editor-workspace {
 
 .query-toolbar {
   min-height: 34px;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding-bottom: 6px;
   gap: 8px 14px;
 }
@@ -1443,7 +1339,17 @@ main.has-query-results .editor-workspace {
 }
 
 .toolbar-document {
-  margin-left: auto;
+  padding-left: 10px;
+  border-left: 1px solid var(--divider);
+}
+
+.toolbar-execution:empty {
+  display: none;
+}
+
+.toolbar-execution:empty + .toolbar-document {
+  padding-left: 0;
+  border-left: 0;
 }
 
 .toolbar-document button {

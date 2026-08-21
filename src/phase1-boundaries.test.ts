@@ -106,6 +106,22 @@ describe('Phase 1 native boundaries', () => {
     expect(controls).not.toMatch(/>\s*(?:\+|×|⋯|—|◆|▦|◇|ƒ|↑|↓|▾|▸)\s*</u);
   });
 
+  it('keeps scoped tabs compact and aligns offline document actions with the editor', () => {
+    const tabs = read('src/lib/components/WorkspaceTabs.svelte');
+    const css = read('src/styles/app.css');
+
+    expect(tabs).toContain('width: 9.25rem;');
+    expect(tabs).toContain('flex: 0 1 auto;');
+    expect(tabs).toContain('name="edited"');
+    expect(tabs).not.toMatch(/>\s*Unsaved\s*</u);
+    expect(css).toMatch(
+      /\.query-toolbar\s*\{[^}]*justify-content:\s*flex-start;/s
+    );
+    expect(css).toMatch(
+      /\.toolbar-execution:empty \+ \.toolbar-document\s*\{[^}]*padding-left:\s*0;[^}]*border-left:\s*0;/s
+    );
+  });
+
   it('keeps query execution behind explicit native commands and grants no frontend filesystem or network capability', () => {
     const contract = JSON.parse(read('contracts/querynot.v1.json')) as {
       commands: Record<string, unknown>;

@@ -19,6 +19,7 @@
     preview: MutationPreviewView | null;
     busy: boolean;
     canGoBack: boolean;
+    onstructure: () => void;
     onstageupdate: (
       rowIndex: number,
       column: TableColumnView,
@@ -46,6 +47,7 @@
     preview,
     busy,
     canGoBack,
+    onstructure,
     onstageupdate,
     onstagedelete,
     onstageinsert,
@@ -583,11 +585,16 @@
         {page.definition.namespace}.{page.definition.table}
       </h2>
     </div>
-    <span class:warning={page.unstable} class="paging-label">
-      {page.unstable
-        ? 'Unstable read-only offset page'
-        : 'Deterministic keyset page'}
-    </span>
+    <div class="table-heading-actions">
+      <button type="button" disabled={busy} onclick={onstructure}
+        >Structure</button
+      >
+      <span class:warning={page.unstable} class="paging-label">
+        {page.unstable
+          ? 'Unstable read-only offset page'
+          : 'Deterministic keyset page'}
+      </span>
+    </div>
   </div>
   {#if filters.length > 0}
     <ul class="active-filters" aria-label="Active server filters">
@@ -969,6 +976,12 @@
   .table-heading {
     justify-content: space-between;
     align-items: center;
+  }
+  .table-heading-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem;
   }
   h2,
   h3,

@@ -36,6 +36,7 @@
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
   import Icon from './lib/components/Icon.svelte';
   import ResultGrid from './lib/components/ResultGrid.svelte';
+  import SchemaObjectDetail from './lib/components/SchemaObjectDetail.svelte';
   import TableDataGrid from './lib/components/TableDataGrid.svelte';
   import WorkspaceTabs from './lib/components/WorkspaceTabs.svelte';
   import SqlEditor, {
@@ -197,6 +198,9 @@
   let schemaObjects = $state<Record<string, SchemaObjectView[]>>({});
   let schemaStates = $state<Record<string, SchemaLoadState>>({});
   let selectedSchemaObject = $state<SchemaObjectDetailView | null>(null);
+  let schemaObjectDetails = $state<Record<string, SchemaObjectDetailView>>({});
+  let schemaObjectErrors = $state<Record<string, string>>({});
+  let schemaObjectLoading = $state<Record<string, boolean>>({});
   let expandedNamespaces = $state<Record<string, boolean>>({});
   let schemaFilter = $state('');
   let editorApi = $state<SqlEditorApi | null>(null);
@@ -205,6 +209,7 @@
     response: ExecutionStartResponse;
   } | null>(null);
   let tableTabs = $state<Record<string, TableUi>>({});
+  let tableTabViews = $state<Record<string, 'structure' | 'rows'>>({});
   let historyOpen = $state(false);
   let historySearch = $state('');
   let historyEntries = $state<HistoryEntryView[]>([]);
@@ -240,8 +245,15 @@
   const activeConnection = $derived(
     activeProfile ? (connections[activeProfile.id] ?? null) : null
   );
+  const activeTableView = $derived<'structure' | 'rows' | null>(
+    activeTab?.kind === 'table_data'
+      ? (tableTabViews[activeTab.id] ?? 'structure')
+      : null
+  );
   const activeSession = $derived(
-    activeTab ? (sessions[activeTab.id] ?? null) : null
+    activeTab && (activeTab.kind === 'query' || activeTableView === 'rows')
+      ? (sessions[activeTab.id] ?? null)
+      : null
   );
   const activeExecution = $derived(
     activeTab ? (executions[activeTab.id] ?? null) : null
@@ -267,7 +279,10 @@
   );
   const tabSessionErrorVisible = $derived(
     Boolean(
-      activeTab?.profile_id && !activeSession && tabSessionErrors[activeTab.id]
+      activeTab?.profile_id &&
+      !activeSession &&
+      tabSessionErrors[activeTab.id] &&
+      (activeTab.kind === 'query' || activeTableView === 'rows')
     )
   );
   const mainGridRows = $derived.by(() => {
@@ -280,6 +295,34 @@
   const activeTableUi = $derived(
     activeTab?.kind === 'table_data' ? (tableTabs[activeTab.id] ?? null) : null
   );
+  const activeObjectDetail = $derived(
+    activeTab?.kind === 'table_data'
+      ? (schemaObjectDetails[activeTab.id] ?? null)
+      : null
+  );
+  const activeSchemaObject = $derived.by<SchemaObjectView | null>(() => {
+    if (
+      activeTab?.kind !== 'table_data' ||
+      !activeTab.table_namespace ||
+      !activeTab.table_name
+    ) {
+      return null;
+    }
+    return (
+      activeObjectDetail?.object ??
+      (activeProfile
+        ? (schemaObjects[activeProfile.id] ?? []).find(
+            (object) =>
+              object.namespace === activeTab.table_namespace &&
+              object.name === activeTab.table_name
+          )
+        : null) ?? {
+        namespace: activeTab.table_namespace,
+        name: activeTab.table_name,
+        kind: 'table'
+      }
+    );
+  });
   const activeSchemaState = $derived<SchemaLoadState>(
     activeProfile
       ? (schemaStates[activeProfile.id] ??
@@ -432,11 +475,17 @@
           (tab) =>
             tab.id === workspace.active_tab_id && tab.profile_id === profile.id
         );
-        const restoredSession = restoredActiveTab
-          ? await ensureTabSession(restoredActiveTab)
-          : null;
-        if (!restoredActiveTab || restoredSession) {
-          statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. Only its restored active tab was opened; other tabs remain lazy.`;
+        if (restoredActiveTab?.kind === 'table_data') {
+          tableTabViews[restoredActiveTab.id] = 'structure';
+          await loadSchemaObjectDetailForTab(restoredActiveTab);
+          statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. The restored object tab loaded structure only; row browsing remains explicit.`;
+        } else {
+          const restoredSession = restoredActiveTab
+            ? await ensureTabSession(restoredActiveTab)
+            : null;
+          if (!restoredActiveTab || restoredSession) {
+            statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. Only its restored active tab was opened; other tabs remain lazy.`;
+          }
         }
       } catch (error) {
         statusMessage = `${profile.name} automatic reconnect failed safely: ${safeErrorMessage(error)}`;
@@ -467,6 +516,10 @@
     results = {};
     selectedResultIds = {};
     tableTabs = {};
+    tableTabViews = {};
+    schemaObjectDetails = {};
+    schemaObjectErrors = {};
+    schemaObjectLoading = {};
     storeState = response.store_state;
     storeMessage = response.store_message;
   }
@@ -629,7 +682,23 @@
     workspace.active_tab_id = tab.id;
     rememberActiveTab(tab);
     queueWorkspaceSave();
-    if (tab.profile_id && connections[tab.profile_id] && !sessions[tab.id]) {
+    if (tab.kind === 'table_data') {
+      tableTabViews[tab.id] ??= 'structure';
+      if (
+        tab.profile_id &&
+        connections[tab.profile_id] &&
+        !schemaObjectDetails[tab.id] &&
+        !schemaObjectLoading[tab.id]
+      ) {
+        await loadSchemaObjectDetailForTab(tab);
+      }
+    }
+    if (
+      tab.profile_id &&
+      connections[tab.profile_id] &&
+      !sessions[tab.id] &&
+      (tab.kind === 'query' || tableTabViews[tab.id] === 'rows')
+    ) {
       await ensureTabSession(tab);
     }
     await tick();
@@ -666,6 +735,12 @@
     if (sessions[tab.id]) return Promise.resolve(sessions[tab.id]);
     const pending = tabSessionOpenPromises.get(tab.id);
     if (pending) return pending;
+    if (
+      tab.kind === 'table_data' &&
+      (tableTabViews[tab.id] ?? 'structure') !== 'rows'
+    ) {
+      return Promise.resolve(null);
+    }
     if (tab.kind === 'table_data' && tableTabs[tab.id]?.staged.length) {
       const message =
         'Discard the in-memory staged edits from the lost table session before opening a new dedicated session; QueryNot will not replay them automatically.';
@@ -1000,7 +1075,12 @@
           (tab) =>
             tab.id === workspace.active_tab_id && tab.profile_id === profile.id
         );
-        if (selectedTab) await ensureTabSession(selectedTab);
+        if (selectedTab?.kind === 'table_data') {
+          tableTabViews[selectedTab.id] = 'structure';
+          await loadSchemaObjectDetailForTab(selectedTab);
+        } else if (selectedTab) {
+          await ensureTabSession(selectedTab);
+        }
       } finally {
         delete connectionOperations[profile.id];
       }
@@ -1259,6 +1339,10 @@
           .map((tab) => tab.id);
         for (const tabId of removedTableIds) {
           delete tableTabs[tabId];
+          delete tableTabViews[tabId];
+          delete schemaObjectDetails[tabId];
+          delete schemaObjectErrors[tabId];
+          delete schemaObjectLoading[tabId];
           delete results[tabId];
           delete selectedResultIds[tabId];
           delete executions[tabId];
@@ -1537,28 +1621,28 @@
     };
   }
 
-  async function openTableData(object: SchemaObjectView) {
-    if (!activeProfile || !activeConnection || !hasNativeRuntime()) return;
-    const profile = activeProfile;
-    await runAction(async () => {
-      const tab = await invokeCommand('create_offline_tab', {
-        profile_id: profile.id
-      });
-      tab.kind = 'table_data';
-      tab.title = `${object.name} data`;
-      tab.context_label = object.namespace;
-      tab.table_namespace = object.namespace;
-      tab.table_name = object.name;
-      tab.sql = '';
-      tab.dirty = false;
-      tab.position = workspace.tabs.length;
-      workspace.tabs.push(tab);
-      workspace.active_tab_id = tab.id;
-      rememberActiveTab(tab);
-      tableTabs[tab.id] = newTableUi();
-      await ensureTabSession(tab);
-      await saveWorkspaceNow();
-    });
+  async function browseActiveObjectRows() {
+    if (
+      activeTab?.kind !== 'table_data' ||
+      !activeConnection ||
+      !hasNativeRuntime()
+    ) {
+      return;
+    }
+    tableTabViews[activeTab.id] = 'rows';
+    tableTabs[activeTab.id] ??= newTableUi();
+    const session = await ensureTabSession(activeTab);
+    if (session && !tableTabs[activeTab.id].page) {
+      await loadTablePage(activeTab.id, [], 0, false);
+    }
+  }
+
+  function showActiveObjectStructure() {
+    if (activeTab?.kind !== 'table_data') return;
+    tableTabViews[activeTab.id] = 'structure';
+    if (!schemaObjectDetails[activeTab.id] && activeConnection) {
+      void loadSchemaObjectDetailForTab(activeTab);
+    }
   }
 
   async function loadTablePage(
@@ -2060,21 +2144,81 @@
     });
   }
 
-  async function inspectSchemaObject(object: SchemaObjectView) {
-    if (!activeProfile || !hasNativeRuntime()) return;
-    const profileId = activeProfile.id;
-    invalidateProfileTablePreviews(profileId);
-    await runAction(async () => {
-      selectedSchemaObject = await invokeCommand('load_schema_object_detail', {
-        profile_id: profileId,
-        namespace: object.namespace,
-        object_name: object.name
+  async function loadSchemaObjectDetailForTab(tab: WorkspaceTabView) {
+    if (
+      tab.kind !== 'table_data' ||
+      !tab.profile_id ||
+      !tab.table_namespace ||
+      !tab.table_name ||
+      !connections[tab.profile_id] ||
+      !hasNativeRuntime()
+    ) {
+      return;
+    }
+    invalidateProfileTablePreviews(tab.profile_id);
+    schemaObjectLoading[tab.id] = true;
+    delete schemaObjectErrors[tab.id];
+    try {
+      const detail = await invokeCommand('load_schema_object_detail', {
+        profile_id: tab.profile_id,
+        namespace: tab.table_namespace,
+        object_name: tab.table_name
       });
-      statusMessage = `${selectedSchemaObject.stale ? 'Showing stale cached metadata' : 'Loaded metadata'} for ${object.namespace}.${object.name}; database-provided text is rendered as plain text.`;
+      if (!workspace.tabs.some((candidate) => candidate.id === tab.id)) return;
+      schemaObjectDetails[tab.id] = detail;
+      selectedSchemaObject = detail;
+      if (workspace.active_tab_id === tab.id) {
+        statusMessage = `${detail.stale ? 'Showing stale cached metadata' : 'Loaded structure'} for ${detail.object.namespace}.${detail.object.name}; database-provided text is rendered as plain text.`;
+      }
+    } catch (error) {
+      const message = safeErrorMessage(error);
+      schemaObjectErrors[tab.id] = message;
+      if (workspace.active_tab_id === tab.id) {
+        statusMessage = `Structure for ${tab.table_namespace}.${tab.table_name} is unavailable: ${message}`;
+      }
+    } finally {
+      delete schemaObjectLoading[tab.id];
+    }
+  }
+
+  async function inspectSchemaObject(object: SchemaObjectView) {
+    if (!activeProfile || !activeConnection || !hasNativeRuntime()) return;
+    const profile = activeProfile;
+    const existing = workspace.tabs.find(
+      (tab) =>
+        tab.kind === 'table_data' &&
+        tab.profile_id === profile.id &&
+        tab.table_namespace === object.namespace &&
+        tab.table_name === object.name
+    );
+    if (existing) {
+      tableTabViews[existing.id] = 'structure';
+      await activateTab(existing.id, false);
+      return;
+    }
+    await runAction(async () => {
+      const tab = await invokeCommand('create_offline_tab', {
+        profile_id: profile.id
+      });
+      tab.kind = 'table_data';
+      tab.title = object.name;
+      tab.context_label = object.namespace;
+      tab.table_namespace = object.namespace;
+      tab.table_name = object.name;
+      tab.sql = '';
+      tab.dirty = false;
+      tab.position = workspace.tabs.length;
+      workspace.tabs.push(tab);
+      workspace.active_tab_id = tab.id;
+      rememberActiveTab(tab);
+      tableTabs[tab.id] = newTableUi();
+      tableTabViews[tab.id] = 'structure';
+      await saveWorkspaceNow();
+      await loadSchemaObjectDetailForTab(tab);
     });
   }
 
-  function refreshSelectedSchemaObject() {
+  function refreshActiveSchemaObject() {
     const stagedTab = activeProfile
       ? stagedTableTabForProfile(activeProfile.id)
       : null;
@@ -2084,8 +2228,8 @@
         'Apply, discard, or cancel staged table changes before refreshing metadata.';
       return;
     }
-    if (selectedSchemaObject) {
-      void inspectSchemaObject(selectedSchemaObject.object);
+    if (activeTab?.kind === 'table_data') {
+      void loadSchemaObjectDetailForTab(activeTab);
     }
   }
 
@@ -2548,6 +2692,10 @@
       delete results[tabId];
       delete selectedResultIds[tabId];
       delete tableTabs[tabId];
+      delete tableTabViews[tabId];
+      delete schemaObjectDetails[tabId];
+      delete schemaObjectErrors[tabId];
+      delete schemaObjectLoading[tabId];
       delete tabSessionErrors[tabId];
       delete tabSessionOperations[tabId];
       await saveWorkspaceNow();
@@ -3256,9 +3404,9 @@
                       {#each visibleSchemaObjects.filter((object) => object.namespace === namespace.name) as object (`${object.namespace}:${object.name}`)}
                         <li
                           role="treeitem"
-                          aria-selected={selectedSchemaObject?.object
-                            .namespace === object.namespace &&
-                            selectedSchemaObject?.object.name === object.name}
+                          aria-selected={activeTab?.kind === 'table_data' &&
+                            activeTab.table_namespace === object.namespace &&
+                            activeTab.table_name === object.name}
                         >
                           <button
                             type="button"
@@ -3302,142 +3450,6 @@
               {/each}
             </div>
           {/if}
-          {#if selectedSchemaObject}
-            <section
-              class="object-detail"
-              aria-labelledby="schema-object-detail-heading"
-            >
-              <div class="object-detail-header">
-                <div>
-                  <h3
-                    id="schema-object-detail-heading"
-                    title={selectedSchemaObject.object.name}
-                  >
-                    {selectedSchemaObject.object.name}
-                  </h3>
-                  <p>
-                    {selectedSchemaObject.object.kind} · {selectedSchemaObject
-                      .columns.length} columns{selectedSchemaObject.stale
-                      ? ' · stale cache'
-                      : ''}
-                  </p>
-                </div>
-                <div class="object-detail-actions">
-                  {#if selectedSchemaObject.object.kind === 'table' || selectedSchemaObject.object.kind === 'view'}
-                    <button
-                      type="button"
-                      class="schema-refresh"
-                      disabled={busy}
-                      onclick={() =>
-                        void openTableData(selectedSchemaObject!.object)}
-                    >
-                      <Icon name="table" size={13} />
-                      Open rows
-                    </button>
-                  {/if}
-                  <button
-                    type="button"
-                    class="schema-refresh"
-                    disabled={busy}
-                    onclick={refreshSelectedSchemaObject}>Refresh</button
-                  >
-                </div>
-              </div>
-
-              <section
-                class="object-detail-section"
-                aria-labelledby="schema-columns-heading"
-              >
-                <h4 id="schema-columns-heading">Columns</h4>
-                {#if selectedSchemaObject.columns.length > 0}
-                  <ul>
-                    {#each selectedSchemaObject.columns as column (`${column.name}:${column.primary_key_position}`)}
-                      <li title={column.name}>
-                        <code>{column.name}</code>
-                        <span>
-                          {column.declared_type || 'untyped'}
-                          {column.primary_key_position
-                            ? ` · primary key ${column.primary_key_position}`
-                            : ''}
-                          {column.nullable ? ' · nullable' : ' · required'}
-                          {column.generated ? ' · generated' : ''}
-                        </span>
-                        {#if column.default_expression}
-                          <small>Default: {column.default_expression}</small>
-                        {/if}
-                      </li>
-                    {/each}
-                  </ul>
-                {:else}
-                  <p>No column metadata was reported.</p>
-                {/if}
-              </section>
-
-              <section
-                class="object-detail-section"
-                aria-labelledby="schema-indexes-heading"
-              >
-                <h4 id="schema-indexes-heading">Indexes</h4>
-                {#if selectedSchemaObject.indexes.length > 0}
-                  <ul>
-                    {#each selectedSchemaObject.indexes as index (index.name)}
-                      <li>
-                        <code>{index.name}</code>
-                        <span>
-                          {index.unique ? 'unique' : 'non-unique'} · {index.origin}
-                          · {index.columns.join(', ')}
-                        </span>
-                      </li>
-                    {/each}
-                  </ul>
-                {:else}
-                  <p>No indexes were reported.</p>
-                {/if}
-              </section>
-
-              <section
-                class="object-detail-section"
-                aria-labelledby="schema-foreign-keys-heading"
-              >
-                <h4 id="schema-foreign-keys-heading">Foreign keys</h4>
-                {#if selectedSchemaObject.foreign_keys.length > 0}
-                  <ul>
-                    {#each selectedSchemaObject.foreign_keys as foreignKey (`${foreignKey.id}:${foreignKey.sequence}`)}
-                      <li>
-                        <code>{foreignKey.from_column}</code>
-                        <span>
-                          references {foreignKey.referenced_table}.{foreignKey.to_column ??
-                            '(adapter default)'} · update {foreignKey.on_update} ·
-                          delete {foreignKey.on_delete}
-                        </span>
-                      </li>
-                    {/each}
-                  </ul>
-                {:else}
-                  <p>No foreign keys were reported.</p>
-                {/if}
-              </section>
-
-              {#if selectedSchemaObject.definition}
-                <details>
-                  <summary>Full engine-provided definition</summary>
-                  <pre>{selectedSchemaObject.definition}</pre>
-                </details>
-              {/if}
-              {#if selectedSchemaObject.object.kind === 'routine'}
-                <p class="object-detail-note">
-                  {selectedSchemaObject.routines_supported
-                    ? 'Routine metadata is supported by this adapter.'
-                    : 'Routine metadata is unavailable for this adapter.'}
-                </p>
-              {/if}
-            </section>
-          {:else if activeConnection}
-            <p class="object-detail-empty">
-              Select a table or view to inspect columns, primary keys, indexes,
-              foreign keys, types, defaults, and generated fields.
-            </p>
-          {/if}
         </section>
       {/if}
     </aside>
@@ -3447,13 +3459,23 @@
       style:grid-template-rows={mainGridRows}
       {@attach captureMain}
     >
-      <div class="context-bar" aria-label="Active query context">
-        <span class="context-state" class:online={Boolean(activeSession)}>
-          {activeSession
-            ? 'Online'
-            : activeTab && tabSessionOperations[activeTab.id]
-              ? 'Opening'
-              : 'Offline'}
+      <div class="context-bar" aria-label="Active workspace context">
+        <span
+          class="context-state"
+          class:online={Boolean(
+            activeSession ||
+            (activeTab?.kind === 'table_data' && activeConnection)
+          )}
+        >
+          {activeTab?.kind === 'table_data' &&
+          activeTableView === 'structure' &&
+          activeConnection
+            ? 'Connected'
+            : activeSession
+              ? 'Online'
+              : activeTab && tabSessionOperations[activeTab.id]
+                ? 'Opening'
+                : 'Offline'}
         </span>
         <span>{activeTab?.profile_label ?? 'No profile'}</span>
         <span
@@ -3487,11 +3509,17 @@
           </span>
         {/if}
         <span>
-          {activeSession
-            ? `${activeSession.transaction.automatic ? 'Auto-commit' : 'Manual'} · ${activeSession.transaction.certainty}`
-            : 'Transaction unavailable'}
+          {activeTab?.kind === 'table_data' && activeTableView === 'structure'
+            ? 'Structure metadata'
+            : activeSession
+              ? `${activeSession.transaction.automatic ? 'Auto-commit' : 'Manual'} · ${activeSession.transaction.certainty}`
+              : 'Transaction unavailable'}
         </span>
-        <span>{activeExecution?.state ?? 'Idle'}</span>
+        <span>
+          {activeTab?.kind === 'table_data' && activeTableView === 'structure'
+            ? 'Structure'
+            : (activeExecution?.state ?? 'Idle')}
+        </span>
       </div>
 
       {#if activeTab}
@@ -3510,7 +3538,7 @@
           onmovetab={(tab, direction) => moveTab(tab.id, direction)}
         />
 
-        {#if activeTab?.profile_id && !activeSession && tabSessionErrors[activeTab.id]}
+        {#if activeTab?.profile_id && (activeTab.kind === 'query' || activeTableView === 'rows') && !activeSession && tabSessionErrors[activeTab.id]}
           <div class="recovery-banner tab-session-error" role="alert">
             <strong>Tab session unavailable</strong>
             <span>{tabSessionErrors[activeTab.id]}</span>
@@ -3524,7 +3552,20 @@
           </div>
         {/if}
 
-        {#if activeTab?.kind === 'table_data'}
+        {#if activeTab.kind === 'table_data' && activeTableView === 'structure' && activeSchemaObject}
+          <SchemaObjectDetail
+            object={activeSchemaObject}
+            detail={activeObjectDetail}
+            loading={Boolean(schemaObjectLoading[activeTab.id])}
+            error={schemaObjectErrors[activeTab.id] ?? null}
+            connected={Boolean(activeConnection)}
+            {busy}
+            onrefresh={refreshActiveSchemaObject}
+            oncopy={() => void copyQualifiedName(activeSchemaObject)}
+            onquery={() => void startQueryForObject(activeSchemaObject)}
+            onbrowserows={() => void browseActiveObjectRows()}
+          />
+        {:else if activeTab.kind === 'table_data'}
           {#if activeTableUi?.page}
             {#if !activeSession}
               <div class="recovery-banner" role="alert">
@@ -3539,6 +3580,7 @@
               preview={activeTableUi.preview}
               {busy}
               canGoBack={activeTableUi.back.length > 0}
+              onstructure={showActiveObjectStructure}
               onstageupdate={stageTableUpdate}
               onstagedelete={stageTableDelete}
               onstageinsert={stageTableInsert}
@@ -3564,7 +3606,7 @@
                 {activeTableUi?.error ??
                   (tabSessionOperations[activeTab.id]
                     ? 'Opening this tab’s dedicated session…'
-                    : 'Connect the profile and select this tab to load a fresh page. Staged edits are never restored.')}
+                    : 'Connect the profile to browse rows. Object structure remains available without opening a table session.')}
               </p>
             </section>
           {/if}
