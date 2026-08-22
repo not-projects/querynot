@@ -232,7 +232,7 @@ The default journey is:
 
 **WKS-2 — Context visibility.** The active tab must show connection name, detected engine, database/schema, transaction mode, and running/idle state without requiring a menu.
 
-**WKS-3 — Multiple tabs.** Users can create, rename, reorder, duplicate, pin, and close query tabs. Pinning and reordering stay within the owning connection or Offline group; moving a tab between groups requires a separate explicit binding design. Closing a tab with unsaved file changes, uncommitted transaction work, staged row edits, or a running query requires an explicit decision.
+**WKS-3 — Multiple tabs.** Users can create, rename, reorder, duplicate, pin, and close query tabs. Pinning and reordering stay within the owning connection or Offline group; moving a tab between groups requires a separate explicit binding design. Closing the active tab activates the preceding tab in the same group, then the following same-group tab if needed; when none remains, QueryNot creates an empty query in that same connection or Offline group instead of switching groups. Closing a tab with unsaved file changes, uncommitted transaction work, staged row edits, or a running query requires an explicit decision.
 
 **WKS-4 — Session restoration.** When restoration is enabled, QueryNot restores open tabs, unsaved drafts, tab order, connection bindings, selected database/schema, panel sizes including the 20–70% query/results split, and the last active tab after a normal restart or recoverable crash. It does not automatically reconnect profiles unless the user enables that preference.
 
@@ -359,9 +359,9 @@ The check must be dialect-aware and resilient to whitespace and comments. For `U
 
 **RES-4 — Data fidelity.** `NULL`, empty strings, signed and unsigned integers, binary values, large text, dates/times, decimals, floating-point values, booleans, and engine-specific values have unambiguous display and copy behavior. Integer and decimal transport must not pass through a lossy JavaScript number. Dates/times preserve the engine value and timezone/offset metadata; QueryNot does not invent an offset or silently convert zones. Display formatting must not alter copied or exported raw values.
 
-**RES-5 — Grid operations.** Users can resize columns, copy a cell/row/selection, copy with headers, select rows, and locally sort or filter the rows already received. Client-side sort/filter state must be labelled as applying only to loaded rows.
+**RES-5 — Grid operations.** Users can resize columns, copy a cell, select rows with explicit row checkboxes, copy all loaded rows or only selected rows with or without headers, and locally sort or filter the rows already received. Selecting a field focuses it without implicitly selecting its row. Selection count, selected-row copy actions, and clearing the selection are visible whenever rows are selected. Client-side sort/filter state must be labelled as applying only to loaded rows.
 
-**RES-6 — Large values.** Oversized cell content is previewed safely and opened on demand. The grid must not eagerly syntax-highlight or fully render every large value.
+**RES-6 — Large values.** Oversized cell content is previewed safely and opened on demand through right-click or an **Open value** action for the focused field. One side subtab inside the result pane shows the selected raw value with soft wrapping. Valid JSON-shaped or JSON-declared text can be displayed with whitespace formatting while preserving the exact raw token text for Raw and Copy; invalid or over-limit JSON falls back to exact raw text with an explanation. Database content remains text-only, and the grid must not eagerly syntax-highlight or fully render every large value.
 
 **RES-7 — Export.** Users can export either all received rows in server order or the current locally sorted/filtered view to CSV or JSON through an explicit file chooser. The confirmation identifies that choice, row count, result-set source, and cap state. QueryNot must not silently re-execute SQL or fetch unreceived rows for export.
 

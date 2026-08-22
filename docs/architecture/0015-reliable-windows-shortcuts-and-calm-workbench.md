@@ -13,6 +13,8 @@ The connection-scoped workbench repaired navigation and result geometry, but its
 
 At large saved UI scales, dialog cards were sized against the unscaled viewport and then enlarged with the rest of the shell. A card could therefore extend above and below the physical screen while its own scrollbar could not recover the clipped title or actions. Font characters were also standing in for common control icons, and the schema tree's ambiguous **Data** row action obscured the structural metadata already returned by the native adapter.
 
+User screenshots then exposed two remaining interaction mismatches: sparse schema namespaces stretched down the full sidebar, and clicking a result field silently selected its row even though the only downstream behavior was copy. Long values also had only a small inline disclosure instead of a usable focused inspector, while closing the active query could activate a tab from another connection or Offline.
+
 ## Decision
 
 Query and document shortcuts use literal Windows Control bindings. `Ctrl+Enter` runs the current execution unit, `Ctrl+Shift+Enter` runs all statements, and the existing Control-based cancel, file, focus, find, and visible-tab actions remain explicit. Shortcut labels and `aria-keyshortcuts` describe the same bindings. The editor keymap keeps execution bindings at highest precedence so CodeMirror extensions cannot consume them first.
@@ -35,6 +37,10 @@ The horizontal tab strip uses compact bounded tab widths rather than distributin
 
 Icon-only controls use one dependency-free inline SVG component with `currentColor` styling. SVG paths remain decorative inside labelled buttons, summaries, or status elements. The schema tree uses those icons for disclosure and object kinds, but remains navigation-only. Selecting a table or view opens or activates a connection-scoped main-workspace object tab whose primary view contains the existing columns, types, primary keys, defaults, generated fields, indexes, and foreign keys. The former ambiguous **Data** action becomes secondary **Browse rows** inside the object tab. Opening structure uses only the profile metadata session; the isolated table session and its first row fetch are deferred until **Browse rows** is chosen.
 
+Schema namespaces and their object rows use content-sized tracks aligned to the top of the explorer. Result fields have a separate focus state, while explicit checkboxes select rows and reveal selected-row copy, copy-with-headers, and clear actions. Right-clicking a field or choosing **Open value** opens one side subtab inside that result set. The viewer soft-wraps exact text, offers Raw and raw Copy, and whitespace-formats valid JSON without reserializing its tokens; invalid or over-limit JSON remains exact raw text. It replaces nonessential completed-result footer copy while open so the value remains visibly reachable at the persisted 35% split, but paused-cursor actions remain present.
+
+Closing the active tab chooses the preceding tab in the same connection or Offline group, then the following same-group tab. If the group would otherwise be empty, QueryNot creates and activates a new empty query bound to that same group. Existing close blockers and isolated session cleanup remain unchanged.
+
 ## Consequences
 
 - No native command, adapter, credential, persistence, workspace, or session-lifecycle contract changes.
@@ -44,8 +50,11 @@ Icon-only controls use one dependency-free inline SVG component with `currentCol
 - Structure-first schema tabs use the existing adapter contract, preserve the narrow sidebar for navigation, and make row browsing an explicit lazy mode.
 - The workbench uses fewer competing accents while preserving familiar navigation and operational context.
 - The visual treatment continues to use QueryNot tokens and assets; MongoDB Compass remains an interaction cue only.
+- Row selection now has a visible selected-row copy purpose and no longer occurs as a side effect of focusing a field.
+- Large text and JSON can be inspected without leaving the result pane or mutating raw database text.
+- Tab close no longer causes an implicit connection-context switch.
 - Browser automation can verify geometry and behavior, but native Windows font rendering, pointer feel, and accessibility observation remain manual checks.
 
 ## Validation
 
-Unit and integration tests cover literal Control routing, stable Settings-dialog scale, viewport-bounded modal CSS, shared SVG icon usage, compact tab alignment, main-workspace structure tabs, lazy row-session allocation, and existing tab/session safeguards. The populated Chromium fixture executes through `Ctrl+Enter`, inspects columns, keys, indexes, and foreign keys without opening a table session or fetching rows, and checks the compact header, concise status help, readable connection rows, scoped tabs, result visibility, split geometry, History overlay, and responsive widths. Retained 1915×1237 Playwright captures review the Offline workbench and schema structure at 150% application scale. A separate 200%-scale Settings check uses a 600px-high viewport and scrolls to both the bottom Save action and top Close control.
+Unit and integration tests cover literal Control routing, stable Settings-dialog scale, viewport-bounded modal CSS, shared SVG icon usage, compact tab alignment, main-workspace structure tabs, lazy row-session allocation, explicit result-row selection, exact raw and formatted JSON viewing, group-local close fallback, and existing tab/session safeguards. The populated Chromium fixture executes through `Ctrl+Enter`, inspects columns, keys, indexes, and foreign keys without opening a table session or fetching rows, and checks compact schema namespaces, selected-row actions, right-click and button value opening, a visibly tall soft-wrapping formatted-JSON side subtab, group-local active-tab close, the compact header, concise status help, readable connection rows, scoped tabs, result visibility, split geometry, History overlay, and responsive widths. Retained Playwright captures review the value subtab at the default split plus the Offline workbench and schema structure at 150% application scale. A separate 200%-scale Settings check uses a 600px-high viewport and scrolls to both the bottom Save action and top Close control.

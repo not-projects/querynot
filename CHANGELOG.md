@@ -9,6 +9,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - Defined explicit context, scoped-tab, editor, splitter, and result tracks so result headings, column headers, and received rows render directly below the persisted 20–70% separator without changing virtualization, multiple-result, error, or backpressure behavior.
+- Kept schema namespaces and their loaded objects compact at the top of the sidebar instead of stretching sparse rows through the available height.
+- Closing an active query now stays in its current connection or Offline group, activates the preceding same-group tab when available, and creates an empty query in that group when no tabs remain.
+- Replaced implicit row selection on field click with explicit row checkboxes and visible selected-row copy actions; focused fields now open in one side value subtab through right-click or **Open value**, with soft wrapping, lossless raw copy, and safe formatted JSON display.
 - The dark SQL-completion popup now uses QueryNot theme tokens; Tab accepts the highlighted completion or indents, while Enter inserts a new SQL line instead of accepting a completion.
 - Wide results now use one horizontal scrollbar and keep column headers synchronized with virtualized rows instead of clipping the first column between competing scroll surfaces.
 - Replaced platform-dependent `Mod` aliases with explicit Windows `Ctrl` shortcuts so `Ctrl+Enter`, `Ctrl+Shift+Enter`, and related file, focus, find, and cancel actions route reliably without treating the Windows key as Command.
