@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - Defined explicit context, scoped-tab, editor, splitter, and result tracks so result headings, column headers, and received rows render directly below the persisted 20–70% separator without changing virtualization, multiple-result, error, or backpressure behavior.
+- Centered shared SVG controls inside their icon-button boxes, including the Connections Plus action at normal and scaled UI sizes.
 - Kept schema namespaces and their loaded objects compact at the top of the sidebar instead of stretching sparse rows through the available height.
 - Closing an active query now stays in its current connection or Offline group, activates the preceding same-group tab when available, and creates an empty query in that group when no tabs remain.
 - Replaced implicit row selection on field click with explicit row checkboxes and visible selected-row copy actions; focused fields now open in one side value subtab through right-click or **Open value**, with soft wrapping, lossless raw copy, and safe formatted JSON display.

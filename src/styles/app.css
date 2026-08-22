@@ -319,8 +319,10 @@ button:hover:not(:disabled) {
 }
 
 .icon-button {
+  display: grid;
   width: 34px;
   padding: 0;
+  place-items: center;
   color: var(--accent);
   font-size: 1.15rem;
   background: transparent;

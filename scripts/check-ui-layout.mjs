@@ -431,16 +431,39 @@ try {
     const documentActions = document.querySelector('.toolbar-document');
     const tabs = document.querySelector('.workspace-tabs');
     const newTab = document.querySelector('.new-tab');
-    if (!editor || !documentActions || !tabs || !newTab) {
+    const connectionAdd = document.querySelector(
+      'button[aria-label="Create connection profile"]'
+    );
+    const connectionAddIcon = connectionAdd?.querySelector('svg');
+    if (
+      !editor ||
+      !documentActions ||
+      !tabs ||
+      !newTab ||
+      !connectionAdd ||
+      !connectionAddIcon
+    ) {
       throw new Error('initial workbench alignment controls are missing');
     }
     const editorBounds = editor.getBoundingClientRect();
     const documentBounds = documentActions.getBoundingClientRect();
     const tabsBounds = tabs.getBoundingClientRect();
     const newTabBounds = newTab.getBoundingClientRect();
+    const addBounds = connectionAdd.getBoundingClientRect();
+    const addIconBounds = connectionAddIcon.getBoundingClientRect();
     return {
       document_action_offset: documentBounds.left - editorBounds.left,
       new_tab_gap: newTabBounds.left - tabsBounds.right,
+      connection_add_icon_offset: {
+        x:
+          addIconBounds.left +
+          addIconBounds.width / 2 -
+          (addBounds.left + addBounds.width / 2),
+        y:
+          addIconBounds.top +
+          addIconBounds.height / 2 -
+          (addBounds.top + addBounds.height / 2)
+      },
       tab_widths: Array.from(
         document.querySelectorAll('.workspace-tab-item')
       ).map((element) => element.getBoundingClientRect().width),
@@ -452,6 +475,11 @@ try {
       ).length
     };
   });
+  assert(
+    Math.abs(initialWorkbenchAlignment.connection_add_icon_offset.x) <= 0.5 &&
+      Math.abs(initialWorkbenchAlignment.connection_add_icon_offset.y) <= 0.5,
+    `connection Plus SVG is not centered in its button (${JSON.stringify(initialWorkbenchAlignment.connection_add_icon_offset)})`
+  );
   assert(
     initialWorkbenchAlignment.document_action_offset <= 24,
     `offline document actions are stranded away from the editor (${initialWorkbenchAlignment.document_action_offset}px)`
@@ -485,7 +513,13 @@ try {
       ?.getBoundingClientRect();
     const newTab = document.querySelector('.new-tab')?.getBoundingClientRect();
     const footer = document.querySelector('footer')?.getBoundingClientRect();
-    if (!tabs || !newTab || !footer) {
+    const connectionAdd = document
+      .querySelector('button[aria-label="Create connection profile"]')
+      ?.getBoundingClientRect();
+    const connectionAddIcon = document
+      .querySelector('button[aria-label="Create connection profile"] svg')
+      ?.getBoundingClientRect();
+    if (!tabs || !newTab || !footer || !connectionAdd || !connectionAddIcon) {
       throw new Error('large-scale workbench controls are incomplete');
     }
     return {
@@ -493,6 +527,16 @@ try {
       viewport_height: window.innerHeight,
       document_scroll_width: document.documentElement.scrollWidth,
       document_scroll_height: document.documentElement.scrollHeight,
+      connection_add_icon_offset: {
+        x:
+          connectionAddIcon.left +
+          connectionAddIcon.width / 2 -
+          (connectionAdd.left + connectionAdd.width / 2),
+        y:
+          connectionAddIcon.top +
+          connectionAddIcon.height / 2 -
+          (connectionAdd.top + connectionAdd.height / 2)
+      },
       new_tab_gap: newTab.left - tabs.right,
       tab_widths: Array.from(
         document.querySelectorAll('.workspace-tab-item')
@@ -512,6 +556,11 @@ try {
     largeScaleAlignment.new_tab_gap >= 0 &&
       largeScaleAlignment.new_tab_gap <= 12,
     `150% new-tab action is separated from its tabs (${largeScaleAlignment.new_tab_gap}px)`
+  );
+  assert(
+    Math.abs(largeScaleAlignment.connection_add_icon_offset.x) <= 0.75 &&
+      Math.abs(largeScaleAlignment.connection_add_icon_offset.y) <= 0.75,
+    `150% connection Plus SVG is not centered in its button (${JSON.stringify(largeScaleAlignment.connection_add_icon_offset)})`
   );
   assert(
     largeScaleAlignment.tab_widths.every((width) => width <= 230),

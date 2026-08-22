@@ -104,6 +104,9 @@ describe('Phase 1 native boundaries', () => {
     expect(icon).toContain('aria-hidden="true"');
     expect(icon).toContain('stroke="currentColor"');
     expect(controls).not.toMatch(/>\s*(?:\+|×|⋯|—|◆|▦|◇|ƒ|↑|↓|▾|▸)\s*</u);
+    expect(read('src/styles/app.css')).toMatch(
+      /\.icon-button\s*\{[^}]*display:\s*grid;[^}]*place-items:\s*center;/s
+    );
   });
 
   it('keeps scoped tabs compact and aligns offline document actions with the editor', () => {
