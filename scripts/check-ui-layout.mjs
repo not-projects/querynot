@@ -38,6 +38,11 @@ const historyScreenshotPath = resolve(
   'artifacts',
   'ui-layout-history.png'
 );
+const valueViewerScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-value-viewer.png'
+);
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
 
@@ -529,9 +534,31 @@ try {
   await workbenchPage
     .getByRole('button', { name: 'Disconnect', exact: true })
     .waitFor();
+  const schemaNamespaceLayout = await workbenchPage.evaluate(() => {
+    const rows = Array.from(
+      document.querySelectorAll('.schema-tree > div > button:first-child')
+    ).map((element) => element.getBoundingClientRect().toJSON());
+    const tree = document.querySelector('.schema-tree');
+    if (!(tree instanceof HTMLElement) || rows.length !== 2) {
+      throw new Error('schema namespace fixture is incomplete');
+    }
+    return {
+      rows,
+      align_content: getComputedStyle(tree).alignContent,
+      tree_height: tree.getBoundingClientRect().height
+    };
+  });
+  assert(
+    schemaNamespaceLayout.align_content === 'start' &&
+      schemaNamespaceLayout.rows[1].top -
+        schemaNamespaceLayout.rows[0].bottom <=
+        12,
+    `schema namespaces stretch down the sidebar (${JSON.stringify(schemaNamespaceLayout)})`
+  );
 
   await workbenchPage
     .locator('.schema-tree > div > button:first-child')
+    .first()
     .click();
   const inspectFractions = workbenchPage.getByRole('button', {
     name: 'Inspect structure for fractions',
@@ -869,6 +896,113 @@ try {
   populatedWorkbench.horizontal_scrollers = horizontalScrollers;
   populatedWorkbench.scrolled_grid_alignment = scrolledGridAlignment;
 
+  const selectedRowCheckbox = workbenchPage.getByRole('checkbox', {
+    name: 'Select loaded row 1'
+  });
+  await selectedRowCheckbox.check();
+  await workbenchPage
+    .getByRole('button', { name: 'Copy selected', exact: true })
+    .waitFor();
+  const rowSelectionActions = await workbenchPage.evaluate(() => ({
+    selected_label:
+      document.querySelector('.selection-label')?.textContent?.trim() ?? '',
+    selected_row_count: document.querySelectorAll('.grid-row.selected').length,
+    copy_selected: Boolean(
+      Array.from(document.querySelectorAll('.result-tools button')).find(
+        (button) => button.textContent?.trim() === 'Copy selected'
+      )
+    ),
+    clear_selection: Boolean(
+      Array.from(document.querySelectorAll('.result-tools button')).find(
+        (button) => button.textContent?.trim() === 'Clear selection'
+      )
+    )
+  }));
+  assert(
+    rowSelectionActions.selected_label === '1 row selected' &&
+      rowSelectionActions.selected_row_count === 1 &&
+      rowSelectionActions.copy_selected &&
+      rowSelectionActions.clear_selection,
+    `row selection has no visible purpose (${JSON.stringify(rowSelectionActions)})`
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Clear selection', exact: true })
+    .click();
+
+  const armorCell = workbenchPage.getByRole('gridcell').nth(5);
+  await armorCell.click();
+  const openValueButton = workbenchPage.getByRole('button', {
+    name: 'Open value',
+    exact: true
+  });
+  assert(
+    await openValueButton.isEnabled(),
+    'focusing a result field did not enable Open value'
+  );
+  await openValueButton.click();
+  const valueViewer = workbenchPage.locator('.value-viewer');
+  await valueViewer.waitFor();
+  await workbenchPage
+    .getByRole('button', { name: 'Close value viewer' })
+    .click();
+  await valueViewer.waitFor({ state: 'detached' });
+  await armorCell.click({ button: 'right' });
+  await valueViewer.waitFor();
+  const valueViewerLayout = await workbenchPage.evaluate(() => {
+    const viewer = document
+      .querySelector('.value-viewer')
+      ?.getBoundingClientRect();
+    const grid = document.querySelector('.grid-shell')?.getBoundingClientRect();
+    const results = document
+      .querySelector('#query-results')
+      ?.getBoundingClientRect();
+    const value = document.querySelector('.value-viewer pre');
+    const focused = document.querySelector(
+      '.grid-row [role="gridcell"][aria-selected="true"]'
+    );
+    if (!viewer || !grid || !results || !value || !focused) {
+      throw new Error('result value viewer geometry is incomplete');
+    }
+    const style = getComputedStyle(value);
+    return {
+      viewer: viewer.toJSON(),
+      grid: grid.toJSON(),
+      results: results.toJSON(),
+      text: value.textContent ?? '',
+      text_area: value.getBoundingClientRect().toJSON(),
+      white_space: style.whiteSpace,
+      overflow_wrap: style.overflowWrap,
+      viewer_count: document.querySelectorAll('.value-viewer').length,
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth
+    };
+  });
+  assert(
+    valueViewerLayout.viewer_count === 1 &&
+      valueViewerLayout.viewer.left >= valueViewerLayout.grid.right - 1 &&
+      valueViewerLayout.viewer.right <= valueViewerLayout.results.right &&
+      valueViewerLayout.viewer.bottom <= valueViewerLayout.results.bottom &&
+      valueViewerLayout.text_area.height >= 55,
+    `value viewer is not a bounded side subtab (${JSON.stringify(valueViewerLayout)})`
+  );
+  assert(
+    valueViewerLayout.text.includes('"serial": 900719925474099312345') &&
+      valueViewerLayout.text.includes('\n') &&
+      valueViewerLayout.white_space === 'pre-wrap' &&
+      ['anywhere', 'break-word'].includes(valueViewerLayout.overflow_wrap),
+    'value viewer did not soft-wrap formatted JSON while preserving the exact integer token'
+  );
+  assert(
+    valueViewerLayout.document_scroll_width <= valueViewerLayout.viewport_width,
+    'value viewer introduced page-level overflow'
+  );
+  await workbenchPage.screenshot({ path: valueViewerScreenshotPath });
+  await workbenchPage
+    .getByRole('button', { name: 'Close value viewer' })
+    .click();
+  populatedWorkbench.row_selection = rowSelectionActions;
+  populatedWorkbench.value_viewer = valueViewerLayout;
+
   const separator = workbenchPage.locator('.results-separator');
   const measureSplit = () =>
     workbenchPage.evaluate(() => {
@@ -1085,6 +1219,57 @@ try {
   populatedWorkbench.scale_150_percent = populatedScale150;
   populatedWorkbench.schema_structure = schemaStructure;
   populatedWorkbench.initial_alignment = initialWorkbenchAlignment;
+  populatedWorkbench.schema_namespace_layout = schemaNamespaceLayout;
+
+  const createdTabsBeforeClose = await workbenchPage.evaluate(
+    () =>
+      window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+        (entry) => entry.command === 'create_offline_tab'
+      ).length
+  );
+  await workbenchPage.getByRole('tab', { name: /armors query/i }).click();
+  await workbenchPage.waitForFunction(
+    () =>
+      !Array.from(document.querySelectorAll('.tab-state')).some((element) =>
+        element.textContent?.includes('Opening')
+      )
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Close armors query' })
+    .click();
+  const closeDialog = workbenchPage.locator('.modal-card');
+  await closeDialog.waitFor();
+  await closeDialog
+    .getByRole('button', {
+      name: 'Discard unsaved changes and close',
+      exact: true
+    })
+    .click();
+  await closeDialog.waitFor({ state: 'detached' });
+  const localTabClose = await workbenchPage.evaluate(() => ({
+    active_tab:
+      document
+        .querySelector('.workspace-tab-item.active .tab-title')
+        ?.textContent?.trim() ?? '',
+    visible_tabs: Array.from(
+      document.querySelectorAll('.workspace-tab-item .tab-title')
+    ).map((element) => element.textContent?.trim() ?? ''),
+    offline_selected: document
+      .querySelector('[data-profile-id="offline"]')
+      ?.getAttribute('aria-current'),
+    created_tabs_after: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+      (entry) => entry.command === 'create_offline_tab'
+    ).length
+  }));
+  localTabClose.created_tabs_before = createdTabsBeforeClose;
+  assert(
+    localTabClose.active_tab === 'fractions query' &&
+      !localTabClose.visible_tabs.includes('offline notes') &&
+      localTabClose.offline_selected !== 'true' &&
+      localTabClose.created_tabs_after === localTabClose.created_tabs_before,
+    `closing an active query left its connection group (${JSON.stringify(localTabClose)})`
+  );
+  populatedWorkbench.local_tab_close = localTabClose;
   await workbenchPage.close();
 
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -1110,6 +1295,7 @@ try {
       'artifacts/ui-layout-autocomplete.png',
       'artifacts/ui-layout-workbench.png',
       'artifacts/ui-layout-workbench-150.png',
+      'artifacts/ui-layout-value-viewer.png',
       'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png'
     ]

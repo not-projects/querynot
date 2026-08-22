@@ -5,6 +5,12 @@
     TaggedValueView
   } from '../generated/contracts';
   import Icon from './Icon.svelte';
+  import ResultValueViewer from './ResultValueViewer.svelte';
+
+  interface CellLocation {
+    rowIndex: number;
+    columnIndex: number;
+  }
 
   interface Props {
     resultSetId: string;
@@ -51,8 +57,8 @@
   let viewportHeight = $state(320);
   let widths = $state<Record<number, number>>({});
   let nullToken = $state('\\N');
-  let selectedCell = $state<TaggedValueView | null>(null);
-  let openedLargeValue = $state<string | null>(null);
+  let focusedCell = $state<CellLocation | null>(null);
+  let openedCell = $state<CellLocation | null>(null);
   const rowHeight = 34;
   const overscan = 8;
   const maxCellPreview = 512;
@@ -101,6 +107,23 @@
       .map((_, index) => `${widths[index] ?? 180}px`)
       .join(' ')
   );
+  const selectionGridColumns = $derived(`2.4rem ${gridColumns}`);
+  const allVisibleRowsSelected = $derived(
+    viewIndexes.length > 0 &&
+      viewIndexes.every((index) => selectedRows.includes(index))
+  );
+  const someVisibleRowsSelected = $derived(
+    viewIndexes.some((index) => selectedRows.includes(index)) &&
+      !allVisibleRowsSelected
+  );
+  const openedValue = $derived(
+    openedCell
+      ? (rows[openedCell.rowIndex]?.values[openedCell.columnIndex] ?? null)
+      : null
+  );
+  const openedColumn = $derived(
+    openedCell ? (columns[openedCell.columnIndex] ?? null) : null
+  );
 
   $effect(() => {
     onviewchange(resultSetId, [...viewIndexes]);
@@ -128,9 +151,41 @@
       : [...selectedRows, index];
   }
 
-  function selectCell(index: number, value: TaggedValueView) {
-    selectedCell = value;
-    toggleRow(index);
+  function toggleAllVisibleRows() {
+    if (allVisibleRowsSelected) {
+      const visible = new Set(viewIndexes);
+      selectedRows = selectedRows.filter((index) => !visible.has(index));
+    } else {
+      selectedRows = [...new Set([...selectedRows, ...viewIndexes])];
+    }
+  }
+
+  function focusCell(rowIndex: number, columnIndex: number) {
+    focusedCell = { rowIndex, columnIndex };
+  }
+
+  function openCell(rowIndex: number, columnIndex: number) {
+    focusedCell = { rowIndex, columnIndex };
+    openedCell = { rowIndex, columnIndex };
+    const column = columns[columnIndex];
+    onstatus(
+      `Opened row ${rowIndex + 1}, ${column?.name ?? `column ${columnIndex + 1}`} in the result value viewer without changing the raw value.`
+    );
+  }
+
+  function openFocusedCell() {
+    if (focusedCell) {
+      openCell(focusedCell.rowIndex, focusedCell.columnIndex);
+    }
+  }
+
+  function openCellContextMenu(
+    event: MouseEvent,
+    rowIndex: number,
+    columnIndex: number
+  ) {
+    event.preventDefault();
+    openCell(rowIndex, columnIndex);
   }
 
   function resizeColumn(event: PointerEvent, index: number) {
@@ -159,8 +214,12 @@
     );
   }
 
-  async function copyRows(withHeaders: boolean) {
-    const indexes = selectedRows.length ? selectedRows : viewIndexes;
+  async function copyRows(withHeaders: boolean, selectionOnly: boolean) {
+    const indexes = selectionOnly ? selectedRows : viewIndexes;
+    if (selectionOnly && indexes.length === 0) {
+      onstatus('Select at least one loaded row before copying a selection.');
+      return;
+    }
     const lineEnding = navigator.userAgent.includes('Windows') ? '\r\n' : '\n';
     const records = indexes.map((index) =>
       rows[index].values.map(tsvField).join('\t')
@@ -169,7 +228,7 @@
       records.unshift(columns.map((column) => column.name).join('\t'));
     await writeClipboard(records.join(lineEnding));
     onstatus(
-      `Copied ${indexes.length} loaded row${indexes.length === 1 ? '' : 's'}${withHeaders ? ' with one header row' : ''}; hidden and unreceived rows were excluded.`
+      `Copied ${indexes.length} ${selectionOnly ? 'selected' : 'loaded'} row${indexes.length === 1 ? '' : 's'}${withHeaders ? ' with one header row' : ''}; hidden and unreceived rows were excluded.`
     );
   }
 
@@ -205,6 +264,8 @@
 
 <section
   class="result-set"
+  class:viewer-open={openedCell !== null}
+  class:paused
   aria-label={`Result set with ${rows.length} received rows`}
 >
   <div class="result-tools">
@@ -219,11 +280,38 @@
     <span class="loaded-label"
       >Loaded rows only · {viewIndexes.length}/{rows.length}</span
     >
-    <button type="button" onclick={() => void copyRows(false)}>Copy rows</button
+    <button type="button" onclick={() => void copyRows(false, false)}
+      >Copy loaded rows</button
     >
-    <button type="button" onclick={() => void copyRows(true)}
-      >Copy with headers</button
+    <button type="button" onclick={() => void copyRows(true, false)}
+      >Copy loaded with headers</button
     >
+    {#if selectedRows.length > 0}
+      <span class="selection-label"
+        >{selectedRows.length} row{selectedRows.length === 1 ? '' : 's'} selected</span
+      >
+      <button type="button" onclick={() => void copyRows(false, true)}
+        >Copy selected</button
+      >
+      <button type="button" onclick={() => void copyRows(true, true)}
+        >Copy selected with headers</button
+      >
+      <button type="button" onclick={() => (selectedRows = [])}
+        >Clear selection</button
+      >
+    {/if}
+    <button
+      type="button"
+      class="open-value"
+      disabled={!focusedCell}
+      title={focusedCell
+        ? 'Open the focused field in the side value viewer'
+        : 'Focus a result field first'}
+      onclick={openFocusedCell}
+    >
+      <Icon name="view" size={14} />
+      Open value
+    </button>
     <details class="export-options">
       <summary>Export…</summary>
       <div>
@@ -255,80 +343,125 @@
     </details>
   </div>
 
-  <div class="grid-shell">
-    <div class="grid-header-viewport">
-      <div
-        class="grid-header"
-        style:grid-template-columns={gridColumns}
-        style:transform={`translateX(${-scrollLeft}px)`}
-        role="row"
-      >
-        {#each columns as column, index (`${index}-${column.name}`)}
-          <div
-            role="columnheader"
-            title={`${column.name} · ${column.declared_type}`}
-          >
-            <button type="button" onclick={() => toggleSort(index)}>
-              {column.name}
-              {#if sortColumn === index}
-                <span
-                  role="img"
-                  aria-label={sortDirection === 1 ? 'ascending' : 'descending'}
-                >
-                  <Icon
-                    name={sortDirection === 1 ? 'arrow-up' : 'arrow-down'}
-                    size={13}
-                  />
-                </span>
-              {/if}
-            </button>
-            <button
-              type="button"
-              class="resize-handle"
-              aria-label={`Resize ${column.name} column`}
-              onpointerdown={(event) => resizeColumn(event, index)}
-            ></button>
+  <div class:viewer-open={openedCell !== null} class="result-content">
+    <div class="grid-shell">
+      <div class="grid-header-viewport">
+        <div
+          class="grid-header"
+          style:grid-template-columns={selectionGridColumns}
+          style:transform={`translateX(${-scrollLeft}px)`}
+          role="row"
+        >
+          <div class="row-selector-header" role="columnheader">
+            <input
+              type="checkbox"
+              checked={allVisibleRowsSelected}
+              aria-checked={someVisibleRowsSelected
+                ? 'mixed'
+                : allVisibleRowsSelected}
+              aria-label="Select all visible loaded rows"
+              onchange={toggleAllVisibleRows}
+            />
           </div>
-        {/each}
-      </div>
-    </div>
-    <div
-      class="grid-viewport"
-      role="grid"
-      aria-rowcount={viewIndexes.length}
-      aria-colcount={columns.length}
-      tabindex="0"
-      onscroll={handleScroll}
-    >
-      <div
-        class="grid-canvas"
-        style:height={`${viewIndexes.length * rowHeight}px`}
-        style:min-width={`max(100%, ${columns.reduce((sum, _, index) => sum + (widths[index] ?? 180), 0)}px)`}
-      >
-        {#each renderedIndexes as rowIndex, renderedPosition (rowIndex)}
-          <div
-            class="grid-row"
-            class:selected={selectedRows.includes(rowIndex)}
-            role="row"
-            aria-rowindex={startIndex + renderedPosition + 1}
-            style:top={`${(startIndex + renderedPosition) * rowHeight}px`}
-            style:grid-template-columns={gridColumns}
-          >
-            {#each rows[rowIndex].values as value, columnIndex (`${rowIndex}-${columnIndex}`)}
+          {#each columns as column, index (`${index}-${column.name}`)}
+            <div
+              role="columnheader"
+              title={`${column.name} · ${column.declared_type}`}
+            >
+              <button type="button" onclick={() => toggleSort(index)}>
+                {column.name}
+                {#if sortColumn === index}
+                  <span
+                    role="img"
+                    aria-label={sortDirection === 1
+                      ? 'ascending'
+                      : 'descending'}
+                  >
+                    <Icon
+                      name={sortDirection === 1 ? 'arrow-up' : 'arrow-down'}
+                      size={13}
+                    />
+                  </span>
+                {/if}
+              </button>
               <button
                 type="button"
-                role="gridcell"
-                class:null-value={value.value_type === 'null'}
-                title={previewText(value)}
-                onclick={() => selectCell(rowIndex, value)}
-                ondblclick={() => void copyCell(value)}
-                >{previewText(value)}</button
-              >
-            {/each}
-          </div>
-        {/each}
+                class="resize-handle"
+                aria-label={`Resize ${column.name} column`}
+                onpointerdown={(event) => resizeColumn(event, index)}
+              ></button>
+            </div>
+          {/each}
+        </div>
+      </div>
+      <div
+        class="grid-viewport"
+        role="grid"
+        aria-rowcount={viewIndexes.length}
+        aria-colcount={columns.length + 1}
+        tabindex="0"
+        onscroll={handleScroll}
+      >
+        <div
+          class="grid-canvas"
+          style:height={`${viewIndexes.length * rowHeight}px`}
+          style:min-width={`max(100%, ${columns.reduce((sum, _, index) => sum + (widths[index] ?? 180), 0) + 38.4}px)`}
+        >
+          {#each renderedIndexes as rowIndex, renderedPosition (rowIndex)}
+            <div
+              class="grid-row"
+              class:selected={selectedRows.includes(rowIndex)}
+              role="row"
+              aria-rowindex={startIndex + renderedPosition + 1}
+              style:top={`${(startIndex + renderedPosition) * rowHeight}px`}
+              style:grid-template-columns={selectionGridColumns}
+            >
+              <div class="row-selector-cell" role="rowheader">
+                <input
+                  type="checkbox"
+                  checked={selectedRows.includes(rowIndex)}
+                  aria-label={`Select loaded row ${rowIndex + 1}`}
+                  onchange={() => toggleRow(rowIndex)}
+                />
+              </div>
+              {#each rows[rowIndex].values as value, columnIndex (`${rowIndex}-${columnIndex}`)}
+                <button
+                  type="button"
+                  role="gridcell"
+                  aria-colindex={columnIndex + 2}
+                  aria-selected={focusedCell?.rowIndex === rowIndex &&
+                    focusedCell.columnIndex === columnIndex}
+                  class:focused={focusedCell?.rowIndex === rowIndex &&
+                    focusedCell.columnIndex === columnIndex}
+                  class:null-value={value.value_type === 'null'}
+                  title={`${previewText(value)} · Right-click or use Open value to inspect`}
+                  onfocus={() => focusCell(rowIndex, columnIndex)}
+                  onclick={() => focusCell(rowIndex, columnIndex)}
+                  oncontextmenu={(event) =>
+                    openCellContextMenu(event, rowIndex, columnIndex)}
+                  ondblclick={() => void copyCell(value)}
+                  >{previewText(value)}</button
+                >
+              {/each}
+            </div>
+          {/each}
+        </div>
       </div>
     </div>
+
+    {#if openedCell && openedValue && openedColumn}
+      {#key `${openedCell.rowIndex}:${openedCell.columnIndex}`}
+        <ResultValueViewer
+          columnName={openedColumn.name}
+          declaredType={openedColumn.declared_type}
+          rowNumber={openedCell.rowIndex + 1}
+          valueType={openedValue.value_type}
+          rawText={canonicalText(openedValue)}
+          onclose={() => (openedCell = null)}
+          oncopy={() => void copyCell(openedValue)}
+        />
+      {/key}
+    {/if}
   </div>
 
   <div class="result-footer">
@@ -338,7 +471,10 @@
       {terminalState ?? (paused ? 'paused' : 'streaming')}
       {capped ? ' · hard cap reached; full-result export unavailable' : ''}
     </span>
-    <span>Double-click copies one cell · selected rows are outlined</span>
+    <span
+      >Select rows with checkboxes for copy actions · right-click a field to
+      open its value · double-click copies one cell</span
+    >
     {#if paused}
       <span class="cursor-warning"
         >Native cursor paused; it expires after five minutes.</span
@@ -348,26 +484,7 @@
       >
       <button type="button" onclick={ondiscard}>Discard remainder</button>
     {/if}
-    {#if selectedCell && canonicalText(selectedCell).length > maxCellPreview}
-      <button
-        type="button"
-        onclick={() => (openedLargeValue = canonicalText(selectedCell))}
-        >Open selected large value</button
-      >
-    {/if}
   </div>
-
-  {#if openedLargeValue !== null}
-    <div class="large-value" role="dialog" aria-label="Full cell value">
-      <div>
-        <strong>Full selected value</strong>
-        <button type="button" onclick={() => (openedLargeValue = null)}
-          >Close</button
-        >
-      </div>
-      <pre>{openedLargeValue}</pre>
-    </div>
-  {/if}
 </section>
 
 <style>
@@ -454,9 +571,38 @@
   }
 
   .loaded-label,
+  .selection-label,
   .result-footer {
     color: var(--muted);
     font-size: 0.78rem;
+  }
+
+  .selection-label {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .result-set.viewer-open:not(.paused) .result-footer {
+    display: none;
+  }
+
+  .open-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .result-content {
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
+    overflow: hidden;
+  }
+
+  .result-content.viewer-open {
+    grid-template-columns: minmax(12rem, 1fr) minmax(14rem, 38%);
   }
 
   .grid-shell {
@@ -483,31 +629,21 @@
     background: var(--surface);
   }
 
-  .grid-row [role='gridcell'] {
-    unicode-bidi: plaintext;
-  }
-
-  .large-value {
+  .row-selector-header,
+  .row-selector-cell {
     display: grid;
-    max-height: 24rem;
-    padding: 0.7rem;
-    gap: 0.5rem;
-    overflow: hidden;
-    border: 1px solid var(--divider);
-    border-radius: 8px;
-    background: var(--surface-raised);
+    place-items: center;
+    border-right: 1px solid var(--divider);
   }
 
-  .large-value > div {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .large-value pre {
+  .row-selector-header input,
+  .row-selector-cell input {
+    width: 0.9rem;
+    height: 0.9rem;
     margin: 0;
-    overflow: auto;
-    white-space: pre-wrap;
+  }
+
+  .grid-row [role='gridcell'] {
     unicode-bidi: plaintext;
   }
 
@@ -584,6 +720,11 @@
     background: transparent;
   }
 
+  .grid-row > button.focused {
+    box-shadow: inset 0 0 0 2px var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+  }
+
   .grid-row > button.null-value {
     color: var(--muted);
     font-style: italic;
@@ -591,5 +732,18 @@
 
   .cursor-warning {
     color: var(--warning);
+  }
+
+  @media (max-width: 900px) {
+    .result-content.viewer-open {
+      grid-template-columns: minmax(10rem, 1fr) minmax(14rem, 44%);
+    }
+  }
+
+  @media (max-width: 620px) {
+    .result-content.viewer-open {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(8rem, 1fr) minmax(9rem, 1fr);
+    }
   }
 </style>

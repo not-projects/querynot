@@ -185,7 +185,7 @@ describe('Phase 2 SQLite boundaries', () => {
     );
   });
 
-  it('quotes structural TSV characters and opens only one large value on demand', async () => {
+  it('makes row selection actionable and safely opens wrapped and formatted values on demand', async () => {
     let copied = '';
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -196,6 +196,8 @@ describe('Phase 2 SQLite boundaries', () => {
       }
     });
     const large = `<script>${'large Ω'.repeat(200)}</script>`;
+    const json =
+      '{"big":900719925474099312345,"nested":{"message":"soft wrap"}}';
     mounted = mount(ResultGrid, {
       target: document.body,
       props: {
@@ -203,7 +205,7 @@ describe('Phase 2 SQLite boundaries', () => {
         statementIndex: 2,
         columns: [
           { name: 'text', declared_type: 'TEXT', nullable: true },
-          { name: 'formula', declared_type: 'TEXT', nullable: true }
+          { name: 'formula_or_json', declared_type: 'JSON', nullable: true }
         ],
         rows: [
           {
@@ -234,8 +236,8 @@ describe('Phase 2 SQLite boundaries', () => {
                 timezone_or_offset: null
               },
               {
-                value_type: 'null',
-                text: null,
+                value_type: 'text',
+                text: json,
                 boolean: null,
                 bytes_base64: null,
                 timezone_or_offset: null
@@ -271,13 +273,19 @@ describe('Phase 2 SQLite boundaries', () => {
     if (exportOptions) exportOptions.open = true;
     expect(exportOptions?.open).toBe(true);
 
-    const firstCell = document.querySelector<HTMLButtonElement>(
-      '.grid-row [role="gridcell"]'
-    );
-    firstCell?.click();
     document
-      .querySelectorAll<HTMLButtonElement>('.result-tools button')[0]
+      .querySelector<HTMLInputElement>(
+        'input[aria-label="Select loaded row 1"]'
+      )
       ?.click();
+    flushSync();
+    expect(document.querySelector('.selection-label')?.textContent).toContain(
+      '1 row selected'
+    );
+    const copySelected = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.result-tools button')
+    ).find((button) => button.textContent?.trim() === 'Copy selected');
+    copySelected?.click();
     await Promise.resolve();
     expect(copied).toBe('"line 1\nline 2\t""quoted"""\t=SUM(A1:A2)');
 
@@ -287,11 +295,40 @@ describe('Phase 2 SQLite boundaries', () => {
     secondRowCell.click();
     flushSync();
     const open = Array.from(document.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Open selected large value'
+      (button) => button.textContent?.trim() === 'Open value'
     );
     (open as HTMLButtonElement | undefined)?.click();
     flushSync();
-    expect(document.querySelector('.large-value pre')?.textContent).toBe(large);
+    expect(document.querySelectorAll('.value-viewer')).toHaveLength(1);
+    expect(document.querySelector('.value-viewer pre')?.textContent).toBe(
+      large
+    );
     expect(document.querySelector('script')).toBeNull();
+
+    const jsonCell = document.querySelectorAll<HTMLButtonElement>(
+      '.grid-row [role="gridcell"]'
+    )[3];
+    jsonCell.dispatchEvent(
+      new MouseEvent('contextmenu', { bubbles: true, cancelable: true })
+    );
+    flushSync();
+    const formatted = document.querySelector('.value-viewer pre');
+    expect(document.querySelectorAll('.value-viewer')).toHaveLength(1);
+    expect(formatted?.textContent).toContain('"big": 900719925474099312345');
+    expect(formatted?.textContent).toContain('\n');
+    const raw = Array.from(document.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Raw'
+    );
+    (raw as HTMLButtonElement | undefined)?.click();
+    flushSync();
+    expect(document.querySelector('.value-viewer pre')?.textContent).toBe(json);
+
+    const gridSource = read('src/lib/components/ResultGrid.svelte');
+    const viewerSource = read('src/lib/components/ResultValueViewer.svelte');
+    expect(gridSource).toContain('oncontextmenu=');
+    expect(viewerSource).toContain('white-space: pre-wrap');
+    expect(viewerSource).toContain('overflow-wrap: anywhere');
+    expect(viewerSource).toContain('JSON.parse(trimmed)');
+    expect(viewerSource).not.toContain('JSON.stringify');
   });
 });

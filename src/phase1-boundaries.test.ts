@@ -120,6 +120,9 @@ describe('Phase 1 native boundaries', () => {
     expect(css).toMatch(
       /\.toolbar-execution:empty \+ \.toolbar-document\s*\{[^}]*padding-left:\s*0;[^}]*border-left:\s*0;/s
     );
+    expect(css).toMatch(
+      /\.schema-tree\s*\{[^}]*align-content:\s*start;[^}]*grid-auto-rows:\s*max-content;/s
+    );
   });
 
   it('keeps query execution behind explicit native commands and grants no frontend filesystem or network capability', () => {

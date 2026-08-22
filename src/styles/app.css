@@ -549,6 +549,8 @@ main.has-query-results .editor-workspace {
   display: grid;
   min-width: 0;
   max-height: none;
+  align-content: start;
+  grid-auto-rows: max-content;
   overflow-x: hidden;
   overflow-y: auto;
   font-size: 0.7rem;

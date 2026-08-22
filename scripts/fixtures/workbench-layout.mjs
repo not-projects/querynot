@@ -175,7 +175,7 @@ async function emitOneRowResult() {
         { name: 'updated_at', declared_type: 'TEXT', nullable: false },
         { name: 'deleted_at', declared_type: 'TEXT', nullable: true },
         { name: 'name', declared_type: 'TEXT', nullable: true },
-        { name: 'armor', declared_type: 'TEXT', nullable: true },
+        { name: 'armor', declared_type: 'JSON', nullable: true },
         { name: 'sequence_id', declared_type: 'INTEGER', nullable: false }
       ],
       rows: [
@@ -186,7 +186,12 @@ async function emitOneRowResult() {
             taggedValue('text', '2026-08-21 12:01:00'),
             taggedValue('null', null),
             taggedValue('text', 'Knights of the Fraction Table'),
-            taggedValue('text', '{"helmet":"Bronze","shield":true}'),
+            taggedValue(
+              'text',
+              `{"helmet":"Bronze","shield":true,"serial":900719925474099312345,"notes":"${'Soft wrap value '.repeat(
+                80
+              )}"}`
+            ),
             taggedValue('integer', '42')
           ]
         }
@@ -272,7 +277,10 @@ mockIPC(
       case 'load_schema_namespaces':
         return {
           profile_id: request.profile_id,
-          namespaces: [{ name: 'main', state: 'loaded' }],
+          namespaces: [
+            { name: 'main', state: 'loaded' },
+            { name: 'temp', state: 'loaded' }
+          ],
           stale: false
         };
       case 'load_schema_objects':

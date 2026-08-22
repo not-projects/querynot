@@ -1380,6 +1380,19 @@
     });
   }
 
+  async function appendNewQueryTab(profileId: string | null) {
+    const tab = await invokeCommand('create_offline_tab', {
+      profile_id: profileId
+    });
+    tab.position = workspace.tabs.length;
+    workspace.tabs.push(tab);
+    workspace.active_tab_id = tab.id;
+    rememberActiveTab(tab);
+    const session =
+      profileId && connections[profileId] ? await ensureTabSession(tab) : null;
+    return { tab, session };
+  }
+
   async function createOfflineTab(profileId: string | null = null) {
     if (!hasNativeRuntime()) {
       statusMessage =
@@ -1387,24 +1400,12 @@
       return;
     }
     await runAction(async () => {
-      const tab = await invokeCommand('create_offline_tab', {
-        profile_id: profileId
-      });
-      tab.position = workspace.tabs.length;
-      workspace.tabs.push(tab);
-      workspace.active_tab_id = tab.id;
-      rememberActiveTab(tab);
-      if (profileId && connections[profileId]) {
-        const session = await ensureTabSession(tab);
-        if (session) {
-          statusMessage =
-            'Opened a query tab with its own dedicated native database session.';
-        }
-      } else {
-        statusMessage = profileId
+      const { tab, session } = await appendNewQueryTab(profileId);
+      statusMessage = session
+        ? 'Opened a query tab with its own dedicated native database session.'
+        : profileId
           ? 'Opened a profile-bound offline draft. Connect the profile once; its selected tabs open dedicated sessions automatically.'
           : 'Opened an offline draft.';
-      }
       await saveWorkspaceNow();
       await tick();
       if (workspace.active_tab_id === tab.id) editorApi?.focus();
@@ -2670,6 +2671,13 @@
   async function closeTab(tabId: string) {
     if (!hasNativeRuntime()) return;
     await runAction(async () => {
+      const closingTab = workspace.tabs.find((tab) => tab.id === tabId);
+      if (!closingTab) return;
+      const closingWasActive = workspace.active_tab_id === tabId;
+      const groupTabs = tabsInGroup(closingTab.profile_id);
+      const groupIndex = groupTabs.findIndex((tab) => tab.id === tabId);
+      const groupFallback =
+        groupTabs[groupIndex - 1] ?? groupTabs[groupIndex + 1] ?? null;
       const session = sessions[tabId];
       if (session) {
         await invokeCommand('close_tab_session', {
@@ -2682,11 +2690,14 @@
       await invokeCommand('close_offline_tab', { tab_id: tabId });
       const index = workspace.tabs.findIndex((tab) => tab.id === tabId);
       workspace.tabs.splice(index, 1);
-      if (workspace.active_tab_id === tabId) {
-        const nextTab =
-          workspace.tabs[Math.min(index, workspace.tabs.length - 1)] ?? null;
+      let replacementTab: WorkspaceTabView | null = null;
+      if (closingWasActive) {
         workspace.active_tab_id = null;
-        if (nextTab) await activateTab(nextTab.id, false);
+        if (groupFallback) {
+          await activateTab(groupFallback.id, false);
+        } else {
+          replacementTab = (await appendNewQueryTab(closingTab.profile_id)).tab;
+        }
       }
       delete executions[tabId];
       delete results[tabId];
@@ -2699,9 +2710,14 @@
       delete tabSessionErrors[tabId];
       delete tabSessionOperations[tabId];
       await saveWorkspaceNow();
-      statusMessage =
-        'Tab and its native database resources were closed explicitly.';
+      statusMessage = replacementTab
+        ? `Closed ${closingTab.title} and opened an empty query in the same ${closingTab.profile_label ?? 'Offline'} group.`
+        : groupFallback && closingWasActive
+          ? `Closed ${closingTab.title} and activated ${groupFallback.title} in the same ${closingTab.profile_label ?? 'Offline'} group.`
+          : 'Tab and its native database resources were closed explicitly.';
       await closeCompletedModal();
+      await tick();
+      if (closingWasActive && activeTab?.kind === 'query') editorApi?.focus();
     });
   }
 
@@ -3836,22 +3852,24 @@
               {/if}
               {#if activeVisibleResult}
                 {@const result = activeVisibleResult}
-                <ResultGrid
-                  resultSetId={result.id}
-                  statementIndex={result.statementIndex}
-                  columns={result.columns}
-                  rows={result.rows}
-                  capped={result.capped}
-                  paused={result.paused}
-                  terminalState={result.terminalState}
-                  durationMs={result.durationMs}
-                  onloadmore={() => void loadMore(result)}
-                  ondiscard={() => void discardRemainder(result)}
-                  onexport={(format, currentView, nullToken) =>
-                    void exportResult(result, format, currentView, nullToken)}
-                  onviewchange={updateResultView}
-                  onstatus={(message) => (statusMessage = message)}
-                />
+                {#key result.id}
+                  <ResultGrid
+                    resultSetId={result.id}
+                    statementIndex={result.statementIndex}
+                    columns={result.columns}
+                    rows={result.rows}
+                    capped={result.capped}
+                    paused={result.paused}
+                    terminalState={result.terminalState}
+                    durationMs={result.durationMs}
+                    onloadmore={() => void loadMore(result)}
+                    ondiscard={() => void discardRemainder(result)}
+                    onexport={(format, currentView, nullToken) =>
+                      void exportResult(result, format, currentView, nullToken)}
+                    onviewchange={updateResultView}
+                    onstatus={(message) => (statusMessage = message)}
+                  />
+                {/key}
               {/if}
             </section>
           {/if}

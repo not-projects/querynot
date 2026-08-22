@@ -48,6 +48,20 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
     expect(app).toContain('Save file and close');
   });
 
+  it('keeps an active close inside its connection group and creates an empty same-group query when needed', () => {
+    const app = read('src/App.svelte');
+    const close = app.slice(
+      app.indexOf('async function closeTab'),
+      app.indexOf('async function cancelTabAndKeepOpen')
+    );
+
+    expect(close).toContain('tabsInGroup(closingTab.profile_id)');
+    expect(close).toContain('groupTabs[groupIndex - 1]');
+    expect(close).toContain('groupTabs[groupIndex + 1]');
+    expect(close).toContain('appendNewQueryTab(closingTab.profile_id)');
+    expect(close).not.toContain('workspace.tabs[Math.min');
+  });
+
   it('treats history persistence failure as a warning after database work completes', () => {
     const runtime = read('src-tauri/src/phase2.rs');
     const historyWrite = runtime.slice(
