@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-21
-- Scope: Unreleased desktop interaction and visual refinement
+- Scope: Included in the `0.1.4` release source after `0.1.3`
 - Complements: [ADR 0014](0014-connection-scoped-tabs-and-history-drawer.md)
 
 ## Context

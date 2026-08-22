@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-21
-- Scope: Unreleased workbench repair
+- Scope: Included in the `0.1.4` release source after `0.1.3`
 - Supersedes: Only the sidebar-grouped presentation in [ADR 0013](0013-stable-editor-and-connection-grouped-tabs.md)
 
 ## Context
