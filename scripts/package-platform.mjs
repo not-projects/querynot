@@ -6,6 +6,7 @@ import {
   disallowedReleaseChanges,
   releaseChangeSummary
 } from './release-source-state.mjs';
+import { normalizeMacosUpdaterArtifacts } from './normalize-macos-updater-artifacts.mjs';
 import { updaterBuildConfig } from './updater-build-config.mjs';
 import { validateUpdaterSigningEnvironment } from './updater-signing-environment.mjs';
 
@@ -93,3 +94,9 @@ const build = spawnSync(process.execPath, buildArguments, {
 if (build.error) throw build.error;
 if (build.status !== 0)
   throw new Error(`${platform} candidate packaging failed`);
+
+if (platform === 'macos') {
+  normalizeMacosUpdaterArtifacts(
+    resolve(targetRoot, 'release', 'bundle', 'macos')
+  );
+}

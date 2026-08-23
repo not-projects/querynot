@@ -20,7 +20,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- Included the macOS application bundle target in candidate packaging so Tauri emits the signed Intel and Apple-silicon updater archives alongside the DMGs.
+- Included the macOS application bundle target and architecture-specific artifact naming in candidate packaging so Tauri retains signed Intel and Apple-silicon updater archives alongside the DMGs.
 
 ### Security
 
