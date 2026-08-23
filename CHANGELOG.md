@@ -18,6 +18,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Signed update installation now uses Tauri's detected package type on Windows, Linux, and macOS instead of rejecting non-Windows installations after a successful update check.
 - Expanded candidate aggregation and exact-byte draft publication from the Windows-only four-asset release to the complete 18-asset desktop release set.
 
+### Fixed
+
+- Included the macOS application bundle target in candidate packaging so Tauri emits the signed Intel and Apple-silicon updater archives alongside the DMGs.
+
 ### Security
 
 - Every unique Windows, Linux, and macOS updater payload is independently verified against the dedicated QueryNot Ed25519-BLAKE2b public key before candidate retention, before publication staging, and after draft download.

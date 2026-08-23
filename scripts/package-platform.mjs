@@ -14,7 +14,7 @@ const platform = process.argv[2];
 const bundles = new Map([
   ['linux', 'deb,rpm,appimage'],
   ['windows', 'nsis,msi'],
-  ['macos', 'dmg']
+  ['macos', 'app,dmg']
 ]);
 if (!bundles.has(platform)) {
   throw new Error(

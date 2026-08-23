@@ -118,6 +118,7 @@ describe('Phase 5 history and current release boundary', () => {
 
     expect(packaging).toContain("'@tauri-apps',\n  'cli',\n  'tauri.js'");
     expect(packaging).toContain('process.execPath');
+    expect(packaging).toContain("['macos', 'app,dmg']");
     expect(packaging).not.toContain('npm.cmd');
     expect(packaging).toContain(
       "buildArguments.push('--config', updaterConfig)"
