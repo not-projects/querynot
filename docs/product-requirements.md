@@ -54,7 +54,7 @@ This baseline is ready to decompose into architecture decisions, issues, and ver
 
 ## 2. Product summary
 
-QueryNot is a local-first desktop SQL client for software developers. It launched on Windows 11 and prepares Windows, Linux, and macOS distribution beginning with `0.1.5`. It is intended to replace MySQL Workbench and DBeaver for routine development work with a faster, calmer, and more dependable experience.
+QueryNot is a local-first desktop SQL client for software developers. It launched on Windows 11 and distributes on Windows, Linux, and macOS beginning with `0.1.5`. It is intended to replace MySQL Workbench and DBeaver for routine development work with a faster, calmer, and more dependable experience.
 
 The initial release focuses on the complete everyday loop:
 
@@ -885,7 +885,7 @@ The following product decisions are fixed for the initial-release plan:
 - First post-release engine: PostgreSQL.
 - Initial workflow level: core querying plus productivity features and staged table-data editing.
 - Credentials: OS credential vault/keychain.
-- Platforms: Windows 11 x86-64 for `0.1.0` through `0.1.4`; Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon are approved for the `0.1.5` candidate under ADR 0016. Windows 10 and Linux ARM remain deferred.
+- Platforms: Windows 11 x86-64 for `0.1.0` through `0.1.4`; Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon are the released `0.1.5` matrix under ADR 0016. Windows 10 and Linux ARM remain deferred.
 - Signing: deferred; unsigned installation is documented.
 - Destructive safeguards: targeted confirmation for clearly high-risk statements.
 - Large results: incremental streaming, virtualization, safety cap, and explicit load more.

@@ -1,6 +1,6 @@
 # Signed update release procedure
 
-QueryNot `0.1.1` introduced the signed Windows updater channel described by [ADR 0011](../architecture/0011-signed-windows-auto-updates.md). ADR 0016 expands the same dedicated QueryNot trust identity to Windows, Linux, and macOS beginning with the prepared `0.1.5` release. The first updater-enabled installation on each platform is manual; later releases can be installed from Settings.
+QueryNot `0.1.1` introduced the signed Windows updater channel described by [ADR 0011](../architecture/0011-signed-windows-auto-updates.md). ADR 0016 expands the same dedicated QueryNot trust identity to Windows, Linux, and macOS beginning with the live `0.1.5` release. The first updater-enabled installation on each platform is manual; later releases can be installed from Settings.
 
 ## One-time signing identity setup
 
@@ -32,7 +32,7 @@ Every platform candidate job validates presence and document shape without print
 
 The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset. The public package matrix is Windows x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS Intel/Apple-silicon DMG, with the updater payload mapping documented in ADR 0016.
 
-The current completed signed release is `v0.1.4`: candidate CI run `32590531115`, publication run `32591104372`, and source commit `3aad76c0214b93f0432fec9ee223f32badea2869`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
+The current completed signed release is `v0.1.5`: candidate CI run `32663343245`, publication run `32665401024`, and source commit `fb3ee515448d8131d17f677ca532940565f4c097`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
 
 ## Rotation and recovery
 

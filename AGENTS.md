@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.4 is the current live Windows 11 x86-64 release on the signed-updater channel; the source tree is prepared as 0.1.5 with Windows x86-64, Linux x86-64, macOS Intel, and macOS Apple-silicon candidate packaging pending signed candidate validation and publication.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.5 is the current live release on the signed-updater channel for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon.
 
 > Query your data, not your patience.
 
@@ -42,7 +42,7 @@ Version 0.1.3 established stable CodeMirror editing, the unchanged flat workspac
 
 Active-tab close stays in the owning connection or Offline group and creates an empty same-group query if needed. Result fields focus independently from explicit row checkboxes; selected-row copy actions are visible when relevant. Right-click or **Open value** opens one soft-wrapping side value subtab with lossless Raw/Copy behavior and bounded formatted JSON display. Schema namespace rows remain compact instead of stretching through unused sidebar height.
 
-The current live `0.1.4` support and publication envelope is Windows 11 x86-64. ADR 0016 approves the `0.1.5` candidate matrix: Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
+The current live `0.1.5` support and publication envelope is Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads under ADR 0016. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
 
 ## Verified Commands
 
