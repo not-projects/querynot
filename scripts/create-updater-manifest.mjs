@@ -12,6 +12,12 @@ import { basename, dirname, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
+import {
+  exactlyOneMatchingPath,
+  updaterPlatformBindings,
+  updaterPayloads
+} from './release-platform-contract.mjs';
+
 const root = resolve(import.meta.dirname, '..');
 const repository = 'not-projects/querynot';
 
@@ -111,44 +117,49 @@ function checkedOutputPath(path, label) {
  *   version: string,
  *   releaseNotes: string,
  *   publishedAt: string,
- *   installerName: string,
- *   signature: string
+ *   payloads: Record<string, {name: string, signature: string}>
  * }} input
  */
 export function buildUpdaterManifest({
   version,
   releaseNotes,
   publishedAt,
-  installerName,
-  signature
+  payloads
 }) {
   requireCondition(
     /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version),
     'version is not semantic'
   );
   requireCondition(
-    installerName === basename(installerName) && installerName.endsWith('.exe'),
-    'installer name is unsafe'
-  );
-  requireCondition(
-    typeof signature === 'string' && signature.length > 32,
-    'updater signature is missing'
-  );
-  requireCondition(
     !Number.isNaN(Date.parse(publishedAt)),
     'publication date is invalid'
   );
   const tag = `v${version}`;
-  const url = `https://github.com/${repository}/releases/download/${tag}/${encodeURIComponent(installerName)}`;
-  const platform = { signature, url };
+  /** @type {Record<string, {signature: string, url: string}>} */
+  const platforms = {};
+  for (const { key, payloadId } of updaterPlatformBindings) {
+    const payload = payloads?.[payloadId];
+    const descriptor = updaterPayloads.find(({ id }) => id === payloadId);
+    requireCondition(descriptor, `unknown updater payload ${payloadId}`);
+    requireCondition(
+      payload?.name === basename(payload.name) &&
+        descriptor.matches(payload.name),
+      `${payloadId} updater payload name is unsafe or unexpected`
+    );
+    requireCondition(
+      typeof payload.signature === 'string' && payload.signature.length > 32,
+      `${payloadId} updater signature is missing`
+    );
+    platforms[key] = {
+      signature: payload.signature,
+      url: `https://github.com/${repository}/releases/download/${tag}/${encodeURIComponent(payload.name)}`
+    };
+  }
   return {
     version,
     notes: normalizeReleaseNotes(releaseNotes),
     pub_date: new Date(publishedAt).toISOString(),
-    platforms: {
-      'windows-x86_64-nsis': platform,
-      'windows-x86_64': { ...platform }
-    }
+    platforms
   };
 }
 
@@ -173,22 +184,30 @@ function main() {
     'updater bundle directory must be a real directory'
   );
   const files = regularFiles(directory);
-  const installers = files.filter((path) => path.endsWith('.exe'));
-  requireCondition(
-    installers.length === 1,
-    `expected exactly one Windows installer; found ${installers.length}`
-  );
-  const installer = installers[0];
-  const signatures = files.filter((path) => path.endsWith('.exe.sig'));
-  requireCondition(
-    signatures.length === 1 && signatures[0] === `${installer}.sig`,
-    'expected exactly one signature matching the Windows installer'
-  );
-  const signature = readFileSync(signatures[0], 'utf8').trim();
-  requireCondition(
-    signature.length > 32 && !/[\u0000-\u001f\u007f]/.test(signature),
-    'updater signature is invalid'
-  );
+  const payloadRecords = updaterPayloads.map((descriptor) => {
+    const payloadPath = exactlyOneMatchingPath(
+      files,
+      descriptor.matches,
+      `${descriptor.id} updater payload`
+    );
+    const signaturePath = exactlyOneMatchingPath(
+      files,
+      (name) => name === `${basename(payloadPath)}.sig`,
+      `${descriptor.id} updater signature`
+    );
+    const signature = readFileSync(signaturePath, 'utf8').trim();
+    requireCondition(
+      signature.length > 32 && !/[\u0000-\u001f\u007f]/.test(signature),
+      `${descriptor.id} updater signature is invalid`
+    );
+    return {
+      id: descriptor.id,
+      path: payloadPath,
+      signaturePath,
+      name: basename(payloadPath),
+      signature
+    };
+  });
 
   const packageJson = JSON.parse(
     readFileSync(resolve(root, 'package.json'), 'utf8')
@@ -209,8 +228,9 @@ function main() {
     version: packageJson.version,
     releaseNotes,
     publishedAt: sourceDate(),
-    installerName: basename(installer),
-    signature
+    payloads: Object.fromEntries(
+      payloadRecords.map(({ id, name, signature }) => [id, { name, signature }])
+    )
   });
   const output = checkedOutputPath(values.output, 'updater manifest');
   const reportPath = checkedOutputPath(
@@ -223,22 +243,25 @@ function main() {
     reportPath,
     `${JSON.stringify(
       {
-        schema_version: 1,
+        schema_version: 2,
         status: 'pass',
         source_commit: sourceCommit(),
         application_version: packageJson.version,
         endpoint:
           'https://github.com/not-projects/querynot/releases/latest/download/latest.json',
-        installer: {
-          name: basename(installer),
-          bytes: lstatSync(installer).size,
-          sha256: sha256(installer)
-        },
-        signature: {
-          name: basename(signatures[0]),
-          bytes: lstatSync(signatures[0]).size,
-          sha256: sha256(signatures[0])
-        },
+        updater_payloads: payloadRecords.map(
+          ({ id, path, signaturePath, name }) => ({
+            id,
+            name,
+            bytes: lstatSync(path).size,
+            sha256: sha256(path),
+            signature: {
+              name: basename(signaturePath),
+              bytes: lstatSync(signaturePath).size,
+              sha256: sha256(signaturePath)
+            }
+          })
+        ),
         manifest: {
           name: basename(output),
           bytes: Buffer.byteLength(manifestText),
@@ -252,7 +275,7 @@ function main() {
     { encoding: 'utf8', mode: 0o644 }
   );
   process.stdout.write(
-    `created signed updater manifest for QueryNot ${packageJson.version}\n`
+    `created signed cross-platform updater manifest for QueryNot ${packageJson.version}\n`
   );
 }
 

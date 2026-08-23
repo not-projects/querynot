@@ -6,7 +6,15 @@ import {
   parseChecksumManifest,
   validatePublicationContract
 } from '../scripts/release-publication.mjs';
-import { validateUpdatePublicationContract } from '../scripts/release-update-publication.mjs';
+import {
+  validateRoundTripPlan,
+  validateUpdatePublicationContract
+} from '../scripts/release-update-publication.mjs';
+import {
+  distributableArtifacts,
+  updaterPlatformBindings,
+  updaterPayloads
+} from '../scripts/release-platform-contract.mjs';
 import {
   disallowedReleaseChanges,
   porcelainPaths,
@@ -163,6 +171,10 @@ describe('Phase 6 publication boundary', () => {
     );
     expect(workflow).toContain('gh release download "$RELEASE_TAG"');
     expect(workflow).toContain('release:verify-update-publication');
+    expect(workflow).toContain('--plan artifacts/publication-plan.json');
+    expect(read('scripts/release-update-publication.mjs')).toContain(
+      'round_trip_candidate_byte_verification'
+    );
     expect(workflow).toContain(
       'gh release edit "$RELEASE_TAG" --draft=false --latest'
     );
@@ -181,66 +193,157 @@ describe('Phase 6 publication boundary', () => {
     );
   });
 
-  it('accepts only the exact signed Windows updater assets and stable feed keys', () => {
-    const installer = {
-      name: 'QueryNot_0.1.1_x64-setup.exe',
-      bytes: 101,
-      sha256: sha('1'),
-      path: '/synthetic/QueryNot_0.1.1_x64-setup.exe',
-      content: Buffer.from('installer')
-    };
-    const signature = {
-      name: `${installer.name}.sig`,
-      bytes: 80,
-      sha256: sha('2'),
-      path: '/synthetic/QueryNot_0.1.1_x64-setup.exe.sig',
-      content: Buffer.from('A'.repeat(80))
-    };
-    const url = `https://github.com/not-projects/querynot/releases/download/v0.1.1/${installer.name}`;
+  it('accepts only the exact signed cross-platform updater assets and feed keys', () => {
+    const names = {
+      'windows-nsis-x64': 'QueryNot_0.1.5_x64-setup.exe',
+      'windows-msi-x64': 'QueryNot_0.1.5_x64_en-US.msi',
+      'linux-appimage-x64': 'QueryNot_0.1.5_amd64.AppImage',
+      'linux-deb-x64': 'QueryNot_0.1.5_amd64.deb',
+      'linux-rpm-x64': 'QueryNot-0.1.5-1.x86_64.rpm',
+      'macos-dmg-x64': 'QueryNot_0.1.5_x64.dmg',
+      'macos-dmg-aarch64': 'QueryNot_0.1.5_aarch64.dmg',
+      'macos-updater-x64': 'QueryNot_x64.app.tar.gz',
+      'macos-updater-aarch64': 'QueryNot_aarch64.app.tar.gz'
+    } as const;
+    const artifacts = distributableArtifacts.map(({ id }, index) => ({
+      id,
+      name: names[id as keyof typeof names],
+      bytes: 100 + index,
+      sha256: String(index + 1).repeat(64),
+      path: `/synthetic/${names[id as keyof typeof names]}`,
+      content: Buffer.from(`package-${id}`)
+    }));
+    const artifactById = new Map(
+      artifacts.map((artifact) => [artifact.id, artifact])
+    );
+    const payloads = updaterPayloads.map(({ id }, index) => {
+      const name = names[id as keyof typeof names];
+      const sharedArtifact = artifactById.get(id);
+      return {
+        id,
+        name,
+        bytes: sharedArtifact?.bytes ?? 200 + index,
+        sha256: sharedArtifact?.sha256 ?? String(index + 1).repeat(64),
+        path: `/synthetic/${name}`,
+        content: sharedArtifact?.content ?? Buffer.from(`payload-${id}`),
+        signature: {
+          name: `${name}.sig`,
+          bytes: 80,
+          sha256: 'a'.repeat(64),
+          path: `/synthetic/${name}.sig`,
+          content: Buffer.from('A'.repeat(80))
+        }
+      };
+    });
+    const payloadById = new Map(
+      payloads.map((payload) => [payload.id, payload])
+    );
     const latest = {
-      version: '0.1.1',
+      version: '0.1.5',
       notes: 'Release notes',
       pub_date: '2026-08-14T00:00:00.000Z',
-      platforms: {
-        'windows-x86_64': { signature: 'A'.repeat(80), url },
-        'windows-x86_64-nsis': { signature: 'A'.repeat(80), url }
+      platforms: Object.fromEntries(
+        updaterPlatformBindings.map(({ key, payloadId }) => {
+          const payload = payloadById.get(payloadId)!;
+          return [
+            key,
+            {
+              signature: 'A'.repeat(80),
+              url: `https://github.com/not-projects/querynot/releases/download/v0.1.5/${payload.name}`
+            }
+          ];
+        })
+      )
+    };
+    const checksumText = `${artifacts
+      .map(({ name, sha256 }) => `${sha256}  ${name}`)
+      .join('\n')}\n`;
+
+    const publicationPlan = validateUpdatePublicationContract({
+      version: '0.1.5',
+      requestedTag: 'v0.1.5',
+      releaseNotes: 'Release notes',
+      artifacts,
+      payloads,
+      latest,
+      checksumText
+    });
+    expect(publicationPlan.status).toBe('pass');
+
+    const latestText = `${JSON.stringify(latest, null, 2)}\n`;
+    const publicRecords = [
+      ...artifacts,
+      ...payloads,
+      ...payloads.map(({ signature }) => signature),
+      {
+        name: 'latest.json',
+        bytes: Buffer.byteLength(latestText),
+        sha256: 'b'.repeat(64)
+      },
+      {
+        name: 'SHA256SUMS',
+        bytes: Buffer.byteLength(checksumText),
+        sha256: publicationPlan.checksum.sha256
+      }
+    ];
+    const uniquePublicRecords = [
+      ...new Map(publicRecords.map((record) => [record.name, record])).values()
+    ];
+    const sourceCommit = 'c'.repeat(40);
+    const completePlan = {
+      ...publicationPlan,
+      source_commit: sourceCommit,
+      staging_verification: 'pass',
+      latest: {
+        ...publicationPlan.latest,
+        sha256: 'b'.repeat(64)
       }
     };
-
-    expect(
-      validateUpdatePublicationContract({
-        version: '0.1.1',
-        requestedTag: 'v0.1.1',
-        releaseNotes: 'Release notes',
-        installer,
-        signature,
-        latest,
-        checksumText: `${installer.sha256}  ${installer.name}\n`
-      }).status
-    ).toBe('pass');
+    expect(() =>
+      validateRoundTripPlan(
+        completePlan,
+        { publicRecords: uniquePublicRecords } as never,
+        '0.1.5',
+        'v0.1.5',
+        sourceCommit
+      )
+    ).not.toThrow();
+    expect(() =>
+      validateRoundTripPlan(
+        completePlan,
+        {
+          publicRecords: uniquePublicRecords.map((record, index) =>
+            index === 0 ? { ...record, sha256: 'f'.repeat(64) } : record
+          )
+        } as never,
+        '0.1.5',
+        'v0.1.5',
+        sourceCommit
+      )
+    ).toThrow('do not byte-match');
 
     expect(() =>
       validateUpdatePublicationContract({
-        version: '0.1.1',
-        requestedTag: 'v0.1.1',
+        version: '0.1.5',
+        requestedTag: 'v0.1.5',
         releaseNotes: 'Release\nnotes',
-        installer,
-        signature,
+        artifacts,
+        payloads,
         latest: { ...latest, notes: 'Release\r\nnotes' },
-        checksumText: `${installer.sha256}  ${installer.name}\n`
+        checksumText
       })
     ).toThrow('canonical LF text');
 
-    latest.platforms['windows-x86_64'].signature = 'B'.repeat(80);
+    latest.platforms['linux-x86_64'].signature = 'B'.repeat(80);
     expect(() =>
       validateUpdatePublicationContract({
-        version: '0.1.1',
-        requestedTag: 'v0.1.1',
+        version: '0.1.5',
+        requestedTag: 'v0.1.5',
         releaseNotes: 'Release notes',
-        installer,
-        signature,
+        artifacts,
+        payloads,
         latest,
-        checksumText: `${installer.sha256}  ${installer.name}\n`
+        checksumText
       })
     ).toThrow('signature does not match');
   });

@@ -1,6 +1,6 @@
 # Signed update release procedure
 
-QueryNot `0.1.1` introduces the signed Windows updater channel described by [ADR 0011](../architecture/0011-signed-windows-auto-updates.md). The first updater-enabled release is a manual install; later releases can be installed from Settings.
+QueryNot `0.1.1` introduced the signed Windows updater channel described by [ADR 0011](../architecture/0011-signed-windows-auto-updates.md). ADR 0016 expands the same dedicated QueryNot trust identity to Windows, Linux, and macOS beginning with the prepared `0.1.5` release. The first updater-enabled installation on each platform is manual; later releases can be installed from Settings.
 
 ## One-time signing identity setup
 
@@ -20,19 +20,19 @@ Configure the `not-projects/querynot` repository:
 
 For example, GNU `base64 -w 0 <public-key-file>` produces the public repository-variable value. The public key is not secret, but it must match the retained private key exactly.
 
-The candidate job validates presence and document shape without printing any key material. Publication independently verifies the installer and Minisign trusted comment against the configured public key without receiving the private key. Missing, malformed, or mismatched configuration fails closed.
+Every platform candidate job validates presence and document shape without printing any key material. Aggregation and publication independently verify every updater payload and Minisign trusted comment against the configured public key without receiving the private key. Missing, malformed, or mismatched configuration fails closed.
 
 ## Candidate and publication
 
 1. Push the clean release-preparation commit to `master`.
 2. Manually dispatch `CI` on `master`.
-3. Review all jobs and the `querynot-windows-x64` artifact. The artifact must contain one NSIS `.exe`, its `.exe.sig`, `latest.json`, `SHA256SUMS`, and the three candidate reports.
-4. Manually dispatch `Publish reviewed signed release` with that successful CI run ID and the exact confirmation `publish-v0.1.4`.
-5. The workflow resolves and checks out the candidate run's exact commit, validates and cryptographically verifies the four public assets, creates a draft, downloads and re-verifies it, then publishes it as the stable release.
+3. Review all jobs, the four platform artifacts, and the combined `querynot-release-candidate` artifact. The combined candidate must contain seven installable packages, two additional macOS updater archives, seven matching signatures, the eight-key `latest.json`, `SHA256SUMS`, four inspection reports, and the combined manifest/checksum/candidate reports.
+4. Manually dispatch `Publish reviewed signed release` with that successful CI run ID and the exact confirmation `publish-v0.1.5`.
+5. The workflow resolves and checks out the candidate run's exact commit, validates and cryptographically verifies all 18 public assets, creates a draft, downloads it, byte-compares every asset with the pre-draft publication plan, re-verifies the checksums, feed, and signatures, then publishes it as the stable release.
 
-The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset.
+The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset. The public package matrix is Windows x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS Intel/Apple-silicon DMG, with the updater payload mapping documented in ADR 0016.
 
-The current completed signed release is `v0.1.3`: candidate CI run `32414032321`, publication run `32415066935`, and source commit `35a097795fb05b9a261f5cbd18e103074b44d44b`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
+The current completed signed release is `v0.1.4`: candidate CI run `32590531115`, publication run `32591104372`, and source commit `3aad76c0214b93f0432fec9ee223f32badea2869`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
 
 ## Rotation and recovery
 

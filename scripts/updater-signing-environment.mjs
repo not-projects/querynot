@@ -12,7 +12,7 @@ export function validateUpdaterSigningEnvironment(environment) {
   const privateKey = environment.TAURI_SIGNING_PRIVATE_KEY?.trim();
   if (!publicKey) {
     throw new Error(
-      'QUERYNOT_UPDATER_PUBLIC_KEY is required for signed Windows release packaging'
+      'QUERYNOT_UPDATER_PUBLIC_KEY is required for signed cross-platform release packaging'
     );
   }
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(publicKey)) {
@@ -47,7 +47,7 @@ export function validateUpdaterSigningEnvironment(environment) {
   }
   if (!privateKey || privateKey.length < 32) {
     throw new Error(
-      'TAURI_SIGNING_PRIVATE_KEY is required for signed Windows release packaging'
+      'TAURI_SIGNING_PRIVATE_KEY is required for signed cross-platform release packaging'
     );
   }
   return {
@@ -62,7 +62,7 @@ export function validateUpdaterSigningEnvironment(environment) {
 function main() {
   const result = validateUpdaterSigningEnvironment(process.env);
   process.stdout.write(
-    `QueryNot updater signing environment is configured${
+    `QueryNot cross-platform updater signing environment is configured${
       result.private_key_password_configured
         ? ' with a protected private key'
         : ''

@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 import { buildUpdaterManifest } from '../scripts/create-updater-manifest.mjs';
 import {
+  expectedPlatformKeys,
+  updaterPayloads
+} from '../scripts/release-platform-contract.mjs';
+import {
   QUERYNOT_UPDATE_ENDPOINT,
   updaterBuildConfig
 } from '../scripts/updater-build-config.mjs';
@@ -101,25 +105,38 @@ describe('updater release trust boundary', () => {
     );
   });
 
-  it('creates only the two supported Windows feed keys from one signed installer', () => {
+  it('creates the complete PostNot-aligned desktop feed from signed payloads', () => {
+    const names = {
+      'windows-nsis-x64': 'QueryNot_0.1.5_x64-setup.exe',
+      'windows-msi-x64': 'QueryNot_0.1.5_x64_en-US.msi',
+      'linux-appimage-x64': 'QueryNot_0.1.5_amd64.AppImage',
+      'linux-deb-x64': 'QueryNot_0.1.5_amd64.deb',
+      'linux-rpm-x64': 'QueryNot-0.1.5-1.x86_64.rpm',
+      'macos-updater-x64': 'QueryNot_x64.app.tar.gz',
+      'macos-updater-aarch64': 'QueryNot_aarch64.app.tar.gz'
+    } as const;
     const manifest = buildUpdaterManifest({
-      version: '0.1.1',
+      version: '0.1.5',
       releaseNotes: 'Release\r\nnotes\r\n',
       publishedAt: '2026-08-14T00:00:00Z',
-      installerName: 'QueryNot_0.1.1_x64-setup.exe',
-      signature: 'A'.repeat(80)
+      payloads: Object.fromEntries(
+        updaterPayloads.map(({ id }) => [
+          id,
+          {
+            name: names[id as keyof typeof names],
+            signature: 'A'.repeat(80)
+          }
+        ])
+      )
     });
 
-    expect(Object.keys(manifest.platforms).sort()).toEqual([
-      'windows-x86_64',
-      'windows-x86_64-nsis'
-    ]);
+    expect(Object.keys(manifest.platforms).sort()).toEqual(
+      expectedPlatformKeys
+    );
     expect(manifest.platforms['windows-x86_64'].url).toContain(
-      '/not-projects/querynot/releases/download/v0.1.1/'
+      '/not-projects/querynot/releases/download/v0.1.5/'
     );
-    expect(manifest.platforms['windows-x86_64-nsis'].signature).toBe(
-      'A'.repeat(80)
-    );
+    expect(manifest.platforms['darwin-aarch64'].signature).toBe('A'.repeat(80));
     expect(manifest.notes).toBe('Release\nnotes');
     expect(manifest.notes).not.toContain('\r');
   });
@@ -137,7 +154,7 @@ describe('updater release trust boundary', () => {
     changedInstaller[0] ^= 1;
     expect(() =>
       verifyUpdaterSignature({ ...fixture, installer: changedInstaller })
-    ).toThrow('installer signature does not verify');
+    ).toThrow('payload signature does not verify');
 
     const otherKey = signedUpdaterFixture(
       Buffer.from('fedcba9876543210', 'hex')

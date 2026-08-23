@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Added a reviewed cross-platform release candidate matrix for Windows x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS Intel/Apple-silicon DMGs with one combined signed updater manifest.
+
+### Changed
+
+- Shortcuts now use Command on macOS and Control on Windows and Linux, including CodeMirror execution bindings, global document actions, labels, and accessibility metadata.
+- Signed update installation now uses Tauri's detected package type on Windows, Linux, and macOS instead of rejecting non-Windows installations after a successful update check.
+- Expanded candidate aggregation and exact-byte draft publication from the Windows-only four-asset release to the complete 18-asset desktop release set.
+
+### Security
+
+- Every unique Windows, Linux, and macOS updater payload is independently verified against the dedicated QueryNot Ed25519-BLAKE2b public key before candidate retention, before publication staging, and after draft download.
+
 ## [0.1.4] - 2026-08-22
 
 ### Fixed

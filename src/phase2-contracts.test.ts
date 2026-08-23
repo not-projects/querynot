@@ -143,7 +143,7 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(document.body.textContent).toContain('Statement 1');
   });
 
-  it('uses CodeMirror with adapter-selected parsing, completion, diagnostics, and fixed execution shortcuts', () => {
+  it('uses CodeMirror with adapter-selected parsing, completion, diagnostics, and platform execution shortcuts', () => {
     const editor = read('src/lib/components/SqlEditor.svelte');
     expect(editor).toContain('basicSetup');
     expect(editor).toContain('MySQL,');
@@ -158,9 +158,10 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(editor).toContain(
       "'.cm-tooltip-autocomplete > ul > li[aria-selected]'"
     );
-    expect(editor).toContain("key: 'Ctrl-Enter'");
-    expect(editor).toContain("key: 'Ctrl-Shift-Enter'");
-    expect(editor).toContain("key: 'Ctrl-.'");
+    expect(editor).toContain("macPrimaryShortcuts ? 'Cmd' : 'Ctrl'");
+    expect(editor).toContain('`${editorPrimaryModifier}-Enter`');
+    expect(editor).toContain('`${editorPrimaryModifier}-Shift-Enter`');
+    expect(editor).toContain('`${editorPrimaryModifier}-.`');
     expect(editor).toContain("key: 'Shift-Alt-f'");
   });
 

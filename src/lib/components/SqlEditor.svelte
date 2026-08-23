@@ -22,6 +22,7 @@
   import { openSearchPanel } from '@codemirror/search';
   import { untrack } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
+  import { isMacPlatform, primaryAriaModifier } from '../platform';
 
   export interface EditorRunRequest {
     selectionStart: number | null;
@@ -67,6 +68,9 @@
   const wrapCompartment = new Compartment();
   const languageCompartment = new Compartment();
   const editableCompartment = new Compartment();
+  const macPrimaryShortcuts = isMacPlatform();
+  const editorPrimaryModifier = macPrimaryShortcuts ? 'Cmd' : 'Ctrl';
+  const ariaPrimaryModifier = primaryAriaModifier(macPrimaryShortcuts);
 
   function aliasCompletion(
     context: CompletionContext
@@ -158,10 +162,16 @@
           parseDiagnostics,
           Prec.highest(
             keymap.of([
-              { key: 'Ctrl-Enter', run: () => run(false) },
-              { key: 'Ctrl-Shift-Enter', run: () => run(true) },
               {
-                key: 'Ctrl-.',
+                key: `${editorPrimaryModifier}-Enter`,
+                run: () => run(false)
+              },
+              {
+                key: `${editorPrimaryModifier}-Shift-Enter`,
+                run: () => run(true)
+              },
+              {
+                key: `${editorPrimaryModifier}-.`,
                 run: () => {
                   oncancel();
                   return true;
@@ -308,7 +318,7 @@
 <div
   class="sql-editor-host"
   aria-label={`${dialect === 'mysql' ? 'MySQL-family' : 'SQLite'} SQL editor`}
-  aria-keyshortcuts="Tab Control+Enter Control+Shift+Enter Control+Period"
+  aria-keyshortcuts={`Tab ${ariaPrimaryModifier}+Enter ${ariaPrimaryModifier}+Shift+Enter ${ariaPrimaryModifier}+Period`}
   {@attach mountEditor}
 ></div>
 

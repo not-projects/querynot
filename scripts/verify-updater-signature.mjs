@@ -47,12 +47,18 @@ function ed25519PublicKey(raw) {
  * Verify the same Minisign envelope consumed by tauri-plugin-updater. Tauri
  * stores both the public-key document and `.sig` document as canonical base64.
  *
- * @param {{installer: Buffer, signature: string, publicKey: string}} input
+ * @param {{payload?: Buffer, installer?: Buffer, signature: string, publicKey: string}} input
  */
-export function verifyUpdaterSignature({ installer, signature, publicKey }) {
+export function verifyUpdaterSignature({
+  payload,
+  installer,
+  signature,
+  publicKey
+}) {
+  const updaterPayload = payload ?? installer;
   requireCondition(
-    Buffer.isBuffer(installer) && installer.length > 0,
-    'updater installer is empty'
+    Buffer.isBuffer(updaterPayload) && updaterPayload.length > 0,
+    'updater payload is empty'
   );
 
   const publicDocument = decodeCanonicalBase64(
@@ -118,11 +124,11 @@ export function verifyUpdaterSignature({ installer, signature, publicKey }) {
   const installerSignature = signaturePacket.subarray(10, 74);
   const signedInstaller =
     algorithm === 'ED'
-      ? createHash('blake2b512').update(installer).digest()
-      : installer;
+      ? createHash('blake2b512').update(updaterPayload).digest()
+      : updaterPayload;
   requireCondition(
     verify(null, signedInstaller, publicKeyObject, installerSignature),
-    'updater installer signature does not verify with QUERYNOT_UPDATER_PUBLIC_KEY'
+    'updater payload signature does not verify with QUERYNOT_UPDATER_PUBLIC_KEY'
   );
 
   const trustedComment = signatureLines[2].slice('trusted comment: '.length);
@@ -145,10 +151,10 @@ export function verifyUpdaterSignature({ installer, signature, publicKey }) {
 }
 
 function main() {
-  const [installerPath, signaturePath] = process.argv.slice(2);
+  const [payloadPath, signaturePath] = process.argv.slice(2);
   requireCondition(
-    installerPath && signaturePath,
-    'usage: node scripts/verify-updater-signature.mjs <installer> <signature>'
+    payloadPath && signaturePath,
+    'usage: node scripts/verify-updater-signature.mjs <payload> <signature>'
   );
   const publicKey = process.env.QUERYNOT_UPDATER_PUBLIC_KEY?.trim();
   requireCondition(
@@ -156,7 +162,7 @@ function main() {
     'QUERYNOT_UPDATER_PUBLIC_KEY is required to verify the updater signature'
   );
   const result = verifyUpdaterSignature({
-    installer: readFileSync(resolve(installerPath)),
+    payload: readFileSync(resolve(payloadPath)),
     signature: readFileSync(resolve(signaturePath), 'utf8').trim(),
     publicKey
   });

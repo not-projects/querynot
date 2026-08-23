@@ -2,8 +2,10 @@
 
 - Status: Accepted
 - Date: 2026-08-21
-- Scope: Included in the `0.1.4` release source after `0.1.3`
+- Scope: Released in `0.1.4`
 - Complements: [ADR 0014](0014-connection-scoped-tabs-and-history-drawer.md)
+
+> ADR 0016 supersedes only the Windows-specific shortcut binding for `0.1.5` and later: macOS uses Command, while Windows and Linux use Control.
 
 ## Context
 

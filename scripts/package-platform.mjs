@@ -12,8 +12,8 @@ import { validateUpdaterSigningEnvironment } from './updater-signing-environment
 const root = resolve(import.meta.dirname, '..');
 const platform = process.argv[2];
 const bundles = new Map([
-  ['linux', 'deb,appimage'],
-  ['windows', 'nsis'],
+  ['linux', 'deb,rpm,appimage'],
+  ['windows', 'nsis,msi'],
   ['macos', 'dmg']
 ]);
 if (!bundles.has(platform)) {
@@ -22,11 +22,10 @@ if (!bundles.has(platform)) {
   );
 }
 
-let updaterConfig;
-if (platform === 'windows') {
-  validateUpdaterSigningEnvironment(process.env);
-  updaterConfig = updaterBuildConfig(process.env.QUERYNOT_UPDATER_PUBLIC_KEY);
-}
+validateUpdaterSigningEnvironment(process.env);
+const updaterConfig = updaterBuildConfig(
+  process.env.QUERYNOT_UPDATER_PUBLIC_KEY
+);
 
 const sourceStatus = spawnSync(
   'git',
@@ -80,9 +79,7 @@ const tauriCli = resolve(
   'tauri.js'
 );
 const buildArguments = [tauriCli, 'build', '--bundles', bundles.get(platform)];
-if (updaterConfig) {
-  buildArguments.push('--config', updaterConfig);
-}
+buildArguments.push('--config', updaterConfig);
 
 const build = spawnSync(process.execPath, buildArguments, {
   cwd: root,

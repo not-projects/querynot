@@ -1,16 +1,13 @@
-#[cfg(target_os = "windows")]
 use std::sync::{
     Arc,
     atomic::{AtomicU64, Ordering},
 };
 
-#[cfg(target_os = "windows")]
 use querynot_core::generated::contracts::UpdateDownloadProgressView;
 use querynot_core::generated::contracts::{
     AvailableUpdateView, ConfirmedActionRequest, FileActionResponse, UpdateCheckResponse,
 };
 use querynot_core::{ErrorCategory, QueryNotError};
-#[cfg(target_os = "windows")]
 use tauri::Emitter;
 use tauri::{AppHandle, State};
 use tauri_plugin_updater::UpdaterExt;
@@ -80,7 +77,6 @@ pub(crate) async fn install_update(
     install_update_for_platform(&app, &state).await
 }
 
-#[cfg(target_os = "windows")]
 async fn install_update_for_platform(
     app: &AppHandle,
     state: &AppRuntimeState,
@@ -126,21 +122,9 @@ async fn install_update_for_platform(
     Ok(FileActionResponse {
         completed: true,
         cancelled: false,
-        message: "The verified Windows update was handed to the installer. QueryNot will close when the installer takes over."
+        message: "The verified update was handed to the platform installer. QueryNot will close when the installer requires it."
             .to_owned(),
     })
-}
-
-#[cfg(not(target_os = "windows"))]
-async fn install_update_for_platform(
-    _app: &AppHandle,
-    _state: &AppRuntimeState,
-) -> Result<FileActionResponse, QueryNotError> {
-    Err(QueryNotError::database(
-        ErrorCategory::UnsupportedCapability,
-        "Automatic installation is available only in the supported Windows release package.",
-        false,
-    ))
 }
 
 fn normalized_public_key(value: Option<&str>) -> Option<&str> {
@@ -155,7 +139,6 @@ fn update_check_error() -> QueryNotError {
     )
 }
 
-#[cfg(target_os = "windows")]
 fn pending_update(
     state: &AppRuntimeState,
 ) -> Result<Option<tauri_plugin_updater::Update>, QueryNotError> {
@@ -186,7 +169,6 @@ fn clear_pending_update(state: &AppRuntimeState) -> Result<(), QueryNotError> {
     Ok(())
 }
 
-#[cfg(target_os = "windows")]
 fn emit_progress(
     app: &AppHandle,
     downloaded_bytes: u64,

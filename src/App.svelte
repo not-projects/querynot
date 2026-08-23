@@ -55,6 +55,12 @@
   } from './lib/execution-ui';
   import { firstWindowCloseBlocker } from './lib/window-close';
   import {
+    isMacPlatform,
+    primaryAriaModifier,
+    primaryModifierPressed,
+    primaryShortcutLabel
+  } from './lib/platform';
+  import {
     localMutationErrors,
     nativeMutationOperations,
     type StagedMutationCell,
@@ -103,6 +109,10 @@
     | 'stale'
     | 'permission-denied'
     | 'error';
+
+  const macPrimaryShortcuts = isMacPlatform();
+  const shortcutModifier = primaryShortcutLabel(macPrimaryShortcuts);
+  const ariaShortcutModifier = primaryAriaModifier(macPrimaryShortcuts);
 
   const defaultSettings = (): SettingsView => ({
     theme: 'system',
@@ -3135,34 +3145,39 @@
 
   function handleWindowKeydown(event: KeyboardEvent) {
     if (modal) return;
+    const primaryModifier = primaryModifierPressed(event, macPrimaryShortcuts);
     if (fileMenuOpen && event.key === 'Escape') {
       event.preventDefault();
       closeFileMenu(true);
-    } else if (event.ctrlKey && event.key === '1') {
+    } else if (primaryModifier && event.key === '1') {
       event.preventDefault();
       document.getElementById('connections-heading')?.focus();
-    } else if (event.ctrlKey && event.key === '2') {
+    } else if (primaryModifier && event.key === '2') {
       event.preventDefault();
       editorApi?.focus();
-    } else if (event.ctrlKey && event.key === '3') {
+    } else if (primaryModifier && event.key === '3') {
       event.preventDefault();
       document.getElementById('query-results')?.focus();
-    } else if (event.ctrlKey && event.key === ',') {
+    } else if (primaryModifier && event.key === ',') {
       event.preventDefault();
       openSettings();
-    } else if (event.ctrlKey && event.key.toLowerCase() === 'n') {
+    } else if (primaryModifier && event.key.toLowerCase() === 'n') {
       event.preventDefault();
       void createOfflineTab(activeProfile?.id ?? null);
-    } else if (event.ctrlKey && event.key.toLowerCase() === 'o') {
+    } else if (primaryModifier && event.key.toLowerCase() === 'o') {
       event.preventDefault();
       void openSqlFile();
-    } else if (event.ctrlKey && event.key.toLowerCase() === 's') {
+    } else if (primaryModifier && event.key.toLowerCase() === 's') {
       event.preventDefault();
       void saveActiveSqlFile(event.shiftKey);
-    } else if (event.ctrlKey && event.key.toLowerCase() === 'f') {
+    } else if (primaryModifier && event.key.toLowerCase() === 'f') {
       event.preventDefault();
       editorApi?.openSearch();
-    } else if (event.ctrlKey && event.key === 'Tab' && activeGroupTabs.length) {
+    } else if (
+      primaryModifier &&
+      event.key === 'Tab' &&
+      activeGroupTabs.length
+    ) {
       event.preventDefault();
       const current = activeGroupTabs.findIndex(
         (tab) => tab.id === workspace.active_tab_id
@@ -3213,10 +3228,10 @@
               type="button"
               role="menuitem"
               onclick={createQueryFromFileMenu}
-              >New query <kbd>Ctrl+N</kbd></button
+              >New query <kbd>{shortcutModifier}+N</kbd></button
             >
             <button type="button" role="menuitem" onclick={openSqlFromFileMenu}
-              >Open SQL file… <kbd>Ctrl+O</kbd></button
+              >Open SQL file… <kbd>{shortcutModifier}+O</kbd></button
             >
             <span class="menu-divider" aria-hidden="true"></span>
             <button
@@ -3224,14 +3239,14 @@
               role="menuitem"
               disabled={activeTab?.kind !== 'query'}
               onclick={() => saveSqlFromFileMenu(false)}
-              >Save <kbd>Ctrl+S</kbd></button
+              >Save <kbd>{shortcutModifier}+S</kbd></button
             >
             <button
               type="button"
               role="menuitem"
               disabled={activeTab?.kind !== 'query'}
               onclick={() => saveSqlFromFileMenu(true)}
-              >Save as… <kbd>Ctrl+Shift+S</kbd></button
+              >Save as… <kbd>{shortcutModifier}+Shift+S</kbd></button
             >
           </div>
         {/if}
@@ -3650,8 +3665,8 @@
                   <button
                     type="button"
                     class="primary"
-                    title="Run current statement (Ctrl+Enter)"
-                    aria-keyshortcuts="Control+Enter"
+                    title={`Run current statement (${shortcutModifier}+Enter)`}
+                    aria-keyshortcuts={`${ariaShortcutModifier}+Enter`}
                     disabled={activeExecution &&
                       ['queued', 'running', 'paused', 'cancelling'].includes(
                         activeExecution.state
@@ -3674,8 +3689,8 @@
                   >
                   <button
                     type="button"
-                    title="Run all statements (Ctrl+Shift+Enter)"
-                    aria-keyshortcuts="Control+Shift+Enter"
+                    title={`Run all statements (${shortcutModifier}+Shift+Enter)`}
+                    aria-keyshortcuts={`${ariaShortcutModifier}+Shift+Enter`}
                     disabled={activeExecution &&
                       ['queued', 'running', 'paused', 'cancelling'].includes(
                         activeExecution.state
@@ -3696,8 +3711,8 @@
                       !['queued', 'running', 'paused', 'cancelling'].includes(
                         activeExecution.state
                       )}
-                    title="Cancel execution (Ctrl+.)"
-                    aria-keyshortcuts="Control+."
+                    title={`Cancel execution (${shortcutModifier}+.)`}
+                    aria-keyshortcuts={`${ariaShortcutModifier}+Period`}
                     onclick={() => void cancelActiveExecution()}>Cancel</button
                   >
                   <label class="transaction-mode">
@@ -3796,7 +3811,7 @@
               <span>
                 {activeExecution
                   ? `${activeExecution.state} · ${activeExecution.statementsCompleted} statements · ${activeExecution.receivedRows} rows · ${executionElapsedMs(activeExecution, nowMs)} ms`
-                  : 'Idle · Ctrl+Enter run · Ctrl+Shift+Enter run all'}
+                  : `Idle · ${shortcutModifier}+Enter run · ${shortcutModifier}+Shift+Enter run all`}
               </span>
             </div>
           </section>
@@ -3921,7 +3936,8 @@
 
   <footer>
     <span class="status-message" aria-live="polite">{statusMessage}</span>
-    <span>Ctrl+Enter Run · Ctrl+Shift+Enter Run all · Ctrl+Tab Switch tabs</span
+    <span
+      >{`${shortcutModifier}+Enter Run · ${shortcutModifier}+Shift+Enter Run all · ${shortcutModifier}+Tab Switch tabs`}</span
     >
   </footer>
 </div>
