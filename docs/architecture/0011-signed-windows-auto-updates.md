@@ -5,6 +5,8 @@
 - Decision owner: QueryNot product owner
 - Extends: [ADR 0010](0010-windows-first-release-validation-boundary.md)
 
+> ADR 0016 extends this signed channel to Windows, Linux, and macOS beginning with `0.1.5`. The dedicated QueryNot key and exact-candidate controls defined here remain unchanged.
+
 ## Context
 
 QueryNot `0.1.0` intentionally shipped without updater material. The product owner subsequently authorized an automatic-update channel based on PostNot's healthy Tauri updater pattern and a `0.1.1` release preparation. The update channel must preserve QueryNot's Windows-only support boundary, local-first product model, exact-candidate publication controls, and application close safeguards.

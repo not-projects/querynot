@@ -1,7 +1,7 @@
 # QueryNot Product Requirements Document
 
-Date: 2026-08-14
-Status: Approved for implementation — revision 2
+Date: 2026-08-23
+Status: Approved for implementation — revision 3
 Product: QueryNot  
 Initial release: Everyday developer workflow  
 Decision owner: QueryNot product owner
@@ -10,7 +10,7 @@ Decision owner: QueryNot product owner
 
 ## 1. Document purpose
 
-This document defines the planned product, architecture boundaries, initial-release requirements, acceptance criteria, and roadmap for QueryNot. It is a product specification, not a statement of implemented behavior. Revision 2 preserves the complete everyday database workflow while changing the first public release envelope and evidence boundary by product-owner decision.
+This document defines the planned product, architecture boundaries, initial-release requirements, acceptance criteria, and roadmap for QueryNot. It is a product specification, not a statement of implemented behavior. Revision 2 preserved the complete everyday database workflow while changing the first public release envelope and evidence boundary by product-owner decision. Revision 3 retains that historical initial-release record and approves the post-`0.1.4` Windows, Linux, and macOS distribution expansion in ADR 0016.
 
 The words **must**, **should**, and **may** indicate required, preferred, and optional behavior. All numbered requirements are release-blocking unless they explicitly say otherwise. A capability is not considered shipped until it exists in the repository and passes the release gates in this document.
 
@@ -26,6 +26,7 @@ This baseline is ready to decompose into architecture decisions, issues, and ver
 - For revision 2, the claimed and distributed platform is Windows 11 x86-64. WSL2 is an approved development and automated-validation environment, not a supported application platform. Windows 10, macOS, and native Linux distribution are deferred until a later approved support-matrix expansion.
 - The product owner is the sole initial participant. Native human checks, the five-day dogfood checklist, and external beta are retained as post-release validation work and do not block `0.1.0`. Their absence must be labelled as deferred; no unperformed result may be recorded as a pass.
 - Release-blocking evidence for `0.1.0` consists of reproducible WSL2 automation, disposable database conformance, automated browser layout/accessibility checks, dependency/security policy gates, and real Windows package construction, inspection, and checksums. The approved scope record must identify every nonblocking post-release check.
+- For `0.1.5` and later releases governed by ADR 0016, the prepared distribution matrix is Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon. Every published platform payload must come from the same reviewed candidate commit and pass the combined package, checksum, updater-signature, manifest, draft-round-trip, and exact-asset gates. The original `0.1.0` evidence boundary remains historical and must not be rewritten as cross-platform evidence.
 
 ### 1.2 Product assumptions
 
@@ -53,7 +54,7 @@ This baseline is ready to decompose into architecture decisions, issues, and ver
 
 ## 2. Product summary
 
-QueryNot is a local-first desktop SQL client for software developers, with a Windows 11 first release and planned cross-platform expansion. It is intended to replace MySQL Workbench and DBeaver for routine development work with a faster, calmer, and more dependable experience.
+QueryNot is a local-first desktop SQL client for software developers. It launched on Windows 11 and prepares Windows, Linux, and macOS distribution beginning with `0.1.5`. It is intended to replace MySQL Workbench and DBeaver for routine development work with a faster, calmer, and more dependable experience.
 
 The initial release focuses on the complete everyday loop:
 
@@ -121,7 +122,7 @@ Database administrators are not a primary initial-release audience.
 - Replace MySQL Workbench and DBeaver for the project owner's routine development workflow.
 - Support SQLite, MySQL 5.7+ with initial conformance coverage for 5.7.44, 8.0, and 8.4 LTS, and MariaDB 10.11 and 11.4 LTS through a common adapter architecture.
 - Make MySQL-versus-MariaDB selection automatic after connection; users choose a single “MySQL / MariaDB” connection family.
-- Deliver the complete core workflow on Windows 11 while retaining portable architecture and CI compile coverage for later macOS and Linux support.
+- Deliver the complete core workflow through one portable architecture, with Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple-silicon packages governed by the release matrix.
 - Provide a rich, dialect-aware SQL editor and an editor-first workspace.
 - Safely stream and render large result sets with bounded memory use.
 - Provide staged table-row insert, update, and delete operations with SQL preview and transactional rollback.
@@ -288,7 +289,7 @@ The default journey is:
 
 **EDT-7 — Multiple statements.** A script may contain multiple statements. By default, QueryNot executes them in order and stops on the first error. The results area preserves statement order and identifies which statement produced each result or message.
 
-**EDT-8 — Keyboard-first operation.** New query, open file, save, run, run all, cancel, format, focus schema, focus editor, focus results, find, and switch tab must have documented shortcuts. The supported Windows desktop uses literal Control bindings so the Windows key is never mistaken for Command.
+**EDT-8 — Keyboard-first operation.** New query, open file, save, run, run all, cancel, format, focus schema, focus editor, focus results, find, and switch tab must have documented shortcuts. The primary modifier is Command on macOS and literal Control on Windows and Linux; the Windows key is never treated as Command.
 
 **EDT-9 — Parser fidelity.** Statement splitting and safety classification must handle the tested dialect's comments, quoted identifiers, string literals, delimiters, and routine bodies. When the editor parser and server dialect cannot be reconciled safely, QueryNot must require an explicit selection rather than guessing a narrower execution range.
 
@@ -296,22 +297,22 @@ The default journey is:
 
 #### Default shortcuts
 
-Shortcuts use the literal Control key on the supported Windows desktop and are displayed in menus/tooltips.
+Shortcuts use the platform primary modifier and are displayed consistently in menus and tooltips: `Cmd` on macOS and `Ctrl` on Windows and Linux.
 
 | Action                    | Shortcut                      |
 | ------------------------- | ----------------------------- |
-| New query                 | `Ctrl+N`                      |
-| Open SQL file             | `Ctrl+O`                      |
-| Save                      | `Ctrl+S`                      |
-| Run execution unit        | `Ctrl+Enter`                  |
-| Run all                   | `Ctrl+Shift+Enter`            |
-| Cancel active execution   | `Ctrl+.`                      |
+| New query                 | `Cmd/Ctrl+N`                  |
+| Open SQL file             | `Cmd/Ctrl+O`                  |
+| Save                      | `Cmd/Ctrl+S`                  |
+| Run execution unit        | `Cmd/Ctrl+Enter`              |
+| Run all                   | `Cmd/Ctrl+Shift+Enter`        |
+| Cancel active execution   | `Cmd/Ctrl+.`                  |
 | Format document/selection | `Shift+Alt+F`                 |
-| Focus schema              | `Ctrl+1`                      |
-| Focus editor              | `Ctrl+2`                      |
-| Focus results             | `Ctrl+3`                      |
-| Find                      | `Ctrl+F`                      |
-| Next/previous tab         | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
+| Focus schema              | `Cmd/Ctrl+1`                  |
+| Focus editor              | `Cmd/Ctrl+2`                  |
+| Focus results             | `Cmd/Ctrl+3`                  |
+| Find                      | `Cmd/Ctrl+F`                  |
+| Next/previous tab         | `Cmd/Ctrl+Tab` / `Cmd/Ctrl+Shift+Tab` |
 
 ### 8.5 Query execution and transactions
 
@@ -610,8 +611,10 @@ Targets are measured from production builds on an otherwise idle reference machi
 
 ### 11.4 Compatibility
 
-- Windows 11 on x86-64 with the exact Microsoft Edge WebView2 runtime recorded for the release candidate.
-- Windows 10, macOS, and native Linux packages are not part of the `0.1.0` support or distribution claim. Portable compile checks and WSL2/Linux engineering packages are development evidence only.
+- Windows 11 on x86-64 with the Microsoft Edge WebView2 runtime recorded for the release candidate.
+- Linux x86-64 through AppImage, Debian, and RPM packages built on the selected Ubuntu runner, with WebKitGTK 4.1 and exact runner/runtime evidence retained by the candidate.
+- macOS 13 or later on Intel and Apple silicon through architecture-specific DMGs and Tauri updater archives built on the selected native macOS runners.
+- Windows 10 and Linux ARM remain outside the `0.1.5` support and distribution claim. Portable compile checks and historical WSL2/Linux engineering packages are development evidence only.
 - MySQL 5.7.44 as a legacy compatibility target, MySQL 8.0 at the exact patch selected for the release fixture, and MySQL 8.4 LTS at the latest maintenance patch selected for the release fixture. “MySQL 5.7+” establishes the compatibility floor; it does not claim untested innovation, future, forked, or vendor-patched versions.
 - MariaDB 10.11 and 11.4 LTS, using the latest maintenance patch selected for the release fixtures.
 - SQLite format 3 database files accepted by the exact bundled SQLite library version; extension loading is disabled in the initial release.
@@ -620,7 +623,7 @@ The repository must publish the exact tested operating-system patch, WebView/run
 
 ### 11.5 Distribution
 
-The initial public artifact is one x86-64 Windows NSIS installer. It is unsigned. Release notes and installation documentation must state the resulting Windows warning and give exact checksum-verification instructions. Existing Linux AppImage and Debian engineering packages are not published or described as supported release artifacts; macOS artifacts are deferred.
+The historical initial public artifact is one unsigned x86-64 Windows NSIS installer. Beginning with `0.1.5`, the reviewed release publishes Windows x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS Intel/Apple-silicon DMGs plus the signed updater payloads required by each platform. Release notes and installation documentation must distinguish updater authentication from Windows Authenticode, Apple signing/notarization, and Linux repository signing, state expected trust prompts, and give exact checksum-verification instructions without advising users to disable operating-system protections globally.
 
 Releases publish SHA-256 checksums through the project release channel. The initial application does not self-update or bypass operating-system security prompts.
 
@@ -882,7 +885,7 @@ The following product decisions are fixed for the initial-release plan:
 - First post-release engine: PostgreSQL.
 - Initial workflow level: core querying plus productivity features and staged table-data editing.
 - Credentials: OS credential vault/keychain.
-- Platforms: Windows 11 x86-64 for `0.1.0`; Windows 10, macOS, and native Linux distribution are deferred until separately validated and approved.
+- Platforms: Windows 11 x86-64 for `0.1.0` through `0.1.4`; Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon are approved for the `0.1.5` candidate under ADR 0016. Windows 10 and Linux ARM remain deferred.
 - Signing: deferred; unsigned installation is documented.
 - Destructive safeguards: targeted confirmation for clearly high-risk statements.
 - Large results: incremental streaming, virtualization, safety cap, and explicit load more.

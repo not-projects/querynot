@@ -14,13 +14,15 @@ import {
   disallowedReleaseChanges,
   releaseChangeSummary
 } from './release-source-state.mjs';
+import { distributableArtifacts } from './release-platform-contract.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const { values } = parseArgs({
   options: {
     directory: { type: 'string' },
     output: { type: 'string' },
-    manifest: { type: 'string' }
+    manifest: { type: 'string' },
+    'require-complete': { type: 'boolean', default: false }
   },
   strict: true
 });
@@ -39,13 +41,12 @@ for (const path of [outputPath, manifestPath]) {
   }
 }
 
-const extensions = ['.AppImage', '.deb', '.dmg', '.exe'];
 function artifactsUnder(path) {
   const found = [];
   for (const entry of readdirSync(path, { withFileTypes: true })) {
     const candidate = resolve(path, entry.name);
     if (entry.isSymbolicLink()) {
-      if (extensions.some((extension) => entry.name.endsWith(extension))) {
+      if (distributableArtifacts.some(({ matches }) => matches(entry.name))) {
         throw new Error(
           `release artifact ${entry.name} must not be a symbolic link`
         );
@@ -53,7 +54,9 @@ function artifactsUnder(path) {
       continue;
     }
     if (entry.isDirectory()) found.push(...artifactsUnder(candidate));
-    else if (extensions.some((extension) => entry.name.endsWith(extension))) {
+    else if (
+      distributableArtifacts.some(({ matches }) => matches(entry.name))
+    ) {
       found.push(candidate);
     }
   }
@@ -70,6 +73,18 @@ const artifacts = artifactsUnder(directory).sort((left, right) =>
   basename(left).localeCompare(basename(right))
 );
 if (artifacts.length === 0) throw new Error('no release artifacts were found');
+if (values['require-complete']) {
+  for (const descriptor of distributableArtifacts) {
+    const matches = artifacts.filter((path) =>
+      descriptor.matches(basename(path))
+    );
+    if (matches.length !== 1) {
+      throw new Error(
+        `complete release checksum set requires exactly one ${descriptor.id}; found ${matches.length}`
+      );
+    }
+  }
+}
 const names = new Set();
 const records = artifacts.map((path) => {
   const stat = lstatSync(path);

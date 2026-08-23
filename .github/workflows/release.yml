@@ -50,8 +50,8 @@ jobs:
       - run: npm ci
       - uses: actions/download-artifact@v4
         with:
-          name: querynot-windows-x64
-          path: artifacts/candidate/windows
+          name: querynot-release-candidate
+          path: artifacts/candidate
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ inputs.candidate_run_id }}
@@ -65,7 +65,7 @@ jobs:
           test "$PUBLISH_CONFIRMATION" = "publish-${tag}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-      - name: Verify and stage only the four signed release assets
+      - name: Verify and stage only the reviewed cross-platform assets
         env:
           PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
           QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
@@ -98,6 +98,7 @@ jobs:
           npm run release:verify-update-publication --
           --directory artifacts/release-roundtrip
           --tag "${{ steps.release.outputs.tag }}"
+          --plan artifacts/publication-plan.json
           --report artifacts/publication-verification.json
       - name: Publish the verified draft as the stable release
         env:

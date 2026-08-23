@@ -5,6 +5,8 @@
 - Decision owner: QueryNot product owner
 - Supersedes: the platform-count, native-manual, dogfood, beta, and artifact-count release assumptions in ADR 0008 and ADR 0009
 
+> ADR 0016 supersedes this Windows-only publication boundary for `0.1.5` and later. This record remains authoritative for the initial release through `0.1.4`.
+
 ## Context
 
 The full SQLite/MySQL/MariaDB everyday workflow is implemented, but the project currently has one participant and one available native end-user platform: Windows 11 x86-64. Development and disposable-database validation run in WSL2. The product owner directed the project to finish what can be established in WSL2 and the current Windows 11 environment, defer or deny unsupported-platform work, move manual checks to the end user after the first release, and defer multi-person beta until participants exist.

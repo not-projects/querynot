@@ -15,6 +15,10 @@ import {
   disallowedReleaseChanges,
   releaseChangeSummary
 } from './release-source-state.mjs';
+import {
+  distributableForName,
+  updaterPayloads
+} from './release-platform-contract.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const { values } = parseArgs({
@@ -49,8 +53,10 @@ if (!lstatSync(binaryPath).isFile() || lstatSync(binaryPath).size === 0) {
 const formatExtensions = new Map([
   ['appimage', '.AppImage'],
   ['deb', '.deb'],
+  ['rpm', '.rpm'],
   ['dmg', '.dmg'],
-  ['nsis', '.exe']
+  ['nsis', '.exe'],
+  ['msi', '.msi']
 ]);
 const expected = values.expect
   .split(',')
@@ -71,8 +77,8 @@ function regularFiles(path) {
     const candidate = resolve(path, entry.name);
     if (entry.isSymbolicLink()) {
       if (
-        [...formatExtensions.values()].some((extension) =>
-          entry.name.endsWith(extension)
+        [...formatExtensions.values(), '.app.tar.gz', '.sig'].some(
+          (extension) => entry.name.endsWith(extension)
         )
       ) {
         throw new Error('release artifact must not be a symbolic link');
@@ -97,40 +103,61 @@ const artifacts = expected.map((format) => {
   const bytes = readFileSync(path);
   if (bytes.length === 0) throw new Error(`${format} artifact is empty`);
   const artifact = {
+    id: distributableForName(basename(path))?.id,
     format,
     name: basename(path),
     bytes: bytes.length,
     sha256: createHash('sha256').update(bytes).digest('hex')
   };
-  if (format === 'nsis') {
-    const signaturePath = `${path}.sig`;
-    const signatureMatches = files.filter((candidate) =>
-      candidate.endsWith('.exe.sig')
+  if (!artifact.id)
+    throw new Error(`${format} artifact has an unexpected platform name`);
+  return artifact;
+});
+
+const updaterPayloadIds = artifacts.map(({ id }) => {
+  if (id === 'macos-dmg-x64') return 'macos-updater-x64';
+  if (id === 'macos-dmg-aarch64') return 'macos-updater-aarch64';
+  return id;
+});
+const updaterPayloadRecords = updaterPayloadIds.map((id) => {
+  const descriptor = updaterPayloads.find((entry) => entry.id === id);
+  if (!descriptor) throw new Error(`unknown updater payload ${id}`);
+  const matches = files.filter((path) => descriptor.matches(basename(path)));
+  if (matches.length !== 1) {
+    throw new Error(
+      `expected exactly one ${id} updater payload; found ${matches.length}`
     );
-    if (
-      signatureMatches.length !== 1 ||
-      signatureMatches[0] !== signaturePath
-    ) {
-      throw new Error(
-        'expected exactly one updater signature matching the NSIS artifact'
-      );
-    }
-    const signatureBytes = readFileSync(signaturePath);
-    const signature = signatureBytes.toString('utf8').trim();
-    if (
-      signatureBytes.length === 0 ||
-      signature.length <= 32 ||
-      /[\u0000-\u001f\u007f]/.test(signature)
-    ) {
-      throw new Error('NSIS updater signature is empty or invalid');
-    }
-    artifact.signature = {
+  }
+  const path = matches[0];
+  const signaturePath = `${path}.sig`;
+  const signatureMatches = files.filter(
+    (candidate) => candidate === signaturePath
+  );
+  if (signatureMatches.length !== 1) {
+    throw new Error(`expected exactly one updater signature matching ${id}`);
+  }
+  const bytes = readFileSync(path);
+  const signatureBytes = readFileSync(signaturePath);
+  const signature = signatureBytes.toString('utf8').trim();
+  if (
+    bytes.length === 0 ||
+    signatureBytes.length === 0 ||
+    signature.length <= 32 ||
+    /[\u0000-\u001f\u007f]/.test(signature)
+  ) {
+    throw new Error(`${id} updater payload or signature is empty or invalid`);
+  }
+  return {
+    id,
+    name: basename(path),
+    bytes: bytes.length,
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    signature: {
       name: basename(signaturePath),
       bytes: signatureBytes.length,
       sha256: createHash('sha256').update(signatureBytes).digest('hex')
-    };
-  }
-  return artifact;
+    }
+  };
 });
 
 const binary = readFileSync(binaryPath);
@@ -190,7 +217,7 @@ if (disallowedChanges.length > 0) {
 }
 const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json')));
 const report = {
-  schema_version: 1,
+  schema_version: 2,
   source_commit: git.stdout.trim(),
   application_version: packageJson.version,
   status: 'pass',
@@ -209,6 +236,7 @@ const report = {
     forbidden_material_scan: 'pass'
   },
   artifacts,
+  updater_payloads: updaterPayloadRecords,
   updater_artifacts: true,
   capability_and_csp_review: 'pass'
 };

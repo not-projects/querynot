@@ -9,8 +9,8 @@ import {
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
-describe('Phase 5 Windows-first release boundary', () => {
-  it('keeps 0.1.4 versions aligned, updater generation enabled, and Windows packaging constrained', () => {
+describe('Phase 5 history and current release boundary', () => {
+  it('keeps 0.1.5 versions aligned and updater generation enabled', () => {
     const packageJson = JSON.parse(read('package.json'));
     const packageLock = JSON.parse(read('package-lock.json'));
     const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
@@ -19,7 +19,7 @@ describe('Phase 5 Windows-first release boundary', () => {
     const tauriCargo = read('src-tauri/Cargo.toml');
     const fixtureCargo = read('crates/querynot-fixture-harness/Cargo.toml');
 
-    expect(packageJson.version).toBe('0.1.4');
+    expect(packageJson.version).toBe('0.1.5');
     expect(packageLock.version).toBe(packageJson.version);
     expect(packageLock.packages[''].version).toBe(packageJson.version);
     expect(tauri.version).toBe(packageJson.version);
@@ -45,34 +45,41 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(tauri.bundle.icon).toContain('icons/icon.ico');
     expect(tauri.bundle.windows.webviewInstallMode.type).toBe('skip');
     expect(tauri.bundle.windows.nsis.installMode).toBe('currentUser');
-    expect([...expectedArtifacts]).toEqual([['windows-nsis-x64', 'nsis']]);
-    expect(osMatrix).toEqual(['windows-11-x64']);
   });
 
-  it('builds exactly one Windows NSIS candidate only on manual dispatch', () => {
+  it('builds and combines the PostNot-aligned desktop candidate matrix only on manual dispatch', () => {
     const workflow = read('.github/workflows/ci.yml');
     const candidate = workflow.split('  release-candidate-packages:')[1];
 
     expect(candidate).toContain("if: github.event_name == 'workflow_dispatch'");
     expect(candidate).toContain('runner: windows-2022');
+    expect(candidate).toContain('runner: ubuntu-22.04');
+    expect(candidate).toContain('runner: macos-15-intel');
+    expect(candidate).toContain('runner: macos-15');
     expect(candidate).toContain('package_script: package:windows');
-    expect(candidate).toContain('expected_formats: nsis');
+    expect(candidate).toContain('package_script: package:linux');
+    expect(candidate).toContain('package_script: package:macos');
+    expect(candidate).toContain('expected_formats: nsis,msi');
+    expect(candidate).toContain('expected_formats: deb,rpm,appimage');
+    expect(candidate).toContain('expected_formats: dmg');
     expect(candidate).toContain('artifact_name: querynot-windows-x64');
-    expect(candidate).not.toContain('expected_formats: dmg');
-    expect(candidate).not.toContain('expected_formats: deb,appimage');
+    expect(candidate).toContain('artifact_name: querynot-linux-x64');
+    expect(candidate).toContain('artifact_name: querynot-macos-x64');
+    expect(candidate).toContain('artifact_name: querynot-macos-aarch64');
     expect(candidate).toContain('npm run release:inspect');
-    expect(candidate).toContain('npm run release:checksums');
     expect(candidate).toContain('npm run release:validate-updater-signing');
-    expect(candidate).toContain('npm run release:create-updater-manifest');
+    expect(workflow).toContain('assemble-release-candidate:');
+    expect(workflow).toContain('npm run release:create-updater-manifest');
+    expect(workflow).toContain('npm run release:checksums');
+    expect(workflow).toContain('npm run release:validate-update-candidate');
     expect(candidate).toContain(
       'QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}'
     );
     expect(candidate).toContain(
       'TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}'
     );
-    expect(candidate).toContain(
-      'target/release-candidate-*/release/bundle/**/*.exe.sig'
-    );
+    expect(candidate).toContain('**/*.app.tar.gz');
+    expect(candidate).toContain('**/*.sig');
     expect(workflow).not.toContain('release-action');
     expect(workflow).not.toContain('create-release');
   });
@@ -148,6 +155,9 @@ describe('Phase 5 Windows-first release boundary', () => {
     );
     expect(native).toContain('option_env!("QUERYNOT_UPDATER_PUBLIC_KEY")');
     expect(native).toContain('if !request.confirmed');
+    expect(native).toContain('.download_and_install(');
+    expect(native).not.toContain('#[cfg(target_os = "windows")]');
+    expect(native).not.toContain('available only in the supported Windows');
     expect(runtime).toContain('tauri_plugin_updater::Builder::new().build()');
     expect(cargo).toContain('tauri-plugin-updater = "=2.10.1"');
     expect(nativeDependencies).toContain('serde_json.workspace = true');
@@ -183,7 +193,7 @@ describe('Phase 5 Windows-first release boundary', () => {
     );
   });
 
-  it('retains cross-platform compile checks without making release claims', () => {
+  it('retains cross-platform compile checks and declares the prepared release matrix', () => {
     const workflow = read('.github/workflows/ci.yml');
     const compatibility = read('docs/compatibility-matrix.md');
 
@@ -192,10 +202,9 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(workflow).toContain('macos-15');
     expect(workflow).toContain('macos-15-intel');
     expect(workflow).toContain('windows-2022');
-    expect(compatibility).toContain('Sole supported and published 0.1.1 row');
-    expect(compatibility).toContain(
-      'Deferred; no `0.1.0` support or artifact claim'
-    );
+    expect(compatibility).toContain('Windows 11 x86-64');
+    expect(compatibility).toContain('macOS 13 or later');
+    expect(compatibility).toContain('Linux x86-64');
   });
 
   it('keeps the historical 0.1.0 unsigned install guidance immutable', () => {
@@ -208,6 +217,11 @@ describe('Phase 5 Windows-first release boundary', () => {
     expect(installation).not.toContain('Open Anyway');
     expect(installation).not.toContain('shasum -a 256');
     expect(installation).not.toContain('sha256sum');
+  });
+
+  it('keeps the immutable Phase 5 evidence contract Windows-only', () => {
+    expect([...expectedArtifacts]).toEqual([['windows-nsis-x64', 'nsis']]);
+    expect(osMatrix).toEqual(['windows-11-x64']);
   });
 
   it('keeps superseded manual templates explicitly unperformed', () => {
