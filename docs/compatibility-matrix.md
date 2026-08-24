@@ -1,25 +1,25 @@
 # Compatibility and conformance matrix
 
-Status: QueryNot 0.1.5 current live cross-platform release
-Selection date: 2026-08-23
+Status: QueryNot 0.1.6 current live cross-platform release
+Selection date: 2026-08-24
 
-Version `0.1.5` is the current live release for Windows 11 x86-64, Linux x86-64, and macOS 13 or later on Intel and Apple silicon under ADR 0016. Its dedicated QueryNot updater key, exact-candidate publication, draft round trip, public-download hashes, and Ed25519-BLAKE2b signature checks passed for every platform payload. Historical `0.1.0` and `0.1.1` evidence remains immutable.
+Version `0.1.6` is the current live release for Windows 11 x86-64, Linux x86-64, and macOS 13 or later on Intel and Apple silicon under ADR 0016. Its dedicated QueryNot updater key, exact-candidate publication, draft round trip, public-download hashes, and Ed25519-BLAKE2b signature checks passed for every platform payload. Historical `0.1.0` and `0.1.1` evidence remains immutable.
 
-The rows below describe the live `0.1.5` publication matrix after the exact multi-platform candidate and public-download round trip passed. Phase 5 continues to describe the historical `0.1.0` Windows-only boundary, and `evidence/release-updates/0.1.1` retains the first signed-channel records. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain explicit follow-up evidence until performed.
+The rows below describe the live `0.1.6` publication matrix after the exact multi-platform candidate and public-download round trip passed. Phase 5 continues to describe the historical `0.1.0` Windows-only boundary, and `evidence/release-updates/0.1.1` retains the first signed-channel records. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain explicit follow-up evidence until performed.
 
-## Prepared 0.1.6 compatibility delta
+## MySQL 5.7 compatibility in 0.1.6
 
-The prepared `0.1.6` source recognizes every well-formed MySQL `5.7.x` identity as the legacy 5.7 compatibility line and keeps ordinary query writes, manual transactions, destructive-statement confirmation, and safe staged row mutations enabled. Non-5.7.44 patches state that 5.7.44 remains the exact automated conformance fixture. Malformed identities and unrecognized MySQL/MariaDB lines remain query-only, and the published `0.1.5` evidence below is unchanged.
+The live `0.1.6` release recognizes every well-formed MySQL `5.7.x` identity as the legacy 5.7 compatibility line and keeps ordinary query writes, manual transactions, destructive-statement confirmation, and safe staged row mutations enabled. Non-5.7.44 patches state that 5.7.44 remains the exact automated conformance fixture. Malformed identities and unrecognized MySQL/MariaDB lines remain query-only; the passing `0.1.6` candidate feasibility gate exercises 5.7.44 and does not represent every 5.7 patch as independently certified.
 
 ## Application platforms
 
 | Matrix ID | Operating system | Architecture | Web runtime/package | Current status |
 | --- | --- | --- | --- | --- |
-| `windows-11-x64` | Windows 11 | x86-64 | Microsoft Edge WebView2; NSIS + MSI | Current live `0.1.5` distribution row |
-| `windows-10-22h2-x64` | Windows 10 22H2 | x86-64 | WebView2; NSIS + MSI | Deferred; no `0.1.5` support claim |
-| `macos-13-intel` | macOS 13 or later | Intel | System WebKit; x86-64 DMG; candidate built on `macos-15-intel` | Current live `0.1.5` distribution row; Apple notarization is not claimed |
-| `macos-13-apple` | macOS 13 or later | Apple silicon | System WebKit; aarch64 DMG; candidate built on `macos-15` | Current live `0.1.5` distribution row; Apple notarization is not claimed |
-| `linux-x64` | Linux x86-64 | x86-64 | WebKitGTK 4.1; AppImage + Debian + RPM; candidate built on Ubuntu 22.04 | Current live `0.1.5` distribution row; unlisted distro/runtime combinations are not blanket-certified |
+| `windows-11-x64` | Windows 11 | x86-64 | Microsoft Edge WebView2; NSIS + MSI | Current live `0.1.6` distribution row |
+| `windows-10-22h2-x64` | Windows 10 22H2 | x86-64 | WebView2; NSIS + MSI | Deferred; no `0.1.6` support claim |
+| `macos-13-intel` | macOS 13 or later | Intel | System WebKit; x86-64 DMG; candidate built on `macos-15-intel` | Current live `0.1.6` distribution row; Apple notarization is not claimed |
+| `macos-13-apple` | macOS 13 or later | Apple silicon | System WebKit; aarch64 DMG; candidate built on `macos-15` | Current live `0.1.6` distribution row; Apple notarization is not claimed |
+| `linux-x64` | Linux x86-64 | x86-64 | WebKitGTK 4.1; AppImage + Debian + RPM; candidate built on Ubuntu 22.04 | Current live `0.1.6` distribution row; unlisted distro/runtime combinations are not blanket-certified |
 | `ubuntu-24.04-x64` | Ubuntu 24.04 LTS | x86-64 | WebKitGTK 4.1; portable compile check | Compile coverage retained; native package observation remains follow-up evidence |
 
 ## Database fixtures
@@ -37,7 +37,30 @@ MySQL 8.0 reached the lifecycle date identified by the vendor before this select
 
 The retained Phase 4 reports cover the full Phase 3 contract plus deterministic keyset paging, labelled read-only fallbacks in the local planner, bound hostile structured filters, typed validation, insert/update/delete, generated-value refresh, optimistic conflicts, and atomic rollback. Positive system-trust validation against a publicly trusted target and native Windows trust-store behavior remain post-release owner observations; fixture automation intentionally never contacts a non-fixture database.
 
-## Current live signed 0.1.5 release
+## Current live signed 0.1.6 release
+
+- Release: [`v0.1.6`](https://github.com/not-projects/querynot/releases/tag/v0.1.6)
+- Candidate run: [`32721015915`](https://github.com/not-projects/querynot/actions/runs/32721015915)
+- Publication run: [`32724430634`](https://github.com/not-projects/querynot/actions/runs/32724430634)
+- Source commit: `849fb7c27fb7aed87e65da2105ecd8eb74b7edc9`
+- Public verification: all 18 assets are byte-identical to the reviewed candidate; all seven updater signatures pass with public key ID `FD25C4E1F33E86DD`
+
+| Role | File | Bytes | SHA-256 |
+| --- | --- | ---: | --- |
+| Windows NSIS | `QueryNot_0.1.6_x64-setup.exe` | 3,389,592 | `4fc2b5fe6176fadd413a8cff3451c9eb1a169a10cfa1dc10967e4e182c5f68f7` |
+| Windows MSI | `QueryNot_0.1.6_x64_en-US.msi` | 4,534,272 | `44b0a7484c1f48f927888fad572b28de3746843096ec1cef9e3ca4920a7810ad` |
+| Linux AppImage | `QueryNot_0.1.6_amd64.AppImage` | 82,184,696 | `2dffc12fb1b56fcf7488d7c45abb1dc32eacd9473c2f40791943b7fbfa4a8be9` |
+| Linux DEB | `QueryNot_0.1.6_amd64.deb` | 4,651,272 | `8f92bd870a84aa1d8656569596ce55d81c0912ce569746c7b742bcf6b8a987a7` |
+| Linux RPM | `QueryNot-0.1.6-1.x86_64.rpm` | 4,651,912 | `d6599f8855c1af2868de2b48ca8751a9841eb54d6c4475e4459a0f41676942a7` |
+| macOS Intel DMG | `QueryNot_0.1.6_x64.dmg` | 4,279,419 | `ffe59fd2023966080c2d4cfa76f3d11b6ecbb003abcc65a4423a939eee9d5f54` |
+| macOS Apple-silicon DMG | `QueryNot_0.1.6_aarch64.dmg` | 3,943,057 | `82d5a39c8a06cbf36dbfdbb92edf652da7dc9d3bde36fc2d9aa53fea477043ac` |
+| macOS Intel updater | `QueryNot_x64.app.tar.gz` | 4,266,393 | `fbf42acf36b1a6d00112592b5cb5b4133155389f8410bbe9b6c6a0fba978e865` |
+| macOS Apple-silicon updater | `QueryNot_aarch64.app.tar.gz` | 3,966,989 | `dd8ff9239f5c82f5a17c7ac702b166633fe4e6c2e2131715b1720a1803f8bcbe` |
+
+- `latest.json`: 7,098 bytes; SHA-256 `dafc1a3b3695ee4562bac3d243de7cd7735c68e5d249a8c9b147a9a9cb45d087`; exact keys `darwin-aarch64`, `darwin-x86_64`, `linux-x86_64`, `linux-x86_64-appimage`, `linux-x86_64-deb`, `linux-x86_64-rpm`, `windows-x86_64`, and `windows-x86_64-nsis`.
+- `SHA256SUMS`: 653 bytes; SHA-256 `e7284665838586de53526fea23c7381c07e64557bf83c5cd23fe72c539483de3`; all seven installable-package checks pass.
+
+## Previous 0.1.5 signed cross-platform release
 
 - Release: [`v0.1.5`](https://github.com/not-projects/querynot/releases/tag/v0.1.5)
 - Candidate run: [`32663343245`](https://github.com/not-projects/querynot/actions/runs/32663343245)
@@ -80,4 +103,4 @@ The retained Phase 4 reports cover the full Phase 3 contract plus deterministic 
 - SHA-256: `80753f765bcae143750b2de1b765405b710ad858fb637c1cfb80c9a06090058c`
 - Updater artifacts: none
 
-The historical WSL2 Debian and AppImage packages remain development evidence only. The public `0.1.5` Linux packages came from the native Ubuntu candidate job and passed the combined release contract. Native hardware observations remain follow-up evidence, and cross-platform compilation alone is still not a support claim.
+The historical WSL2 Debian and AppImage packages remain development evidence only. The public `0.1.6` Linux packages came from the native Ubuntu candidate job and passed the combined release contract. Native hardware observations remain follow-up evidence, and cross-platform compilation alone is still not a support claim.

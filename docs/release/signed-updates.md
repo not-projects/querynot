@@ -32,7 +32,7 @@ Every platform candidate job validates presence and document shape without print
 
 The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset. The public package matrix is Windows x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS Intel/Apple-silicon DMG, with the updater payload mapping documented in ADR 0016.
 
-The current completed signed release is `v0.1.5`: candidate CI run `32663343245`, publication run `32665401024`, and source commit `fb3ee515448d8131d17f677ca532940565f4c097`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
+The current completed signed release is `v0.1.6`: candidate CI run `32721015915`, publication run `32724430634`, and source commit `849fb7c27fb7aed87e65da2105ecd8eb74b7edc9`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
 
 ## Rotation and recovery
 

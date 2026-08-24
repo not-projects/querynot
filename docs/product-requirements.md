@@ -616,7 +616,7 @@ Targets are measured from production builds on an otherwise idle reference machi
 - Windows 11 on x86-64 with the Microsoft Edge WebView2 runtime recorded for the release candidate.
 - Linux x86-64 through AppImage, Debian, and RPM packages built on the selected Ubuntu runner, with WebKitGTK 4.1 and exact runner/runtime evidence retained by the candidate.
 - macOS 13 or later on Intel and Apple silicon through architecture-specific DMGs and Tauri updater archives built on the selected native macOS runners.
-- Windows 10 and Linux ARM remain outside the `0.1.5` support and distribution claim. Portable compile checks and historical WSL2/Linux engineering packages are development evidence only.
+- Windows 10 and Linux ARM remain outside the `0.1.6` support and distribution claim. Portable compile checks and historical WSL2/Linux engineering packages are development evidence only.
 - Well-formed MySQL 5.7.x patch identities share the legacy 5.7 query, transaction, and safe-mutation capability path; MySQL 5.7.44 remains the only exact 5.7 conformance fixture and the only patch certified by the published release matrix. This does not certify ambiguous identities, forks, or vendor-specific behavior. MySQL 8.0 and 8.4 remain bounded to the exact selected fixtures.
 - MariaDB 10.11 and 11.4 LTS, using the latest maintenance patch selected for the release fixtures.
 - SQLite format 3 database files accepted by the exact bundled SQLite library version; extension loading is disabled in the initial release.
@@ -887,7 +887,7 @@ The following product decisions are fixed for the initial-release plan:
 - First post-release engine: PostgreSQL.
 - Initial workflow level: core querying plus productivity features and staged table-data editing.
 - Credentials: OS credential vault/keychain.
-- Platforms: Windows 11 x86-64 for `0.1.0` through `0.1.4`; Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon are the released `0.1.5` matrix under ADR 0016. Windows 10 and Linux ARM remain deferred.
+- Platforms: Windows 11 x86-64 for `0.1.0` through `0.1.4`; Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon are the released matrix beginning with `0.1.5` under ADR 0016. Windows 10 and Linux ARM remain deferred.
 - Signing: deferred; unsigned installation is documented.
 - Destructive safeguards: targeted confirmation for clearly high-risk statements.
 - Large results: incremental streaming, virtualization, safety cap, and explicit load more.
