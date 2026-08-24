@@ -11,6 +11,8 @@
     | 'pin'
     | 'plus'
     | 'routine'
+    | 'search'
+    | 'refresh'
     | 'table'
     | 'view';
 
@@ -55,6 +57,13 @@
     <path d="m6 9 6 6 6-6" />
   {:else if name === 'routine'}
     <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" />
+  {:else if name === 'search'}
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m16 16 4 4" />
+  {:else if name === 'refresh'}
+    <path d="M20 7v5h-5" />
+    <path d="M4 17v-5h5" />
+    <path d="M6.1 8.5A7 7 0 0 1 18.4 7L20 12M4 12l1.6 5a7 7 0 0 0 12.3-1.5" />
   {:else if name === 'view'}
     <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
     <circle cx="12" cy="12" r="2.5" />

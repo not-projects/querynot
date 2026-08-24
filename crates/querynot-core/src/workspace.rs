@@ -39,10 +39,26 @@ pub struct WorkspaceTab {
     pub reconnectable: bool,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct PanelSizes {
     pub explorer_percent: f64,
     pub results_percent: f64,
+    #[serde(default = "default_sidebar_connections_percent")]
+    pub sidebar_connections_percent: f64,
+}
+
+impl Default for PanelSizes {
+    fn default() -> Self {
+        Self {
+            explorer_percent: 22.0,
+            results_percent: 35.0,
+            sidebar_connections_percent: default_sidebar_connections_percent(),
+        }
+    }
+}
+
+const fn default_sidebar_connections_percent() -> f64 {
+    50.0
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
@@ -179,6 +195,7 @@ mod tests {
             panel_sizes: PanelSizes {
                 explorer_percent: 22.0,
                 results_percent: 36.0,
+                sidebar_connections_percent: 50.0,
             },
         };
         snapshot.validate().unwrap();
@@ -187,5 +204,16 @@ mod tests {
         assert_eq!(restored.tabs[0].profile_id, Some(profile));
         assert_eq!(restored.tabs[0].context_label.as_deref(), Some("main"));
         assert_eq!(restored.active_tab_id, Some(second));
+    }
+
+    #[test]
+    fn released_workspace_gains_a_centered_sidebar_split() {
+        let sizes: PanelSizes = serde_json::from_value(serde_json::json!({
+            "explorer_percent": 22.0,
+            "results_percent": 35.0
+        }))
+        .unwrap();
+
+        assert_eq!(sizes.sidebar_connections_percent, 50.0);
     }
 }

@@ -123,6 +123,8 @@
     connection_timeout_seconds: 15,
     result_tranche_rows: 10_000,
     table_page_rows: 200,
+    table_font_family: 'monospace',
+    table_font_size_px: 13,
     history_enabled: true,
     history_retention_days: 90,
     session_restoration_enabled: true,
@@ -135,7 +137,11 @@
   const emptyWorkspace = (): WorkspaceView => ({
     tabs: [],
     active_tab_id: null,
-    panel_sizes: { explorer_percent: 22, results_percent: 35 }
+    panel_sizes: {
+      explorer_percent: 22,
+      results_percent: 35,
+      sidebar_connections_percent: 50
+    }
   });
 
   const defaultProfileForm = (): ProfileForm => ({
@@ -213,6 +219,7 @@
   let schemaObjectLoading = $state<Record<string, boolean>>({});
   let expandedNamespaces = $state<Record<string, boolean>>({});
   let schemaFilter = $state('');
+  let schemaSearchOpen = $state(false);
   let editorApi = $state<SqlEditorApi | null>(null);
   let pendingExecution = $state<{
     request: StartExecutionRequest;
@@ -240,6 +247,7 @@
   let fileMenuButton: HTMLButtonElement | undefined;
   let fileMenuElement: HTMLElement | undefined;
   let mainElement: HTMLElement | undefined;
+  let sidebarElement: HTMLElement | undefined;
   let historyButton: HTMLButtonElement | undefined;
 
   const activeTab = $derived(
@@ -286,6 +294,11 @@
   );
   const resultsPercent = $derived(
     clampResultsPercent(workspace.panel_sizes.results_percent)
+  );
+  const sidebarConnectionsPercent = $derived(
+    clampSidebarConnectionsPercent(
+      workspace.panel_sizes.sidebar_connections_percent
+    )
   );
   const tabSessionErrorVisible = $derived(
     Boolean(
@@ -371,6 +384,10 @@
 
   function clampResultsPercent(value: number): number {
     return Math.min(70, Math.max(20, Number.isFinite(value) ? value : 35));
+  }
+
+  function clampSidebarConnectionsPercent(value: number): number {
+    return Math.min(80, Math.max(20, Number.isFinite(value) ? value : 50));
   }
   const displayedSettings = $derived(
     modal === 'settings' ? settingsDraft : settings
@@ -511,6 +528,10 @@
     workspace.panel_sizes.results_percent = clampResultsPercent(
       workspace.panel_sizes.results_percent
     );
+    workspace.panel_sizes.sidebar_connections_percent =
+      clampSidebarConnectionsPercent(
+        workspace.panel_sizes.sidebar_connections_percent
+      );
     connections = {};
     connectionOperations = {};
     tabSessionOperations = {};
@@ -967,6 +988,13 @@
     mainElement = element;
     return () => {
       if (mainElement === element) mainElement = undefined;
+    };
+  };
+
+  const captureSidebar: Attachment<HTMLElement> = (element) => {
+    sidebarElement = element;
+    return () => {
+      if (sidebarElement === element) sidebarElement = undefined;
     };
   };
 
@@ -3143,6 +3171,77 @@
     };
   };
 
+  function setSidebarConnectionsPercent(value: number, announce = false) {
+    workspace.panel_sizes.sidebar_connections_percent =
+      clampSidebarConnectionsPercent(value);
+    if (announce) {
+      statusMessage = `Connections use ${Math.round(sidebarConnectionsPercent)}% of the sidebar; Schema uses the remaining space.`;
+      queueWorkspaceSave();
+    }
+  }
+
+  function beginSidebarResize(event: PointerEvent) {
+    if (event.button !== 0 || !sidebarElement) return;
+    event.preventDefault();
+    const connectionsPane =
+      sidebarElement.querySelector<HTMLElement>('.connections-pane');
+    const schemaPane =
+      sidebarElement.querySelector<HTMLElement>('.schema-explorer');
+    if (!connectionsPane || !schemaPane) return;
+    const top = connectionsPane.getBoundingClientRect().top;
+    const bottom = schemaPane.getBoundingClientRect().bottom;
+    const height = Math.max(1, bottom - top);
+    const move = (moveEvent: PointerEvent) => {
+      setSidebarConnectionsPercent(((moveEvent.clientY - top) / height) * 100);
+    };
+    const stop = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      setSidebarConnectionsPercent(sidebarConnectionsPercent, true);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop, { once: true });
+  }
+
+  function handleSidebarSeparatorKeydown(event: KeyboardEvent) {
+    let next = sidebarConnectionsPercent;
+    const step = event.shiftKey ? 5 : 2;
+    if (event.key === 'ArrowUp') next -= step;
+    else if (event.key === 'ArrowDown') next += step;
+    else if (event.key === 'Home') next = 20;
+    else if (event.key === 'End') next = 80;
+    else return;
+    event.preventDefault();
+    setSidebarConnectionsPercent(next, true);
+  }
+
+  const resizeSidebarSeparator: Attachment<HTMLElement> = (element) => {
+    element.tabIndex = 0;
+    const reset = () => setSidebarConnectionsPercent(50, true);
+    element.addEventListener('pointerdown', beginSidebarResize);
+    element.addEventListener('keydown', handleSidebarSeparatorKeydown);
+    element.addEventListener('dblclick', reset);
+    return () => {
+      element.removeEventListener('pointerdown', beginSidebarResize);
+      element.removeEventListener('keydown', handleSidebarSeparatorKeydown);
+      element.removeEventListener('dblclick', reset);
+    };
+  };
+
+  function toggleSchemaSearch() {
+    if (schemaSearchOpen) {
+      schemaSearchOpen = false;
+      schemaFilter = '';
+      return;
+    }
+    schemaSearchOpen = true;
+    void tick().then(() => {
+      sidebarElement
+        ?.querySelector<HTMLInputElement>('.schema-filter input')
+        ?.focus();
+    });
+  }
+
   function handleWindowKeydown(event: KeyboardEvent) {
     if (modal) return;
     const primaryModifier = primaryModifierPressed(event, macPrimaryShortcuts);
@@ -3204,7 +3303,9 @@
 <div
   class="app-shell"
   data-theme={displayedSettings.theme}
+  data-table-font-family={displayedSettings.table_font_family}
   style:--ui-scale={displayedSettings.ui_scale_percent / 100}
+  style:--table-font-size={`${displayedSettings.table_font_size_px}px`}
   aria-busy={busy || closingWindow}
 >
   <header class="topbar">
@@ -3305,93 +3406,127 @@
   {/if}
 
   <div class="workbench">
-    <aside aria-labelledby="connections-heading">
-      <div class="pane-heading">
-        <div>
-          <h2 id="connections-heading" tabindex="-1">Connections</h2>
-        </div>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="Create connection profile"
-          onclick={() => openConnectionProfile()}><Icon name="plus" /></button
-        >
-      </div>
-
-      {#if profiles.length === 0}
-        <div class="sidebar-empty">
-          <p>No saved profiles</p>
-          <span>QueryNot will not scan this device or network for them.</span>
-          <button type="button" onclick={() => openConnectionProfile()}
-            >Create connection</button
+    <aside
+      aria-labelledby="connections-heading"
+      class:has-schema={Boolean(activeProfile)}
+      style:grid-template-rows={activeProfile
+        ? `${sidebarConnectionsPercent}fr 7px ${100 - sidebarConnectionsPercent}fr`
+        : 'minmax(0, 1fr)'}
+      {@attach captureSidebar}
+    >
+      <div class="connections-pane">
+        <div class="pane-heading">
+          <div>
+            <h2 id="connections-heading" tabindex="-1">Connections</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            aria-label="Create connection profile"
+            onclick={() => openConnectionProfile()}><Icon name="plus" /></button
           >
         </div>
-      {/if}
 
-      <ConnectionList
-        {profiles}
-        activeProfileId={activeProfile?.id ?? null}
-        offlineActive={Boolean(activeTab && !activeTab.profile_id)}
-        {connections}
-        {connectionOperations}
-        onselectprofile={(profile) => void selectProfileGroup(profile)}
-        onselectoffline={() => void selectOfflineGroup()}
-        onconnect={(profile) => void connectProfile(profile)}
-        ondisconnect={(profile) => void disconnectProfile(profile)}
-        ontest={(profile) => void testProfile(profile)}
-        oncancelconnection={(profile) => void cancelProfileConnection(profile)}
-        oneditprofile={editProfile}
-        onduplicateprofile={(profile) => void duplicateProfile(profile)}
-        ondeleteprofile={confirmDeleteProfile}
-      />
+        {#if profiles.length === 0}
+          <div class="sidebar-empty">
+            <p>No saved profiles</p>
+            <span>QueryNot will not scan this device or network for them.</span>
+            <button type="button" onclick={() => openConnectionProfile()}
+              >Create connection</button
+            >
+          </div>
+        {/if}
 
-      <p class="sidebar-note">
-        Profiles and drafts stay on this device. Credentials use the OS vault or
-        native session memory.
-      </p>
+        <ConnectionList
+          {profiles}
+          activeProfileId={activeProfile?.id ?? null}
+          offlineActive={Boolean(activeTab && !activeTab.profile_id)}
+          {connections}
+          {connectionOperations}
+          onselectprofile={(profile) => void selectProfileGroup(profile)}
+          onselectoffline={() => void selectOfflineGroup()}
+          onconnect={(profile) => void connectProfile(profile)}
+          ondisconnect={(profile) => void disconnectProfile(profile)}
+          ontest={(profile) => void testProfile(profile)}
+          oncancelconnection={(profile) =>
+            void cancelProfileConnection(profile)}
+          oneditprofile={editProfile}
+          onduplicateprofile={(profile) => void duplicateProfile(profile)}
+          ondeleteprofile={confirmDeleteProfile}
+        />
+      </div>
 
       {#if activeProfile}
+        <div
+          class="sidebar-separator"
+          role="separator"
+          aria-label="Resize Connections and Schema panels"
+          aria-orientation="horizontal"
+          aria-valuemin="20"
+          aria-valuemax="80"
+          aria-valuenow={Math.round(sidebarConnectionsPercent)}
+          {@attach resizeSidebarSeparator}
+        >
+          <span aria-hidden="true"></span>
+        </div>
         <section class="schema-explorer" aria-labelledby="schema-heading">
           <div class="pane-heading compact">
             <div>
               <h2 id="schema-heading">Schema</h2>
             </div>
-            {#if activeConnection}
-              <button
-                type="button"
-                class="schema-refresh"
-                disabled={busy}
-                onclick={() => void refreshSchema()}>Refresh</button
-              >
-            {/if}
+            <div class="schema-heading-actions">
+              {#if activeConnection}
+                <button
+                  type="button"
+                  class:active={schemaSearchOpen || Boolean(schemaFilter)}
+                  class="icon-button schema-tool"
+                  aria-label={schemaSearchOpen
+                    ? 'Close schema search'
+                    : 'Search schema objects'}
+                  aria-expanded={schemaSearchOpen}
+                  onclick={toggleSchemaSearch}><Icon name="search" /></button
+                >
+                <button
+                  type="button"
+                  class="icon-button schema-tool"
+                  aria-label="Refresh schema metadata"
+                  title="Refresh schema metadata"
+                  disabled={busy}
+                  onclick={() => void refreshSchema()}
+                  ><Icon name="refresh" /></button
+                >
+              {/if}
+            </div>
           </div>
-          <p
-            class:schema-stale={activeSchemaState === 'stale'}
-            class="schema-state"
-          >
-            {activeSchemaState === 'disconnected'
-              ? 'Disconnected — connect this profile to refresh metadata.'
-              : activeSchemaState === 'loading'
-                ? 'Loading top-level namespaces…'
-                : activeSchemaState === 'empty'
-                  ? 'Connected; this database exposes no namespaces.'
-                  : activeSchemaState === 'stale'
-                    ? 'Stale cache — the latest metadata refresh did not succeed.'
-                    : activeSchemaState === 'permission-denied'
-                      ? 'Permission denied while loading metadata; retained cache was not erased.'
-                      : activeSchemaState === 'error'
-                        ? 'Metadata error — editor sessions remain independent.'
-                        : 'Metadata is current.'}
-          </p>
+          {#if activeSchemaState !== 'loaded'}
+            <p
+              class:schema-stale={activeSchemaState === 'stale'}
+              class="schema-state"
+            >
+              {activeSchemaState === 'disconnected'
+                ? 'Disconnected — connect to load metadata.'
+                : activeSchemaState === 'loading'
+                  ? 'Loading namespaces…'
+                  : activeSchemaState === 'empty'
+                    ? 'No namespaces exposed.'
+                    : activeSchemaState === 'stale'
+                      ? 'Showing stale cached metadata.'
+                      : activeSchemaState === 'permission-denied'
+                        ? 'Metadata permission denied; cache retained.'
+                        : 'Metadata unavailable; editor sessions remain independent.'}
+            </p>
+          {/if}
           {#if activeConnection}
-            <label class="schema-filter">
-              <span class="sr-only">Filter loaded schema objects</span>
-              <input
-                type="search"
-                placeholder="Filter loaded objects"
-                bind:value={schemaFilter}
-              />
-            </label>
+            {#if schemaSearchOpen}
+              <label class="schema-filter">
+                <span class="sr-only">Filter loaded schema objects</span>
+                <input
+                  type="search"
+                  placeholder="Filter loaded objects"
+                  bind:value={schemaFilter}
+                />
+              </label>
+            {/if}
             <div
               class="schema-tree"
               role="tree"
@@ -3427,8 +3562,9 @@
                     type="button"
                     class="schema-copy"
                     aria-label={`Refresh ${namespace.name} metadata`}
+                    title={`Refresh ${namespace.name} metadata`}
                     onclick={() => void refreshNamespace(namespace.name)}
-                    >Refresh</button
+                    ><Icon name="refresh" size={13} /></button
                   >
                   {#if expandedNamespaces[`${activeProfile.id}:${namespace.name}`]}
                     <ul role="group">
@@ -3877,6 +4013,8 @@
                     paused={result.paused}
                     terminalState={result.terminalState}
                     durationMs={result.durationMs}
+                    tableFontFamily={displayedSettings.table_font_family}
+                    tableFontSizePx={displayedSettings.table_font_size_px}
                     onloadmore={() => void loadMore(result)}
                     ondiscard={() => void discardRemainder(result)}
                     onexport={(format, currentView, nullToken) =>
@@ -4422,6 +4560,25 @@
                   min="25"
                   max="1000"
                   bind:value={settingsDraft.table_page_rows}
+                />
+              </label>
+              <label class="field">
+                <span>Table font</span>
+                <select bind:value={settingsDraft.table_font_family}>
+                  <option value="monospace">Monospace</option>
+                  <option value="system">System sans serif</option>
+                </select>
+              </label>
+              <label class="field">
+                <span
+                  >Table text size: {settingsDraft.table_font_size_px}px</span
+                >
+                <input
+                  type="range"
+                  min="10"
+                  max="20"
+                  step="1"
+                  bind:value={settingsDraft.table_font_size_px}
                 />
               </label>
               <label class="check-row">

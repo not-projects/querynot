@@ -37,6 +37,12 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     expect(app).toContain('Legacy server connection');
     expect(mysql).toContain('CompatibilityStatus::QueryOnly');
     expect(mysql).toContain('possible writes are disabled');
+    expect(mysql).toContain(
+      'mysql_version_line(exact_version) == Some((5, 7))'
+    );
+    expect(mysql).toContain(
+      'write-enabled under the MySQL 5.7 compatibility line'
+    );
   });
 
   it('exposes cancellable and timed connection lifecycle states', () => {

@@ -979,6 +979,7 @@ mod tests {
             panel_sizes: PanelSizes {
                 explorer_percent: 20.0,
                 results_percent: 35.0,
+                sidebar_connections_percent: 50.0,
             },
         };
         store.save_workspace(&workspace, 102).await.unwrap();

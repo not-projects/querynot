@@ -7,6 +7,10 @@ Version `0.1.5` is the current live release for Windows 11 x86-64, Linux x86-64,
 
 The rows below describe the live `0.1.5` publication matrix after the exact multi-platform candidate and public-download round trip passed. Phase 5 continues to describe the historical `0.1.0` Windows-only boundary, and `evidence/release-updates/0.1.1` retains the first signed-channel records. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain explicit follow-up evidence until performed.
 
+## Prepared 0.1.6 compatibility delta
+
+The prepared `0.1.6` source recognizes every well-formed MySQL `5.7.x` identity as the legacy 5.7 compatibility line and keeps ordinary query writes, manual transactions, destructive-statement confirmation, and safe staged row mutations enabled. Non-5.7.44 patches state that 5.7.44 remains the exact automated conformance fixture. Malformed identities and unrecognized MySQL/MariaDB lines remain query-only, and the published `0.1.5` evidence below is unchanged.
+
 ## Application platforms
 
 | Matrix ID | Operating system | Architecture | Web runtime/package | Current status |

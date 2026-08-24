@@ -1124,17 +1124,17 @@ async fn connection_info(
         .next()
         .unwrap_or(&reported_version)
         .to_owned();
-    let (compatibility_status, legacy) = match (product, exact_version.as_str()) {
-        ("MySQL", "5.7.44" | "8.0.46") => (CompatibilityStatus::Supported, true),
-        ("MySQL", "8.4.10") | ("MariaDB", "10.11.18" | "11.4.12") => {
-            (CompatibilityStatus::Supported, false)
-        }
-        _ => (CompatibilityStatus::QueryOnly, false),
-    };
+    let (compatibility_status, legacy, exact_fixture) =
+        classify_compatibility(product, &exact_version);
     let mut warnings = Vec::new();
     if compatibility_status == CompatibilityStatus::QueryOnly {
         warnings.push(format!(
             "{product} {exact_version} is outside the tested compatibility matrix; possible writes are disabled."
+        ));
+    }
+    if compatibility_status == CompatibilityStatus::Supported && !exact_fixture {
+        warnings.push(format!(
+            "{product} {exact_version} is write-enabled under the MySQL 5.7 compatibility line; 5.7.44 remains the exact conformance fixture."
         ));
     }
     if legacy {
@@ -1177,6 +1177,30 @@ async fn connection_info(
         compatibility_status,
         compatibility_warning: (!warnings.is_empty()).then(|| warnings.join(" ")),
     })
+}
+
+fn classify_compatibility(product: &str, exact_version: &str) -> (CompatibilityStatus, bool, bool) {
+    let mysql57 = product == "MySQL" && mysql_version_line(exact_version) == Some((5, 7));
+    match (product, exact_version) {
+        ("MySQL", "5.7.44") => (CompatibilityStatus::Supported, true, true),
+        ("MySQL", "8.0.46") => (CompatibilityStatus::Supported, true, true),
+        ("MySQL", "8.4.10") | ("MariaDB", "10.11.18" | "11.4.12") => {
+            (CompatibilityStatus::Supported, false, true)
+        }
+        _ if mysql57 => (CompatibilityStatus::Supported, true, false),
+        _ => (CompatibilityStatus::QueryOnly, false, false),
+    }
+}
+
+fn mysql_version_line(exact_version: &str) -> Option<(u64, u64)> {
+    let mut components = exact_version.split('.');
+    let major = components.next()?.parse().ok()?;
+    let minor = components.next()?.parse().ok()?;
+    components.next()?.parse::<u64>().ok()?;
+    if components.next().is_some() {
+        return None;
+    }
+    Some((major, minor))
 }
 
 async fn load_object_detail(
@@ -1820,23 +1844,60 @@ syWTcIRpuGqs+IFaeys=\n\
     }
 
     #[test]
-    fn exact_matrix_and_legacy_classification_is_fail_closed() {
-        for (product, version, expected_status, expected_legacy) in [
-            ("MySQL", "5.7.44", CompatibilityStatus::Supported, true),
-            ("MySQL", "8.0.46", CompatibilityStatus::Supported, true),
-            ("MySQL", "8.4.10", CompatibilityStatus::Supported, false),
-            ("MariaDB", "10.11.18", CompatibilityStatus::Supported, false),
-            ("MariaDB", "11.4.12", CompatibilityStatus::Supported, false),
-            ("MySQL", "8.4.11", CompatibilityStatus::QueryOnly, false),
+    fn mysql57_line_and_exact_matrix_classification_are_fail_closed() {
+        for (product, version, expected) in [
+            (
+                "MySQL",
+                "5.7.0",
+                (CompatibilityStatus::Supported, true, false),
+            ),
+            (
+                "MySQL",
+                "5.7.39",
+                (CompatibilityStatus::Supported, true, false),
+            ),
+            (
+                "MySQL",
+                "5.7.44",
+                (CompatibilityStatus::Supported, true, true),
+            ),
+            (
+                "MySQL",
+                "8.0.46",
+                (CompatibilityStatus::Supported, true, true),
+            ),
+            (
+                "MySQL",
+                "8.4.10",
+                (CompatibilityStatus::Supported, false, true),
+            ),
+            (
+                "MariaDB",
+                "10.11.18",
+                (CompatibilityStatus::Supported, false, true),
+            ),
+            (
+                "MariaDB",
+                "11.4.12",
+                (CompatibilityStatus::Supported, false, true),
+            ),
+            (
+                "MySQL",
+                "5.7",
+                (CompatibilityStatus::QueryOnly, false, false),
+            ),
+            (
+                "MySQL",
+                "5.7.44.1",
+                (CompatibilityStatus::QueryOnly, false, false),
+            ),
+            (
+                "MySQL",
+                "8.4.11",
+                (CompatibilityStatus::QueryOnly, false, false),
+            ),
         ] {
-            let observed = match (product, version) {
-                ("MySQL", "5.7.44" | "8.0.46") => (CompatibilityStatus::Supported, true),
-                ("MySQL", "8.4.10") | ("MariaDB", "10.11.18" | "11.4.12") => {
-                    (CompatibilityStatus::Supported, false)
-                }
-                _ => (CompatibilityStatus::QueryOnly, false),
-            };
-            assert_eq!(observed, (expected_status, expected_legacy));
+            assert_eq!(classify_compatibility(product, version), expected);
         }
     }
 

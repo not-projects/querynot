@@ -143,7 +143,6 @@
       >
       <span class="connection-copy">
         <strong>Offline</strong>
-        <small>SQL files and detached drafts</small>
       </span>
       <span
         class="connection-status"
@@ -157,16 +156,22 @@
 <style>
   .connection-list {
     display: grid;
+    flex: 1 1 auto;
     min-width: 0;
-    margin-block: 0.65rem 0.25rem;
-    gap: 0.22rem;
+    min-height: 0;
+    align-content: start;
+    grid-auto-rows: max-content;
+    margin-block: 0.4rem 0;
+    gap: 0.12rem;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .connection-row {
     position: relative;
     display: grid;
     min-width: 0;
-    min-height: 2.65rem;
+    min-height: 2.35rem;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 0.15rem;
@@ -189,7 +194,7 @@
   .connection-main {
     display: grid;
     min-width: 0;
-    min-height: 2.3rem;
+    min-height: 2rem;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     padding: 0.25rem 0.3rem;
@@ -203,6 +208,10 @@
     display: grid;
     min-width: 0;
     gap: 0.08rem;
+  }
+
+  .offline-row .connection-main {
+    min-height: 1.9rem;
   }
 
   .connection-copy strong,

@@ -154,8 +154,8 @@ Database administrators are not a primary initial-release audience.
 
 QueryNot uses an editor-first workbench:
 
-- A persistent left sidebar contains saved connections, their collapsible query/table-data children, one Offline group for unbound files and detached drafts, and the active connection's schema tree.
-- The main region contains the active query or table-data child without a duplicate global tab strip.
+- A persistent left sidebar contains compact saved-connection rows, one compact Offline row, and the active connection's schema tree. Connections and Schema share a persisted pointer- and keyboard-resizable vertical split that defaults to 50% and is bounded to 20–80%; each region scrolls independently.
+- The selected connection or Offline group owns one compact horizontal query/object tab strip above the main workspace.
 - A compact context bar shows engine, connection, database or schema, and transaction state.
 - The editor occupies the primary canvas.
 - Results, messages, and related execution details appear directly below the editor in a resizable region.
@@ -360,7 +360,7 @@ The check must be dialect-aware and resilient to whitespace and comments. For `U
 
 **RES-4 — Data fidelity.** `NULL`, empty strings, signed and unsigned integers, binary values, large text, dates/times, decimals, floating-point values, booleans, and engine-specific values have unambiguous display and copy behavior. Integer and decimal transport must not pass through a lossy JavaScript number. Dates/times preserve the engine value and timezone/offset metadata; QueryNot does not invent an offset or silently convert zones. Display formatting must not alter copied or exported raw values.
 
-**RES-5 — Grid operations.** Users can resize columns, copy a cell, select rows with explicit row checkboxes, copy all loaded rows or only selected rows with or without headers, and locally sort or filter the rows already received. Selecting a field focuses it without implicitly selecting its row. Selection count, selected-row copy actions, and clearing the selection are visible whenever rows are selected. Client-side sort/filter state must be labelled as applying only to loaded rows.
+**RES-5 — Grid operations.** Users can resize columns, copy a cell, select rows with explicit row checkboxes, copy all loaded rows or only selected rows with or without headers, and locally sort or filter the rows already received. Initial query-result widths fit the loaded header/value content from 64px up to the established 180px default cap; long fields remain capped and every column remains manually resizable up to 640px. Selecting a field focuses it without implicitly selecting its row. Selection count, selected-row copy actions, and clearing the selection are visible whenever rows are selected. Client-side sort/filter state must be labelled as applying only to loaded rows.
 
 **RES-6 — Large values.** Oversized cell content is previewed safely and opened on demand through right-click or an **Open value** action for the focused field. One side subtab inside the result pane shows the selected raw value with soft wrapping. Valid JSON-shaped or JSON-declared text can be displayed with whitespace formatting while preserving the exact raw token text for Raw and Copy; invalid or over-limit JSON falls back to exact raw text with an explanation. Database content remains text-only, and the grid must not eagerly syntax-highlight or fully render every large value.
 
@@ -426,7 +426,7 @@ The check must be dialect-aware and resilient to whitespace and comments. For `U
 
 ### 8.9 Settings and diagnostics
 
-**SET-1 — Settings.** Initial settings cover theme, UI scale, editor preferences, formatter behavior, connection timeout, default result tranche, table page size, history retention, session restoration, reconnect preference, and local-log retention/clearing. UI-scale changes preview on the main application immediately, while an already-open Settings dialog keeps its opening scale so the control remains stable; reopening Settings adopts the saved scale.
+**SET-1 — Settings.** Initial settings cover theme, UI scale, editor preferences, formatter behavior, connection timeout, default result tranche, table page size, table font family and text size, history retention, session restoration, reconnect preference, and local-log retention/clearing. UI-scale and table-typography changes preview on the main application immediately, while an already-open Settings dialog keeps its opening scale so the control remains stable; reopening Settings adopts the saved scale.
 
 **SET-2 — Themes.** Light, dark, and forest themes must use the same semantic roles and meet accessibility requirements. Theme changes apply without restarting.
 
@@ -448,6 +448,8 @@ The check must be dialect-aware and resilient to whitespace and comments. For `U
 | Connection timeout        | 15 seconds                             | Per profile, inherited from global                  |
 | Result tranche            | 10,000 rows                            | Global                                              |
 | Table page                | 200 rows                               | Global                                              |
+| Table font                | Monospace                              | Global                                              |
+| Table text size           | 13px; adjustable from 10–20px          | Global                                              |
 | Query history             | Enabled, 90 days                       | Global                                              |
 | Draft/session restoration | Enabled                                | Global                                              |
 | Automatic reconnect       | Disabled                               | Per profile opt-in and only with a saved credential |
@@ -615,7 +617,7 @@ Targets are measured from production builds on an otherwise idle reference machi
 - Linux x86-64 through AppImage, Debian, and RPM packages built on the selected Ubuntu runner, with WebKitGTK 4.1 and exact runner/runtime evidence retained by the candidate.
 - macOS 13 or later on Intel and Apple silicon through architecture-specific DMGs and Tauri updater archives built on the selected native macOS runners.
 - Windows 10 and Linux ARM remain outside the `0.1.5` support and distribution claim. Portable compile checks and historical WSL2/Linux engineering packages are development evidence only.
-- MySQL 5.7.44 as a legacy compatibility target, MySQL 8.0 at the exact patch selected for the release fixture, and MySQL 8.4 LTS at the latest maintenance patch selected for the release fixture. “MySQL 5.7+” establishes the compatibility floor; it does not claim untested innovation, future, forked, or vendor-patched versions.
+- Well-formed MySQL 5.7.x patch identities share the legacy 5.7 query, transaction, and safe-mutation capability path; MySQL 5.7.44 remains the only exact 5.7 conformance fixture and the only patch certified by the published release matrix. This does not certify ambiguous identities, forks, or vendor-specific behavior. MySQL 8.0 and 8.4 remain bounded to the exact selected fixtures.
 - MariaDB 10.11 and 11.4 LTS, using the latest maintenance patch selected for the release fixtures.
 - SQLite format 3 database files accepted by the exact bundled SQLite library version; extension loading is disabled in the initial release.
 
@@ -879,7 +881,7 @@ The following product decisions are fixed for the initial-release plan:
 - Primary audience: software developers.
 - Replacement target: everyday MySQL Workbench and DBeaver workflows, not full feature parity.
 - Initial engines: bundled SQLite, MySQL 5.7+ with initial tested lines 5.7.44, 8.0, and 8.4 LTS, and MariaDB 10.11/11.4 LTS on the published patch matrix.
-- MySQL 5.7 status: legacy compatibility through the final 5.7.44 release, with a visible lifecycle warning and no safety downgrade; “5.7+” is a version floor, not blanket certification of untested later versions.
+- MySQL 5.7 status: well-formed 5.7.x patches use the write-capable legacy compatibility path with a visible lifecycle warning and no safety downgrade; 5.7.44 remains the only exact automated conformance fixture and published patch certification.
 - MariaDB behavior: automatic detection through the MySQL/MariaDB connection family.
 - Adapter delivery: compiled into QueryNot; no third-party plugin system initially.
 - First post-release engine: PostgreSQL.

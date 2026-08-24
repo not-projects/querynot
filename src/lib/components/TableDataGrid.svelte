@@ -1035,7 +1035,14 @@
   table {
     border-collapse: collapse;
     min-width: 100%;
-    font-size: 0.8rem;
+    font-family: var(
+      --table-font-family,
+      'IBM Plex Mono',
+      'Cascadia Code',
+      ui-monospace,
+      monospace
+    );
+    font-size: var(--table-font-size, 13px);
   }
   th,
   td {

@@ -583,6 +583,98 @@ try {
   await workbenchPage
     .getByRole('button', { name: 'Disconnect', exact: true })
     .waitFor();
+  const sidebarSeparator = workbenchPage.locator('.sidebar-separator');
+  await sidebarSeparator.waitFor();
+  const measureSidebarSplit = () =>
+    workbenchPage.evaluate(() => {
+      const connections = document
+        .querySelector('.connections-pane')
+        ?.getBoundingClientRect();
+      const schema = document
+        .querySelector('.schema-explorer')
+        ?.getBoundingClientRect();
+      const separator = document.querySelector('.sidebar-separator');
+      if (!connections || !schema || !separator) {
+        throw new Error('sidebar split geometry is incomplete');
+      }
+      return {
+        connections_height: connections.height,
+        schema_height: schema.height,
+        aria_value: separator.getAttribute('aria-valuenow'),
+        connection_rows: Array.from(
+          document.querySelectorAll('.connection-row')
+        ).map((row) => row.getBoundingClientRect().toJSON())
+      };
+    });
+  const sidebarSplit50 = await measureSidebarSplit();
+  assert(
+    sidebarSplit50.aria_value === '50' &&
+      Math.abs(
+        sidebarSplit50.connections_height - sidebarSplit50.schema_height
+      ) <= 2,
+    `sidebar did not start at its centered split (${JSON.stringify(sidebarSplit50)})`
+  );
+  assert(
+    sidebarSplit50.connection_rows.every(
+      (row, index, rows) =>
+        index === 0 || row.top - rows[index - 1].bottom <= 10
+    ),
+    `connection rows are not compact (${JSON.stringify(sidebarSplit50.connection_rows)})`
+  );
+  assert(
+    (await workbenchPage.locator('.schema-filter').count()) === 0 &&
+      !(await workbenchPage.locator('aside').innerText()).includes(
+        'Metadata is current.'
+      ),
+    'schema search or routine metadata description consumes default space'
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Search schema objects' })
+    .click();
+  await workbenchPage.locator('.schema-filter input').waitFor();
+  await workbenchPage
+    .getByRole('button', { name: 'Close schema search' })
+    .click();
+  assert(
+    (await workbenchPage.locator('.schema-filter').count()) === 0,
+    'schema search did not collapse back under its icon'
+  );
+  const sidebarSeparatorBounds = await sidebarSeparator.boundingBox();
+  if (!sidebarSeparatorBounds) {
+    throw new Error('sidebar separator has no pointer target');
+  }
+  await workbenchPage.mouse.move(
+    sidebarSeparatorBounds.x + sidebarSeparatorBounds.width / 2,
+    sidebarSeparatorBounds.y + sidebarSeparatorBounds.height / 2
+  );
+  await workbenchPage.mouse.down();
+  await workbenchPage.mouse.move(
+    sidebarSeparatorBounds.x + sidebarSeparatorBounds.width / 2,
+    sidebarSeparatorBounds.y + sidebarSeparatorBounds.height / 2 + 60
+  );
+  await workbenchPage.mouse.up();
+  const sidebarPointerSplit = await measureSidebarSplit();
+  assert(
+    Number(sidebarPointerSplit.aria_value) > 50 &&
+      sidebarPointerSplit.connections_height >
+        sidebarSplit50.connections_height,
+    `sidebar pointer drag did not resize the panes (${JSON.stringify(sidebarPointerSplit)})`
+  );
+  await sidebarSeparator.dblclick();
+  await sidebarSeparator.focus();
+  await sidebarSeparator.press('End');
+  const sidebarSplit80 = await measureSidebarSplit();
+  await sidebarSeparator.press('Home');
+  const sidebarSplit20 = await measureSidebarSplit();
+  await sidebarSeparator.dblclick();
+  const sidebarSplitReset = await measureSidebarSplit();
+  assert(
+    sidebarSplit20.connections_height < sidebarSplitReset.connections_height &&
+      sidebarSplitReset.connections_height <
+        sidebarSplit80.connections_height &&
+      sidebarSplitReset.aria_value === '50',
+    `sidebar split keyboard bounds are not ordered (${JSON.stringify({ sidebarSplit20, sidebarSplitReset, sidebarSplit80 })})`
+  );
   const schemaNamespaceLayout = await workbenchPage.evaluate(() => {
     const rows = Array.from(
       document.querySelectorAll('.schema-tree > div > button:first-child')
@@ -779,6 +871,20 @@ try {
     const visibleTabs = Array.from(
       document.querySelectorAll('[role="tab"] .tab-title')
     ).map((element) => element.textContent?.trim() ?? '');
+    const resultColumnWidths = Object.fromEntries(
+      Array.from(
+        document.querySelectorAll('.grid-header > [role="columnheader"]')
+      )
+        .map((element) => {
+          const name = element.querySelector('button')?.textContent?.trim();
+          return name ? [name, element.getBoundingClientRect().width] : null;
+        })
+        .filter(Boolean)
+    );
+    const firstGridCell = document.querySelector('.grid-row [role="gridcell"]');
+    const firstGridCellStyle = firstGridCell
+      ? getComputedStyle(firstGridCell)
+      : null;
     return {
       document_scroll_width: document.documentElement.scrollWidth,
       viewport_width: window.innerWidth,
@@ -791,6 +897,9 @@ try {
         Boolean(emissaryAction) &&
         emissaryAction.scrollWidth <= emissaryAction.clientWidth,
       visible_tabs: visibleTabs,
+      result_column_widths: resultColumnWidths,
+      table_font_size: firstGridCellStyle?.fontSize ?? '',
+      table_font_family: firstGridCellStyle?.fontFamily ?? '',
       topbar: rect('.topbar'),
       toolbar_group_count: document.querySelectorAll(
         '.query-toolbar > .toolbar-group'
@@ -870,6 +979,18 @@ try {
   assert(
     populatedWorkbench.results.bottom <= populatedWorkbench.footer.top,
     'results overlap the status bar'
+  );
+  assert(
+    populatedWorkbench.result_column_widths.id <= 90 &&
+      populatedWorkbench.result_column_widths.id <
+        populatedWorkbench.result_column_widths.armor &&
+      Math.abs(populatedWorkbench.result_column_widths.armor - 180) <= 1,
+    `result columns are not value-aware and capped (${JSON.stringify(populatedWorkbench.result_column_widths)})`
+  );
+  assert(
+    populatedWorkbench.table_font_size === '13px' &&
+      /Mono|monospace/i.test(populatedWorkbench.table_font_family),
+    `saved table typography did not reach the result grid (${populatedWorkbench.table_font_family} ${populatedWorkbench.table_font_size})`
   );
 
   const horizontalScrollers = await workbenchPage.evaluate(() =>

@@ -12,6 +12,14 @@ pub enum ThemePreference {
     Forest,
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TableFontPreference {
+    System,
+    #[default]
+    Monospace,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct AppSettings {
@@ -23,6 +31,8 @@ pub struct AppSettings {
     pub connection_timeout_seconds: u16,
     pub result_tranche_rows: u32,
     pub table_page_rows: u32,
+    pub table_font_family: TableFontPreference,
+    pub table_font_size_px: u8,
     pub history_enabled: bool,
     pub history_retention_days: u16,
     pub session_restoration_enabled: bool,
@@ -43,6 +53,8 @@ impl Default for AppSettings {
             connection_timeout_seconds: 15,
             result_tranche_rows: 10_000,
             table_page_rows: 200,
+            table_font_family: TableFontPreference::Monospace,
+            table_font_size_px: 13,
             history_enabled: true,
             history_retention_days: 90,
             session_restoration_enabled: true,
@@ -66,6 +78,8 @@ pub enum SettingsValidationError {
     ResultTranche,
     #[error("table page must be between 25 and 1,000 rows")]
     TablePage,
+    #[error("table font size must be between 10 and 20 pixels")]
+    TableFontSize,
     #[error("history retention must be between 1 and 3,650 days")]
     HistoryRetention,
     #[error("operational log cap must be between 64 KiB and 5 MiB")]
@@ -94,6 +108,9 @@ impl AppSettings {
         }
         if !(25..=1_000).contains(&self.table_page_rows) {
             return Err(SettingsValidationError::TablePage);
+        }
+        if !(10..=20).contains(&self.table_font_size_px) {
+            return Err(SettingsValidationError::TableFontSize);
         }
         if !(1..=3_650).contains(&self.history_retention_days) {
             return Err(SettingsValidationError::HistoryRetention);
@@ -128,6 +145,8 @@ mod tests {
         assert_eq!(settings.connection_timeout_seconds, 15);
         assert_eq!(settings.result_tranche_rows, 10_000);
         assert_eq!(settings.table_page_rows, 200);
+        assert_eq!(settings.table_font_family, TableFontPreference::Monospace);
+        assert_eq!(settings.table_font_size_px, 13);
         assert_eq!(settings.history_retention_days, 90);
         assert_eq!(settings.operational_log_max_bytes, 5 * 1024 * 1024);
         assert_eq!(settings.operational_log_retention_days, 7);
@@ -143,5 +162,31 @@ mod tests {
         settings.ui_scale_percent = 125;
         assert_ne!(settings, AppSettings::default());
         assert_eq!(AppSettings::reset(), AppSettings::default());
+    }
+
+    #[test]
+    fn released_settings_gain_table_typography_defaults_on_load() {
+        let released = serde_json::json!({
+            "theme": "system",
+            "ui_scale_percent": 100,
+            "editor_word_wrap": false,
+            "formatter_uppercase_keywords": true,
+            "formatter_indent_spaces": 2,
+            "connection_timeout_seconds": 15,
+            "result_tranche_rows": 10_000,
+            "table_page_rows": 200,
+            "history_enabled": true,
+            "history_retention_days": 90,
+            "session_restoration_enabled": true,
+            "automatic_reconnect_default": false,
+            "operational_log_enabled": true,
+            "operational_log_max_bytes": DEFAULT_LOG_MAX_BYTES,
+            "operational_log_retention_days": 7
+        });
+        let settings: AppSettings = serde_json::from_value(released).unwrap();
+
+        assert_eq!(settings.table_font_family, TableFontPreference::Monospace);
+        assert_eq!(settings.table_font_size_px, 13);
+        settings.validate().unwrap();
     }
 }

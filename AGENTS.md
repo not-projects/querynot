@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.5 is the current live release on the signed-updater channel for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.5 is the current live release on the signed-updater channel for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon; the source tree is prepared as 0.1.6 pending signed candidate validation and publication.
 
 > Query your data, not your patience.
 
@@ -42,6 +42,8 @@ Version 0.1.3 established stable CodeMirror editing, the unchanged flat workspac
 
 Active-tab close stays in the owning connection or Offline group and creates an empty same-group query if needed. Result fields focus independently from explicit row checkboxes; selected-row copy actions are visible when relevant. Right-click or **Open value** opens one soft-wrapping side value subtab with lossless Raw/Copy behavior and bounded formatted JSON display. Schema namespace rows remain compact instead of stretching through unused sidebar height.
 
+The prepared 0.1.6 source treats every well-formed MySQL 5.7.x patch as write-capable with the existing legacy and safety controls; 5.7.44 remains the exact conformance fixture and other 5.7 patches disclose that distinction. Connections and Schema use a persisted 20–80% vertical split that defaults to 50%, routine schema copy and the Offline subtitle are removed, search and refresh use labelled SVG controls, short result columns auto-fit up to the existing 180px cap, and Settings persists table font family and 10–20px text size.
+
 The current live `0.1.5` support and publication envelope is Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads under ADR 0016. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
 
 ## Verified Commands
@@ -49,7 +51,7 @@ The current live `0.1.5` support and publication envelope is Windows 11 x86-64 N
 - `npm install` — install the exact frontend/Tauri CLI lockfile.
 - `npm run check` — Svelte and TypeScript diagnostics.
 - `npm run test` — frontend/policy unit tests with a repository-local temporary directory.
-- `npm run test:ui-layout` — Chromium regression checks for 720–2048px and 100–150% workbench geometry, a fully reachable 200% Settings dialog in a 600px-high viewport, PostNot theme names, opaque themed dialogs, stable CodeMirror node/focus behavior, dark completion contrast and Enter/Tab behavior, platform-primary execution, stable Settings controls during scale preview, compact non-stretched tabs, compact schema namespaces, a main-workspace schema structure tab with lazy row browsing, synchronized wide results and 20–70% splits, explicit row-selection actions, a bounded soft-wrapping formatted-JSON value subtab, group-local active-tab close, plus History overlay/focus behavior; the retained evidence includes 1915×1237 captures at 150% scale, and the pinned browser is installed once with `npx playwright install chromium`.
+- `npm run test:ui-layout` — Chromium regression checks for 720–2048px and 100–150% workbench geometry, a fully reachable 200% Settings dialog in a 600px-high viewport, PostNot theme names, opaque themed dialogs, stable CodeMirror node/focus behavior, dark completion contrast and Enter/Tab behavior, platform-primary execution, stable Settings controls during scale preview, compact non-stretched tabs, a centered persisted 20–80% Connections/Schema split with collapsed search, compact schema namespaces, a main-workspace schema structure tab with lazy row browsing, value-aware result widths and saved typography, synchronized wide results and 20–70% query/result splits, explicit row-selection actions, a bounded soft-wrapping formatted-JSON value subtab, group-local active-tab close, plus History overlay/focus behavior; the retained evidence includes 1915×1237 captures at 150% scale, and the pinned browser is installed once with `npx playwright install chromium`.
 - `npm run build` — production frontend build.
 - `npm run test:contracts` — generated Rust/TypeScript command contract drift check.
 - `npm run test:traceability` — PRD/matrix coverage and evidence invariant check.
@@ -71,10 +73,10 @@ The current live `0.1.5` support and publication envelope is Windows 11 x86-64 N
 - `npm run release:inspect -- --binary <path> --directory <path> --expect <formats> --report <path>` — inspect one platform's nonempty packages, matching updater signature, binary material, CSP/capability boundary, version, and commit.
 - `npm run release:checksums -- --directory <path> --output <path> --manifest <path>` — generate commit/version-addressed SHA-256 text and JSON records for the exact candidate packages.
 - `npm run release:create-updater-manifest -- --directory <path> --output <latest.json> --report <report>` — generate the eight-key Windows/Linux/macOS updater manifest from the seven signed payloads and checked-in versioned release notes.
-- `npm run release:validate-update-candidate -- --directory <candidate-dir> --tag v0.1.5 --report <report>` — validate the combined four-target candidate, seven installable packages, seven updater payload signatures, eight feed keys, retained inspections, and exact source/version evidence.
+- `npm run release:validate-update-candidate -- --directory <candidate-dir> --tag v0.1.6 --report <report>` — validate the combined four-target candidate, seven installable packages, seven updater payload signatures, eight feed keys, retained inspections, and exact source/version evidence.
 - `npm run test:conformance:phase5` — exact five-server candidate rerun retained separately from earlier phase evidence.
-- `npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.5 --confirm publish-v0.1.5 --report <report>` — verify the candidate source, retained reports, hashes, manifest, and every updater signature, then stage exactly the 18 reviewed public assets.
-- `npm run release:verify-update-publication -- --directory <download-dir> --tag v0.1.5 --plan <publication-plan.json> --report <report>` — cryptographically and byte-for-byte verify the 18 draft assets against the pre-draft plan; the manual signed-release workflow runs this before publication.
+- `npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.6 --confirm publish-v0.1.6 --report <report>` — verify the candidate source, retained reports, hashes, manifest, and every updater signature, then stage exactly the 18 reviewed public assets.
+- `npm run release:verify-update-publication -- --directory <download-dir> --tag v0.1.6 --plan <publication-plan.json> --report <report>` — cryptographically and byte-for-byte verify the 18 draft assets against the pre-draft plan; the manual signed-release workflow runs this before publication.
 - `npm run fixtures:fetch:native` then `npm run test:feasibility:native` — canonical checksum-pinned Linux feasibility gate used by candidate CI; installs nothing, exercises all five exact targets on random loopback ports with verified TLS 1.2, and retains a redacted report.
 
 `npm run test:feasibility` is a supplemental three-image Docker smoke harness, not release evidence. A legacy image that cannot negotiate QueryNot's TLS floor must fail rather than weaken the adapter.

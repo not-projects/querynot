@@ -13,6 +13,8 @@ const settings = {
   connection_timeout_seconds: 15,
   result_tranche_rows: 10_000,
   table_page_rows: 200,
+  table_font_family: 'monospace',
+  table_font_size_px: 13,
   history_enabled: true,
   history_retention_days: 90,
   session_restoration_enabled: true,
@@ -42,7 +44,11 @@ const workspace = {
     }
   ],
   active_tab_id: 'browser-editor-tab',
-  panel_sizes: { explorer_percent: 22, results_percent: 35 }
+  panel_sizes: {
+    explorer_percent: 22,
+    results_percent: 35,
+    sidebar_connections_percent: 50
+  }
 };
 
 mockWindows('main');

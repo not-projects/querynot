@@ -195,13 +195,13 @@ describe('Phase 6 publication boundary', () => {
 
   it('accepts only the exact signed cross-platform updater assets and feed keys', () => {
     const names = {
-      'windows-nsis-x64': 'QueryNot_0.1.5_x64-setup.exe',
-      'windows-msi-x64': 'QueryNot_0.1.5_x64_en-US.msi',
-      'linux-appimage-x64': 'QueryNot_0.1.5_amd64.AppImage',
-      'linux-deb-x64': 'QueryNot_0.1.5_amd64.deb',
-      'linux-rpm-x64': 'QueryNot-0.1.5-1.x86_64.rpm',
-      'macos-dmg-x64': 'QueryNot_0.1.5_x64.dmg',
-      'macos-dmg-aarch64': 'QueryNot_0.1.5_aarch64.dmg',
+      'windows-nsis-x64': 'QueryNot_0.1.6_x64-setup.exe',
+      'windows-msi-x64': 'QueryNot_0.1.6_x64_en-US.msi',
+      'linux-appimage-x64': 'QueryNot_0.1.6_amd64.AppImage',
+      'linux-deb-x64': 'QueryNot_0.1.6_amd64.deb',
+      'linux-rpm-x64': 'QueryNot-0.1.6-1.x86_64.rpm',
+      'macos-dmg-x64': 'QueryNot_0.1.6_x64.dmg',
+      'macos-dmg-aarch64': 'QueryNot_0.1.6_aarch64.dmg',
       'macos-updater-x64': 'QueryNot_x64.app.tar.gz',
       'macos-updater-aarch64': 'QueryNot_aarch64.app.tar.gz'
     } as const;
@@ -239,7 +239,7 @@ describe('Phase 6 publication boundary', () => {
       payloads.map((payload) => [payload.id, payload])
     );
     const latest = {
-      version: '0.1.5',
+      version: '0.1.6',
       notes: 'Release notes',
       pub_date: '2026-08-14T00:00:00.000Z',
       platforms: Object.fromEntries(
@@ -249,7 +249,7 @@ describe('Phase 6 publication boundary', () => {
             key,
             {
               signature: 'A'.repeat(80),
-              url: `https://github.com/not-projects/querynot/releases/download/v0.1.5/${payload.name}`
+              url: `https://github.com/not-projects/querynot/releases/download/v0.1.6/${payload.name}`
             }
           ];
         })
@@ -260,8 +260,8 @@ describe('Phase 6 publication boundary', () => {
       .join('\n')}\n`;
 
     const publicationPlan = validateUpdatePublicationContract({
-      version: '0.1.5',
-      requestedTag: 'v0.1.5',
+      version: '0.1.6',
+      requestedTag: 'v0.1.6',
       releaseNotes: 'Release notes',
       artifacts,
       payloads,
@@ -303,8 +303,8 @@ describe('Phase 6 publication boundary', () => {
       validateRoundTripPlan(
         completePlan,
         { publicRecords: uniquePublicRecords } as never,
-        '0.1.5',
-        'v0.1.5',
+        '0.1.6',
+        'v0.1.6',
         sourceCommit
       )
     ).not.toThrow();
@@ -316,16 +316,16 @@ describe('Phase 6 publication boundary', () => {
             index === 0 ? { ...record, sha256: 'f'.repeat(64) } : record
           )
         } as never,
-        '0.1.5',
-        'v0.1.5',
+        '0.1.6',
+        'v0.1.6',
         sourceCommit
       )
     ).toThrow('do not byte-match');
 
     expect(() =>
       validateUpdatePublicationContract({
-        version: '0.1.5',
-        requestedTag: 'v0.1.5',
+        version: '0.1.6',
+        requestedTag: 'v0.1.6',
         releaseNotes: 'Release\nnotes',
         artifacts,
         payloads,
@@ -337,8 +337,8 @@ describe('Phase 6 publication boundary', () => {
     latest.platforms['linux-x86_64'].signature = 'B'.repeat(80);
     expect(() =>
       validateUpdatePublicationContract({
-        version: '0.1.5',
-        requestedTag: 'v0.1.5',
+        version: '0.1.6',
+        requestedTag: 'v0.1.6',
         releaseNotes: 'Release notes',
         artifacts,
         payloads,

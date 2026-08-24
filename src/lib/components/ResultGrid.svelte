@@ -4,6 +4,10 @@
     ResultRowView,
     TaggedValueView
   } from '../generated/contracts';
+  import {
+    MIN_RESULT_COLUMN_WIDTH,
+    autoResultColumnWidth
+  } from '../result-grid-sizing';
   import Icon from './Icon.svelte';
   import ResultValueViewer from './ResultValueViewer.svelte';
 
@@ -30,6 +34,8 @@
     ) => void;
     onviewchange: (resultSetId: string, indexes: number[]) => void;
     onstatus: (message: string) => void;
+    tableFontFamily?: string;
+    tableFontSizePx?: number;
   }
 
   let {
@@ -45,7 +51,9 @@
     ondiscard,
     onexport,
     onviewchange,
-    onstatus
+    onstatus,
+    tableFontFamily = 'monospace',
+    tableFontSizePx = 13
   }: Props = $props();
 
   let filterText = $state('');
@@ -55,11 +63,11 @@
   let scrollTop = $state(0);
   let scrollLeft = $state(0);
   let viewportHeight = $state(320);
-  let widths = $state<Record<number, number>>({});
+  let manualWidths = $state<Record<number, number>>({});
   let nullToken = $state('\\N');
   let focusedCell = $state<CellLocation | null>(null);
   let openedCell = $state<CellLocation | null>(null);
-  const rowHeight = 34;
+  const rowHeight = $derived(Math.max(34, tableFontSizePx + 18));
   const overscan = 8;
   const maxCellPreview = 512;
 
@@ -104,7 +112,7 @@
       ? columns
       : [{ name: 'Result', declared_type: '', nullable: null }]
     )
-      .map((_, index) => `${widths[index] ?? 180}px`)
+      .map((_, index) => `${columnWidth(index)}px`)
       .join(' ')
   );
   const selectionGridColumns = $derived(`2.4rem ${gridColumns}`);
@@ -191,13 +199,16 @@
   function resizeColumn(event: PointerEvent, index: number) {
     event.preventDefault();
     const initialX = event.clientX;
-    const initialWidth = widths[index] ?? 180;
+    const initialWidth = columnWidth(index);
     const move = (moveEvent: PointerEvent) => {
       const next = Math.min(
         640,
-        Math.max(80, initialWidth + moveEvent.clientX - initialX)
+        Math.max(
+          MIN_RESULT_COLUMN_WIDTH,
+          initialWidth + moveEvent.clientX - initialX
+        )
       );
-      widths[index] = next;
+      manualWidths[index] = next;
     };
     const stop = () => {
       window.removeEventListener('pointermove', move);
@@ -205,6 +216,23 @@
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', stop, { once: true });
+  }
+
+  function columnWidth(index: number): number {
+    return (
+      manualWidths[index] ??
+      autoResultColumnWidth(
+        columns[index] ?? {
+          name: 'Result',
+          declared_type: '',
+          nullable: null
+        },
+        rows,
+        index,
+        tableFontSizePx,
+        tableFontFamily
+      )
+    );
   }
 
   async function copyCell(value: TaggedValueView) {
@@ -405,7 +433,7 @@
         <div
           class="grid-canvas"
           style:height={`${viewIndexes.length * rowHeight}px`}
-          style:min-width={`max(100%, ${columns.reduce((sum, _, index) => sum + (widths[index] ?? 180), 0) + 38.4}px)`}
+          style:min-width={`max(100%, ${columns.reduce((sum, _, index) => sum + columnWidth(index), 0) + 38.4}px)`}
         >
           {#each renderedIndexes as rowIndex, renderedPosition (rowIndex)}
             <div
@@ -414,6 +442,7 @@
               role="row"
               aria-rowindex={startIndex + renderedPosition + 1}
               style:top={`${(startIndex + renderedPosition) * rowHeight}px`}
+              style:height={`${rowHeight}px`}
               style:grid-template-columns={selectionGridColumns}
             >
               <div class="row-selector-cell" role="rowheader">
@@ -620,6 +649,14 @@
     display: grid;
     width: max-content;
     min-width: 100%;
+    font-family: var(
+      --table-font-family,
+      'IBM Plex Mono',
+      'Cascadia Code',
+      ui-monospace,
+      monospace
+    );
+    font-size: var(--table-font-size, 13px);
   }
 
   .grid-header-viewport {
@@ -696,7 +733,6 @@
   .grid-row {
     position: absolute;
     left: 0;
-    height: 34px;
     border-bottom: 1px solid var(--divider);
   }
 
@@ -709,8 +745,8 @@
     overflow: hidden;
     padding: 0.35rem 0.55rem;
     color: var(--text);
-    font-family: 'IBM Plex Mono', 'Cascadia Code', ui-monospace, monospace;
-    font-size: 0.78rem;
+    font-family: inherit;
+    font-size: inherit;
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;

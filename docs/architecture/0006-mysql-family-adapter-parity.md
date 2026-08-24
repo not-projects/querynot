@@ -7,7 +7,7 @@ Status: Implemented locally in Phase 3; target-platform release evidence pending
 
 QueryNot uses one `AdapterSession` contract for SQLite, MySQL, and MariaDB. Direct MySQL-family TCP/TLS connections, metadata, SQL execution, transactions, cancellation, and value decoding remain in Rust. The presentation layer receives detected identity, exact version, dialect, capabilities, compatibility state, and safe errors; it does not select a MySQL versus MariaDB implementation.
 
-The release-development matrix is pinned to MySQL 5.7.44, 8.0.46, and 8.4.10 plus MariaDB 10.11.18 and 11.4.12. Exact identity is derived from both `VERSION()` and `@@version_comment`; disagreement fails closed. Unknown but unambiguous versions enter visible query-only mode and native execution rejects possible writes. MySQL 5.7.44 and 8.0.46 retain a persistent legacy indicator without weakening any control.
+The release-development matrix is pinned to MySQL 5.7.44, 8.0.46, and 8.4.10 plus MariaDB 10.11.18 and 11.4.12. Exact identity is derived from both `VERSION()` and `@@version_comment`; disagreement fails closed. Every well-formed MySQL 5.7 patch identity uses the tested 5.7 transaction and mutation capability path, remains visibly legacy, and keeps write safeguards enabled; a non-5.7.44 patch also states that 5.7.44 remains the exact conformance fixture. Other unknown but unambiguous versions enter visible query-only mode and native execution rejects possible writes. MySQL 8.0.46 retains its persistent legacy indicator without weakening any control.
 
 ## Transport and authentication
 

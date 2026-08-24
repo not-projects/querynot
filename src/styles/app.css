@@ -82,6 +82,9 @@ button:disabled {
 }
 
 .app-shell {
+  --table-font-family:
+    'IBM Plex Mono', 'Cascadia Code', ui-monospace, monospace;
+  --table-font-size: 13px;
   display: grid;
   width: calc(100% / var(--ui-scale));
   height: calc(100vh / var(--ui-scale));
@@ -91,6 +94,10 @@ button:disabled {
   background: var(--surface);
   transform: scale(var(--ui-scale));
   transform-origin: top left;
+}
+
+.app-shell[data-table-font-family='system'] {
+  --table-font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
 .app-shell[data-theme='light'],
@@ -351,15 +358,22 @@ button:hover:not(:disabled) {
 }
 
 aside {
-  display: flex;
+  display: grid;
   min-width: 0;
   min-height: 0;
-  flex-direction: column;
   padding: 14px 12px;
   overflow-x: hidden;
   overflow-y: auto;
   border-right: 1px solid var(--divider);
   background: var(--surface-subtle);
+}
+
+.connections-pane {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .pane-heading {
@@ -513,22 +527,30 @@ main.has-query-results .editor-workspace {
 .schema-explorer {
   display: grid;
   min-height: 0;
-  flex: 1;
-  margin-top: 14px;
-  padding-top: 12px;
-  grid-template-rows: auto auto auto minmax(8rem, 1fr);
-  gap: 8px;
-  border-top: 1px solid var(--divider);
+  margin: 0;
+  padding-top: 7px;
+  grid-template-rows: repeat(3, auto) minmax(0, 1fr);
+  gap: 5px;
 }
 
 .pane-heading.compact {
   min-height: 30px;
 }
 
-.schema-refresh {
+.schema-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.schema-tool {
+  width: 28px;
   min-height: 26px;
-  padding: 3px 7px;
-  font-size: 0.62rem;
+}
+
+.schema-tool.active {
+  color: var(--accent-text);
+  background: var(--accent);
 }
 
 .schema-state {
@@ -544,11 +566,48 @@ main.has-query-results .editor-workspace {
 
 .schema-filter input {
   width: 100%;
-  min-height: 30px;
+  min-height: 27px;
+}
+
+.sidebar-separator {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  height: 7px;
+  min-height: 7px;
+  place-items: center;
+  margin-inline: -10px;
+  border-block: 1px solid var(--divider);
+  background: var(--surface-subtle);
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.sidebar-separator span {
+  width: 34px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--muted);
+  opacity: 0.65;
+}
+
+.sidebar-separator:hover,
+.sidebar-separator:focus-visible {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-subtle));
+}
+
+.sidebar-separator:focus-visible {
+  outline: 0;
+}
+
+.sidebar-separator:focus-visible span {
+  background: var(--accent);
+  opacity: 1;
 }
 
 .schema-tree {
   display: grid;
+  grid-row: 4;
   min-width: 0;
   max-height: none;
   align-content: start;
@@ -611,6 +670,8 @@ main.has-query-results .editor-workspace {
 }
 
 .schema-tree .schema-copy {
+  display: grid;
+  place-items: center;
   color: var(--muted);
   font-size: 0.6rem;
 }

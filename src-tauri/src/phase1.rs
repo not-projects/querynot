@@ -6,7 +6,7 @@ use querynot_core::generated::contracts::*;
 use querynot_core::history::{HistoryEntry, HistoryStatus};
 use querynot_core::ownership::OwnershipRegistry;
 use querynot_core::profile::{ConnectionProfile, ConnectionTarget, TlsMode};
-use querynot_core::settings::{AppSettings, ThemePreference};
+use querynot_core::settings::{AppSettings, TableFontPreference, ThemePreference};
 use querynot_core::sqlite::test_sqlite_connection;
 use querynot_core::state::LocalStoreState;
 use querynot_core::store::{
@@ -1368,6 +1368,12 @@ fn settings_to_view(settings: &AppSettings) -> SettingsView {
         connection_timeout_seconds: settings.connection_timeout_seconds,
         result_tranche_rows: settings.result_tranche_rows,
         table_page_rows: settings.table_page_rows,
+        table_font_family: match settings.table_font_family {
+            TableFontPreference::System => "system",
+            TableFontPreference::Monospace => "monospace",
+        }
+        .to_owned(),
+        table_font_size_px: settings.table_font_size_px,
         history_enabled: settings.history_enabled,
         history_retention_days: settings.history_retention_days,
         session_restoration_enabled: settings.session_restoration_enabled,
@@ -1386,6 +1392,15 @@ fn settings_from_view(view: SettingsView) -> Result<AppSettings, QueryNotError> 
         "forest" => ThemePreference::Forest,
         _ => return Err(QueryNotError::authorization("Unsupported theme value.")),
     };
+    let table_font_family = match view.table_font_family.as_str() {
+        "system" => TableFontPreference::System,
+        "monospace" => TableFontPreference::Monospace,
+        _ => {
+            return Err(QueryNotError::authorization(
+                "Unsupported table font value.",
+            ));
+        }
+    };
     Ok(AppSettings {
         theme,
         ui_scale_percent: view.ui_scale_percent,
@@ -1395,6 +1410,8 @@ fn settings_from_view(view: SettingsView) -> Result<AppSettings, QueryNotError> 
         connection_timeout_seconds: view.connection_timeout_seconds,
         result_tranche_rows: view.result_tranche_rows,
         table_page_rows: view.table_page_rows,
+        table_font_family,
+        table_font_size_px: view.table_font_size_px,
         history_enabled: view.history_enabled,
         history_retention_days: view.history_retention_days,
         session_restoration_enabled: view.session_restoration_enabled,
@@ -1466,6 +1483,7 @@ fn workspace_to_view(
         panel_sizes: PanelSizesView {
             explorer_percent: snapshot.panel_sizes.explorer_percent,
             results_percent: snapshot.panel_sizes.results_percent,
+            sidebar_connections_percent: snapshot.panel_sizes.sidebar_connections_percent,
         },
     })
 }
@@ -1536,6 +1554,7 @@ fn workspace_from_view(
         panel_sizes: PanelSizes {
             explorer_percent: view.panel_sizes.explorer_percent,
             results_percent: view.panel_sizes.results_percent,
+            sidebar_connections_percent: view.panel_sizes.sidebar_connections_percent,
         },
     };
     snapshot.validate().map_err(validation_error)?;

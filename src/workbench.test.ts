@@ -86,10 +86,12 @@ describe('Phase 1 workbench', () => {
     expect(dialog?.textContent).toContain('Connection timeout');
     expect(dialog?.textContent).toContain('Result tranche rows');
     expect(dialog?.textContent).toContain('Table page rows');
+    expect(dialog?.textContent).toContain('Table font');
+    expect(dialog?.textContent).toContain('Table text size: 13px');
     expect(dialog?.textContent).toContain('History retention');
     expect(dialog?.textContent).toContain('Restore drafts and tabs offline');
     expect(dialog?.textContent).toContain('Signed application updates');
-    expect(dialog?.textContent).toContain('Installed version 0.1.5');
+    expect(dialog?.textContent).toContain('Installed version 0.1.6');
     expect(dialog?.textContent).toContain(
       'Update checks are available in installed desktop builds.'
     );
@@ -98,6 +100,37 @@ describe('Phase 1 workbench', () => {
       'System'
     );
     expect(button('Save settings').disabled).toBe(false);
+  });
+
+  it('previews the selected table font and text size in the workspace', async () => {
+    await renderWorkbench();
+    button('Settings').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flushSync();
+
+    const font = document.querySelector<HTMLSelectElement>(
+      'select option[value="monospace"]'
+    )?.parentElement;
+    const ranges = document.querySelectorAll<HTMLInputElement>(
+      '.modal-card input[type="range"]'
+    );
+    const size = ranges[1];
+    if (!(font instanceof HTMLSelectElement) || !size) {
+      throw new Error('table typography controls were not rendered');
+    }
+
+    font.value = 'system';
+    font.dispatchEvent(new Event('change', { bubbles: true }));
+    size.value = '18';
+    size.dispatchEvent(new Event('input', { bubbles: true }));
+    flushSync();
+
+    const shell = document.querySelector<HTMLElement>('.app-shell');
+    expect(shell?.dataset.tableFontFamily).toBe('system');
+    expect(shell?.style.getPropertyValue('--table-font-size')).toBe('18px');
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+      'Table text size: 18px'
+    );
   });
 
   it('previews application scale without resizing the open Settings dialog', async () => {

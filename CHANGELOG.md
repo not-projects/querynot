@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-24
+
+### Added
+
+- Added persisted table font-family and 10–20px text-size controls that apply to query results and editable table grids.
+
+### Changed
+
+- Enabled ordinary query writes, transactions, and safe staged row mutations for well-formed MySQL 5.7.x server versions while retaining the persistent legacy warning, the exact 5.7.44 conformance baseline, and query-only handling for malformed or unrecognized lines.
+- Split Connections and Schema into a persisted 20–80% pointer- and keyboard-resizable sidebar layout that starts centered and resets to 50% on double-click.
+- Compacted the sidebar by removing the Offline subtitle and routine schema status copy, hiding schema search behind a labelled magnifying-glass control, and replacing refresh labels with shared SVG controls.
+- Made result columns size to their loaded header/value content between 64px and the prior 180px default cap, while preserving manual resizing up to 640px.
+
 ## [0.1.5] - 2026-08-23
 
 ### Added

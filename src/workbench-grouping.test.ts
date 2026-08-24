@@ -79,6 +79,8 @@ function defaultSettings() {
     connection_timeout_seconds: 15,
     result_tranche_rows: 10_000,
     table_page_rows: 200,
+    table_font_family: 'monospace',
+    table_font_size_px: 13,
     history_enabled: true,
     history_retention_days: 90,
     session_restoration_enabled: true,
@@ -155,7 +157,11 @@ function setupNativeWorkspace() {
                 tab('offline-1', 'Offline draft', null, 3)
               ],
               active_tab_id: 'offline-1',
-              panel_sizes: { explorer_percent: 22, results_percent: 35 }
+              panel_sizes: {
+                explorer_percent: 22,
+                results_percent: 35,
+                sidebar_connections_percent: 50
+              }
             }
           };
         case 'take_pending_sql_files':
@@ -260,6 +266,35 @@ function commandCount(
 }
 
 describe('Connection-scoped workbench tabs', () => {
+  it('uses a centered keyboard-resizable sidebar split and hides schema search until requested', async () => {
+    const { commands } = setupNativeWorkspace();
+    await renderNativeWorkbench();
+    expect(document.body.textContent).not.toContain(
+      'SQL files and detached drafts'
+    );
+
+    click('[data-profile-id="profile-1"] .connection-main');
+    click('[data-profile-id="profile-1"] .connection-action');
+    await waitFor(() => document.querySelector('.schema-tree') !== null);
+
+    const separator = document.querySelector<HTMLElement>('.sidebar-separator');
+    expect(separator?.getAttribute('aria-valuenow')).toBe('50');
+    expect(document.querySelector('.schema-filter')).toBeNull();
+    expect(document.body.textContent).not.toContain('Metadata is current.');
+
+    click('[aria-label="Search schema objects"]');
+    expect(document.querySelector('.schema-filter input')).not.toBeNull();
+    click('[aria-label="Close schema search"]');
+    expect(document.querySelector('.schema-filter')).toBeNull();
+
+    separator?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'End', bubbles: true })
+    );
+    flushSync();
+    expect(separator?.getAttribute('aria-valuenow')).toBe('80');
+    await waitFor(() => commandCount(commands, 'save_workspace') > 0);
+  });
+
   it('remembers the last tab per connection and cycles only visible tabs', async () => {
     setupNativeWorkspace();
     await renderNativeWorkbench();

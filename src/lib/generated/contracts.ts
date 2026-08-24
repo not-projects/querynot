@@ -120,6 +120,8 @@ export interface SettingsView {
   connection_timeout_seconds: number;
   result_tranche_rows: number;
   table_page_rows: number;
+  table_font_family: string;
+  table_font_size_px: number;
   history_enabled: boolean;
   history_retention_days: number;
   session_restoration_enabled: boolean;
@@ -132,6 +134,7 @@ export interface SettingsView {
 export interface PanelSizesView {
   explorer_percent: number;
   results_percent: number;
+  sidebar_connections_percent: number;
 }
 
 export interface WorkspaceTabView {

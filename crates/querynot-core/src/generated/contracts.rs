@@ -137,6 +137,8 @@ pub struct SettingsView {
     pub connection_timeout_seconds: u16,
     pub result_tranche_rows: u32,
     pub table_page_rows: u32,
+    pub table_font_family: String,
+    pub table_font_size_px: u8,
     pub history_enabled: bool,
     pub history_retention_days: u16,
     pub session_restoration_enabled: bool,
@@ -150,6 +152,7 @@ pub struct SettingsView {
 pub struct PanelSizesView {
     pub explorer_percent: f64,
     pub results_percent: f64,
+    pub sidebar_connections_percent: f64,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
