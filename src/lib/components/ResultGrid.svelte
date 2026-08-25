@@ -17,7 +17,6 @@
   }
 
   interface Props {
-    resultSetId: string;
     statementIndex: number;
     columns: ResultColumnView[];
     rows: ResultRowView[];
@@ -30,16 +29,15 @@
     onexport: (
       format: 'csv' | 'json',
       currentView: boolean,
-      nullToken: string
+      nullToken: string,
+      viewIndexes: number[]
     ) => void;
-    onviewchange: (resultSetId: string, indexes: number[]) => void;
     onstatus: (message: string) => void;
     tableFontFamily?: string;
     tableFontSizePx?: number;
   }
 
   let {
-    resultSetId,
     statementIndex,
     columns,
     rows,
@@ -50,7 +48,6 @@
     onloadmore,
     ondiscard,
     onexport,
-    onviewchange,
     onstatus,
     tableFontFamily = 'monospace',
     tableFontSizePx = 13
@@ -132,10 +129,6 @@
   const openedColumn = $derived(
     openedCell ? (columns[openedCell.columnIndex] ?? null) : null
   );
-
-  $effect(() => {
-    onviewchange(resultSetId, [...viewIndexes]);
-  });
 
   function handleScroll(event: Event) {
     const element = event.currentTarget as HTMLElement;
@@ -297,78 +290,111 @@
   aria-label={`Result set with ${rows.length} received rows`}
 >
   <div class="result-tools">
-    <label>
-      <span class="sr-only">Filter loaded rows</span>
-      <input
-        type="search"
-        placeholder="Filter loaded rows"
-        bind:value={filterText}
-      />
-    </label>
-    <span class="loaded-label"
-      >Loaded rows only · {viewIndexes.length}/{rows.length}</span
-    >
-    <button type="button" onclick={() => void copyRows(false, false)}
-      >Copy loaded rows</button
-    >
-    <button type="button" onclick={() => void copyRows(true, false)}
-      >Copy loaded with headers</button
-    >
+    <div class="result-filter">
+      <label>
+        <span class="sr-only">Filter loaded rows</span>
+        <input
+          type="search"
+          aria-label="Filter loaded rows"
+          placeholder="Filter loaded rows"
+          bind:value={filterText}
+        />
+      </label>
+      <span class="loaded-label">
+        {viewIndexes.length === rows.length
+          ? `${rows.length} loaded ${rows.length === 1 ? 'row' : 'rows'}`
+          : `${viewIndexes.length} of ${rows.length} loaded rows`}
+      </span>
+    </div>
+    <div class="result-actions" role="group" aria-label="Result actions">
+      <details class="action-options copy-options" name="result-action-menu">
+        <summary>
+          <Icon name="copy" size={13} />
+          Copy rows
+          <Icon name="chevron-down" size={12} />
+        </summary>
+        <div class="action-popover">
+          <button type="button" onclick={() => void copyRows(false, false)}
+            >Loaded rows</button
+          >
+          <button type="button" onclick={() => void copyRows(true, false)}
+            >Loaded rows with headers</button
+          >
+        </div>
+      </details>
+      <button
+        type="button"
+        class="open-value"
+        disabled={!focusedCell}
+        title={focusedCell
+          ? 'Open the focused field in the side value viewer'
+          : 'Focus a result field first'}
+        onclick={openFocusedCell}
+      >
+        <Icon name="view" size={13} />
+        Open value
+      </button>
+      <details class="action-options export-options" name="result-action-menu">
+        <summary>
+          <Icon name="export" size={13} />
+          Export
+          <Icon name="chevron-down" size={12} />
+        </summary>
+        <div class="action-popover">
+          <label class="null-token">
+            <span>CSV NULL token</span>
+            <input
+              bind:value={nullToken}
+              maxlength="64"
+              aria-label="CSV null token"
+            />
+          </label>
+          <p class="export-safety-note">
+            CSV keeps raw spreadsheet-formula prefixes. NULL uses the configured
+            token; binary values use hexadecimal in CSV and tagged base64 in
+            JSON.
+          </p>
+          <button
+            type="button"
+            onclick={() => onexport('csv', false, nullToken, viewIndexes)}
+            >Server-order CSV</button
+          >
+          <button
+            type="button"
+            onclick={() => onexport('csv', true, nullToken, viewIndexes)}
+            >Current-view CSV</button
+          >
+          <button
+            type="button"
+            onclick={() => onexport('json', false, nullToken, viewIndexes)}
+            >Server-order JSON</button
+          >
+          <button
+            type="button"
+            onclick={() => onexport('json', true, nullToken, viewIndexes)}
+            >Current-view JSON</button
+          >
+        </div>
+      </details>
+    </div>
     {#if selectedRows.length > 0}
-      <span class="selection-label"
-        >{selectedRows.length} row{selectedRows.length === 1 ? '' : 's'} selected</span
-      >
-      <button type="button" onclick={() => void copyRows(false, true)}
-        >Copy selected</button
-      >
-      <button type="button" onclick={() => void copyRows(true, true)}
-        >Copy selected with headers</button
-      >
-      <button type="button" onclick={() => (selectedRows = [])}
-        >Clear selection</button
-      >
-    {/if}
-    <button
-      type="button"
-      class="open-value"
-      disabled={!focusedCell}
-      title={focusedCell
-        ? 'Open the focused field in the side value viewer'
-        : 'Focus a result field first'}
-      onclick={openFocusedCell}
-    >
-      <Icon name="view" size={14} />
-      Open value
-    </button>
-    <details class="export-options">
-      <summary>Export…</summary>
-      <div>
-        <label class="null-token">
-          <span>CSV NULL token</span>
-          <input
-            bind:value={nullToken}
-            maxlength="64"
-            aria-label="CSV null token"
-          />
-        </label>
-        <p class="export-safety-note">
-          CSV keeps raw spreadsheet-formula prefixes. NULL uses the configured
-          token; binary values use hexadecimal in CSV and tagged base64 in JSON.
-        </p>
-        <button type="button" onclick={() => onexport('csv', false, nullToken)}
-          >Server-order CSV</button
+      <div class="selection-tools" aria-label="Selected row actions">
+        <span class="selection-label"
+          >{selectedRows.length} row{selectedRows.length === 1 ? '' : 's'} selected</span
         >
-        <button type="button" onclick={() => onexport('csv', true, nullToken)}
-          >Current-view CSV</button
+        <button type="button" onclick={() => void copyRows(false, true)}
+          ><Icon name="copy" size={13} />Copy selected</button
         >
-        <button type="button" onclick={() => onexport('json', false, nullToken)}
-          >Server-order JSON</button
+        <button type="button" onclick={() => void copyRows(true, true)}
+          >Copy selected with headers</button
         >
-        <button type="button" onclick={() => onexport('json', true, nullToken)}
-          >Current-view JSON</button
+        <button
+          type="button"
+          class="clear-selection"
+          onclick={() => (selectedRows = [])}>Clear selection</button
         >
       </div>
-    </details>
+    {/if}
   </div>
 
   <div class:viewer-open={openedCell !== null} class="result-content">
@@ -496,13 +522,13 @@
   <div class="result-footer">
     <span>
       Statement {statementIndex + 1} · {rows.length} rows retained ·
-      {durationMs === null ? 'duration pending' : `${durationMs} ms`} ·
+      {durationMs === null ? 'timing unavailable' : `${durationMs} ms`} ·
       {terminalState ?? (paused ? 'paused' : 'streaming')}
       {capped ? ' · hard cap reached; full-result export unavailable' : ''}
     </span>
     <span
-      >Select rows with checkboxes for copy actions · right-click a field to
-      open its value · double-click copies one cell</span
+      >Checkboxes select rows · right-click inspects a value · double-click
+      copies one cell</span
     >
     {#if paused}
       <span class="cursor-warning"
@@ -534,21 +560,71 @@
     min-width: 0;
     min-height: 0;
     height: 100%;
-    gap: 0.45rem;
+    gap: 0.35rem;
     grid-template-rows: auto minmax(0, 1fr) auto;
     overflow: hidden;
   }
 
-  .result-tools,
+  .result-tools {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(14rem, 1fr) auto;
+    align-items: center;
+    gap: 0.35rem 0.55rem;
+  }
+
+  .result-filter,
+  .result-actions,
+  .selection-tools,
   .result-footer {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.35rem;
   }
 
-  .result-tools input {
-    width: 12rem;
+  .result-filter {
+    min-width: 0;
+  }
+
+  .result-filter label {
+    flex: 0 1 12rem;
+  }
+
+  .result-filter input {
+    width: 100%;
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .result-actions {
+    justify-content: flex-end;
+  }
+
+  .selection-tools {
+    grid-column: 1 / -1;
+    min-height: 31px;
+    padding: 3px 5px 3px 8px;
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--divider));
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+
+  .selection-tools button {
+    display: inline-flex;
+    min-height: 25px;
+    align-items: center;
+    padding: 3px 7px;
+    gap: 0.3rem;
+    font-size: 0.68rem;
+  }
+
+  .selection-tools .clear-selection {
+    margin-left: auto;
+    border-color: transparent;
+    color: var(--muted);
+    background: transparent;
   }
 
   .null-token {
@@ -563,33 +639,62 @@
     width: 4.5rem;
   }
 
-  .export-options {
+  .action-options {
     position: relative;
   }
 
-  .export-options summary {
-    min-height: 30px;
-    padding: 6px 10px;
+  .action-options summary,
+  .open-value {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    padding: 4px 8px;
+    gap: 0.3rem;
     border: 1px solid var(--divider);
-    border-radius: 5px;
+    border-radius: 4px;
+    color: var(--text);
     background: var(--surface-raised);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
+  }
+
+  .action-options summary {
+    list-style: none;
     cursor: pointer;
   }
 
-  .export-options > div {
+  .action-options summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .action-options[open] summary,
+  .action-options summary:hover {
+    border-color: var(--accent);
+  }
+
+  .action-popover {
     position: absolute;
     z-index: 5;
     top: calc(100% + 4px);
     right: 0;
     display: grid;
-    width: 13rem;
+    width: 15rem;
     padding: 0.55rem;
     gap: 0.35rem;
     border: 1px solid var(--divider);
     border-radius: 6px;
     background: var(--surface-raised);
     box-shadow: var(--shadow);
+  }
+
+  .copy-options .action-popover {
+    width: 12.5rem;
+  }
+
+  .action-popover > button {
+    min-height: 28px;
+    padding: 4px 7px;
+    text-align: left;
+    font-size: 0.68rem;
   }
 
   .export-safety-note {
@@ -603,7 +708,7 @@
   .selection-label,
   .result-footer {
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.68rem;
   }
 
   .selection-label {
@@ -615,18 +720,12 @@
     display: none;
   }
 
-  .open-value {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
   .result-content {
     display: grid;
     min-width: 0;
     min-height: 0;
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.45rem;
+    gap: 0.35rem;
     overflow: hidden;
   }
 
@@ -640,7 +739,7 @@
     grid-template-rows: auto minmax(0, 1fr);
     overflow: hidden;
     border: 1px solid var(--divider);
-    border-radius: 10px;
+    border-radius: 5px;
     background: var(--surface-raised);
   }
 
@@ -663,7 +762,7 @@
     min-width: 0;
     overflow: hidden;
     border-bottom: 1px solid var(--divider);
-    background: var(--surface);
+    background: var(--surface-subtle);
   }
 
   .row-selector-header,
@@ -686,7 +785,7 @@
 
   .grid-header {
     min-height: 2.2rem;
-    background: var(--surface);
+    background: var(--surface-subtle);
     will-change: transform;
   }
 
@@ -703,6 +802,7 @@
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 650;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -771,6 +871,18 @@
   }
 
   @media (max-width: 900px) {
+    .result-tools {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .result-actions {
+      justify-content: flex-start;
+    }
+
+    .selection-tools {
+      grid-column: 1;
+    }
+
     .result-content.viewer-open {
       grid-template-columns: minmax(10rem, 1fr) minmax(14rem, 44%);
     }

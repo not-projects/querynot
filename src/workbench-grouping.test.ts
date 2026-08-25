@@ -390,7 +390,7 @@ describe('Connection-scoped workbench tabs', () => {
     await waitFor(
       () =>
         document.querySelector('.context-state.online')?.textContent?.trim() ===
-        'Online'
+        'Connected'
     );
 
     tabButton('Primary query 3').click();

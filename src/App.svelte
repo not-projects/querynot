@@ -209,7 +209,6 @@
   let executions = $state<Record<string, ExecutionUi>>({});
   let results = $state<Record<string, ResultUi[]>>({});
   let selectedResultIds = $state<Record<string, string>>({});
-  let resultViewIndexes = $state<Record<string, number[]>>({});
   let schemaNamespaces = $state<Record<string, SchemaNamespaceView[]>>({});
   let schemaObjects = $state<Record<string, SchemaObjectView[]>>({});
   let schemaStates = $state<Record<string, SchemaLoadState>>({});
@@ -252,6 +251,14 @@
 
   const activeTab = $derived(
     workspace.tabs.find((tab) => tab.id === workspace.active_tab_id) ?? null
+  );
+  const connectedCount = $derived(Object.keys(connections).length);
+  const editingProfileHasSavedSecret = $derived(
+    Boolean(
+      editingProfileId &&
+      profiles.find((profile) => profile.id === editingProfileId)
+        ?.has_saved_secret
+    )
   );
   const activeProfile = $derived(
     profiles.find((profile) => profile.id === activeTab?.profile_id) ?? null
@@ -2548,26 +2555,23 @@
     statusMessage = response.message;
   }
 
-  function updateResultView(resultSetId: string, indexes: number[]) {
-    resultViewIndexes[resultSetId] = indexes;
-  }
-
   async function exportResult(
     result: ResultUi,
     format: 'csv' | 'json',
     currentView: boolean,
-    nullToken: string
+    nullToken: string,
+    currentViewIndexes: number[]
   ) {
     if (!hasNativeRuntime()) return;
     await runAction(async () => {
-      const indexes = currentView
-        ? (resultViewIndexes[result.id] ?? result.rows.map((_, index) => index))
+      const rowIndexes = currentView
+        ? currentViewIndexes
         : result.rows.map((_, index) => index);
       const response = await invokeCommand('export_result', {
         execution_id: result.executionId,
         result_set_id: result.id,
         format,
-        row_indexes: indexes,
+        row_indexes: rowIndexes,
         null_token: nullToken,
         view_label: currentView ? 'current_view' : 'server_order'
       });
@@ -3289,6 +3293,15 @@
   }
 </script>
 
+{#snippet modalCloseButton(label = 'Close')}
+  <button
+    type="button"
+    class="icon-button"
+    aria-label={label}
+    onclick={closeModal}><Icon name="close" /></button
+  >
+{/snippet}
+
 <svelte:head>
   <title>QueryNot — local-first SQL workbench</title>
   <meta
@@ -3309,20 +3322,23 @@
   aria-busy={busy || closingWindow}
 >
   <header class="topbar">
-    <div class="brand">
-      <h1>QueryNot</h1>
-      <span class="brand-context">Not Projects · local SQL client</span>
-    </div>
-    <div class="topbar-actions">
+    <div class="topbar-primary">
+      <div class="brand">
+        <h1>QueryNot</h1>
+        <span class="brand-context">Not Projects · local SQL client</span>
+      </div>
       <div class="file-menu" {@attach captureFileMenu}>
         <button
           type="button"
-          class="quiet"
+          class="quiet topbar-control file-trigger"
           aria-haspopup="menu"
           aria-expanded={fileMenuOpen}
           {@attach captureFileMenuButton}
-          onclick={() => (fileMenuOpen = !fileMenuOpen)}>File</button
+          onclick={() => (fileMenuOpen = !fileMenuOpen)}
         >
+          File
+          <Icon name="chevron-down" size={12} />
+        </button>
         {#if fileMenuOpen}
           <div class="file-menu-popover" role="menu" aria-label="File">
             <button
@@ -3352,30 +3368,38 @@
           </div>
         {/if}
       </div>
+    </div>
+    <nav class="topbar-actions" aria-label="Application utilities">
       <span class="connection-summary">
         <span
           class="summary-status"
-          class:online={Object.keys(connections).length > 0}
+          class:online={connectedCount > 0}
           aria-hidden="true"
         ></span>
         <span>
-          {Object.keys(connections).length
-            ? `${Object.keys(connections).length} connected`
-            : 'Offline'}
+          {connectedCount ? `${connectedCount} connected` : 'Offline'}
         </span>
       </span>
       <button
         type="button"
-        class="quiet"
+        class="quiet topbar-control"
         aria-controls="history-drawer"
         aria-expanded={historyOpen}
         {@attach captureHistoryButton}
-        onclick={toggleHistory}>History</button
+        onclick={toggleHistory}
       >
-      <button type="button" class="quiet" onclick={openSettings}
-        >Settings{updater.availableUpdate ? ' · Update ready' : ''}</button
-      >
-    </div>
+        <Icon name="history" size={14} />
+        History
+      </button>
+      <button type="button" class="quiet topbar-control" onclick={openSettings}>
+        <Icon name="settings" size={14} />
+        Settings
+        {#if updater.availableUpdate}
+          <span class="update-indicator" aria-hidden="true"></span>
+          <span class="sr-only">Update ready</span>
+        {/if}
+      </button>
+    </nav>
   </header>
 
   {#if storeMessage}
@@ -3639,7 +3663,7 @@
           activeConnection
             ? 'Connected'
             : activeSession
-              ? 'Online'
+              ? 'Connected'
               : activeTab && tabSessionOperations[activeTab.id]
                 ? 'Opening'
                 : 'Offline'}
@@ -3796,11 +3820,15 @@
               >
             </div>
             <div class="query-toolbar" aria-label="Query actions">
-              <div class="toolbar-group toolbar-execution">
+              <div
+                class="toolbar-group toolbar-execution"
+                role="group"
+                aria-label="Execution controls"
+              >
                 {#if activeSession}
                   <button
                     type="button"
-                    class="primary"
+                    class="primary primary-action"
                     title={`Run current statement (${shortcutModifier}+Enter)`}
                     aria-keyshortcuts={`${ariaShortcutModifier}+Enter`}
                     disabled={activeExecution &&
@@ -3821,7 +3849,7 @@
                         cursor: selection?.cursor ?? 0,
                         runAll: false
                       });
-                    }}>Run</button
+                    }}><Icon name="run" size={13} />Run</button
                   >
                   <button
                     type="button"
@@ -3843,6 +3871,7 @@
                   >
                   <button
                     type="button"
+                    class="cancel-action"
                     disabled={!activeExecution ||
                       !['queued', 'running', 'paused', 'cancelling'].includes(
                         activeExecution.state
@@ -3852,7 +3881,7 @@
                     onclick={() => void cancelActiveExecution()}>Cancel</button
                   >
                   <label class="transaction-mode">
-                    <span>Mode</span>
+                    <span>Transaction</span>
                     <select
                       value={activeSession.transaction.automatic
                         ? 'automatic'
@@ -3881,7 +3910,11 @@
                   {/if}
                 {/if}
               </div>
-              <div class="toolbar-group toolbar-document">
+              <div
+                class="toolbar-group toolbar-document"
+                role="group"
+                aria-label="Query document controls"
+              >
                 <button
                   type="button"
                   title="Format SQL (Shift+Alt+F)"
@@ -3975,7 +4008,11 @@
                 <div>
                   <h2 id="results-heading">Results</h2>
                 </div>
-                <span class="results-context">Loaded rows only</span>
+                <span class="results-context">
+                  {activeResults.length} result {activeResults.length === 1
+                    ? 'set'
+                    : 'sets'} · {activeExecution?.state ?? 'ready'}
+                </span>
               </div>
               {#if activeExecution?.error}
                 <div class="result-error" role="alert">
@@ -4005,7 +4042,6 @@
                 {@const result = activeVisibleResult}
                 {#key result.id}
                   <ResultGrid
-                    resultSetId={result.id}
                     statementIndex={result.statementIndex}
                     columns={result.columns}
                     rows={result.rows}
@@ -4017,9 +4053,19 @@
                     tableFontSizePx={displayedSettings.table_font_size_px}
                     onloadmore={() => void loadMore(result)}
                     ondiscard={() => void discardRemainder(result)}
-                    onexport={(format, currentView, nullToken) =>
-                      void exportResult(result, format, currentView, nullToken)}
-                    onviewchange={updateResultView}
+                    onexport={(
+                      format,
+                      currentView,
+                      nullToken,
+                      currentViewIndexes
+                    ) =>
+                      void exportResult(
+                        result,
+                        format,
+                        currentView,
+                        nullToken,
+                        currentViewIndexes
+                      )}
                     onstatus={(message) => (statusMessage = message)}
                   />
                 {/key}
@@ -4090,6 +4136,10 @@
     <div
       class="modal-card"
       class:modal-wide={modal === 'settings' || modal === 'file-review'}
+      class:profile-dialog={modal === 'profile'}
+      class:profile-file-dialog={modal === 'profile' &&
+        profileForm.kind === 'sqlite'}
+      class:settings-dialog={modal === 'settings'}
       role="dialog"
       tabindex="-1"
       aria-modal="true"
@@ -4098,30 +4148,30 @@
       onkeydown={handleDialogKeydown}
     >
       {#if modal === 'profile'}
-        <form onsubmit={submitProfile}>
-          <div class="modal-header">
+        <form class="profile-form" onsubmit={submitProfile}>
+          <div class="modal-header profile-header">
             <div>
-              <p class="eyebrow">Saved profile</p>
+              <p class="eyebrow">
+                {editingProfileId ? 'Saved connection' : 'New connection'}
+              </p>
               <h2 id="modal-title">
-                {editingProfileId
-                  ? 'Edit connection profile'
-                  : 'Create connection profile'}
+                {editingProfileId ? 'Edit connection' : 'Add connection'}
               </h2>
+              <p class="profile-intro">
+                {editingProfileId
+                  ? 'Update local connection details and security preferences.'
+                  : 'Save connection details locally. QueryNot will not connect until you choose Connect.'}
+              </p>
             </div>
-            <button
-              type="button"
-              class="icon-button"
-              aria-label="Close"
-              onclick={closeModal}><Icon name="close" /></button
-            >
+            {@render modalCloseButton()}
           </div>
 
-          <div class="form-grid">
+          <div class="profile-scroll">
             <fieldset
-              class="field-full connection-source-choice"
+              class="connection-source-choice"
               disabled={Boolean(editingProfileId)}
             >
-              <legend>Connection type</legend>
+              <legend>Connect to</legend>
               <label>
                 <input
                   type="radio"
@@ -4131,7 +4181,7 @@
                 />
                 <span>
                   <strong>Server</strong>
-                  <small>MySQL or MariaDB at an exact host and port</small>
+                  <small>MySQL or MariaDB over direct TCP and TLS</small>
                 </span>
               </label>
               <label>
@@ -4142,286 +4192,442 @@
                   onchange={() => setConnectionSource('file')}
                 />
                 <span>
-                  <strong>File</strong>
-                  <small
-                    >Choose a database file; QueryNot detects its type</small
-                  >
+                  <strong>Database file</strong>
+                  <small>Choose one file; QueryNot detects SQLite safely</small>
                 </span>
               </label>
               {#if editingProfileId}
-                <small
-                  >The connection type is fixed after profile creation.</small
-                >
+                <small>The connection type cannot change after saving.</small>
               {/if}
             </fieldset>
 
-            <label class="field field-full">
-              <span>Profile name</span>
-              <input required maxlength="100" bind:value={profileForm.name} />
-            </label>
-
             {#if profileForm.kind === 'sqlite'}
-              <div class="file-summary field-full">
-                <span>Native file grant</span>
-                <strong
-                  >{selectedSqliteName ??
-                    (editingProfileId
-                      ? 'Previously selected database file'
-                      : 'No database file selected')}</strong
-                >
-                <small
-                  >The full local path is kept behind the native boundary.</small
-                >
-                <div class="profile-actions">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onclick={() => void chooseConnectionFile()}
-                    >{selectedSqliteName
-                      ? 'Choose another file…'
-                      : 'Choose database file…'}</button
+              <section
+                class="profile-section"
+                aria-labelledby="profile-file-heading"
+              >
+                <div class="profile-section-heading">
+                  <h3 id="profile-file-heading">Database file</h3>
+                  <p>Choose the file before naming the connection.</p>
+                </div>
+                <div class="profile-section-content">
+                  <div
+                    class="profile-file-card"
+                    data-selected={Boolean(selectedSqliteName)}
                   >
-                  {#if selectedSqliteName}
-                    <span class="detected-file-kind">SQLite detected</span>
+                    <div class="profile-file-status">
+                      <span>Selected file</span>
+                      <strong
+                        >{selectedSqliteName ??
+                          (editingProfileId
+                            ? 'Previously selected database file'
+                            : 'No database file selected')}</strong
+                      >
+                      <small>
+                        The full local path stays behind the native boundary.
+                      </small>
+                    </div>
+                    <div class="profile-file-actions">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onclick={() => void chooseConnectionFile()}
+                        >{selectedSqliteName
+                          ? 'Choose another file…'
+                          : 'Choose database file…'}</button
+                      >
+                      {#if selectedSqliteName}
+                        <span class="detected-file-kind">SQLite detected</span>
+                      {/if}
+                    </div>
+                    {#if !selectedSqliteName}
+                      <small>
+                        QueryNot probes only the file you select and never scans
+                        folders. Creating a new database file is not available
+                        yet.
+                      </small>
+                    {/if}
+                  </div>
+                </div>
+              </section>
+
+              <section
+                class="profile-section"
+                aria-labelledby="profile-file-details-heading"
+              >
+                <div class="profile-section-heading">
+                  <h3 id="profile-file-details-heading">Profile details</h3>
+                  <p>Name the connection and choose its access boundary.</p>
+                </div>
+                <div class="profile-section-content profile-fields">
+                  <label class="field field-full">
+                    <span>Connection name</span>
+                    <input
+                      required
+                      maxlength="100"
+                      autocomplete="off"
+                      bind:value={profileForm.name}
+                    />
+                  </label>
+                  <label class="check-row field-full profile-check-row">
+                    <input
+                      type="checkbox"
+                      bind:checked={profileForm.read_only}
+                    />
+                    <span>
+                      <strong>Open read-only</strong>
+                      <small>
+                        Enforce read-only access in every native tab and
+                        metadata session.
+                      </small>
+                    </span>
+                  </label>
+                  <label class="field profile-timeout-field">
+                    <span>Connection timeout (seconds)</span>
+                    <input
+                      required
+                      type="number"
+                      min="5"
+                      max="120"
+                      bind:value={profileForm.connection_timeout_seconds}
+                    />
+                  </label>
+                </div>
+              </section>
+            {:else}
+              <section
+                class="profile-section"
+                aria-labelledby="profile-endpoint-heading"
+              >
+                <div class="profile-section-heading">
+                  <h3 id="profile-endpoint-heading">Connection details</h3>
+                  <p>The local label and exact server endpoint.</p>
+                </div>
+                <div class="profile-section-content profile-fields">
+                  <label class="field field-full">
+                    <span>Connection name</span>
+                    <input
+                      required
+                      maxlength="100"
+                      autocomplete="off"
+                      bind:value={profileForm.name}
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Host</span>
+                    <input
+                      required
+                      maxlength="255"
+                      autocomplete="off"
+                      bind:value={profileForm.host}
+                    />
+                  </label>
+                  <label class="field profile-port-field">
+                    <span>Port</span>
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      max="65535"
+                      bind:value={profileForm.port}
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Username</span>
+                    <input
+                      maxlength="255"
+                      autocomplete="username"
+                      bind:value={profileForm.username}
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Default database <small>Optional</small></span>
+                    <input
+                      maxlength="255"
+                      autocomplete="off"
+                      bind:value={profileForm.default_database}
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section
+                class="profile-section"
+                aria-labelledby="profile-security-heading"
+              >
+                <div class="profile-section-heading">
+                  <h3 id="profile-security-heading">Transport security</h3>
+                  <p>Identity verification never downgrades automatically.</p>
+                </div>
+                <div class="profile-section-content">
+                  <label class="field">
+                    <span>TLS mode</span>
+                    <select bind:value={profileForm.tls_mode}>
+                      <option value="disabled"
+                        >Unencrypted — trusted local development only</option
+                      >
+                      <option value="required"
+                        >Encrypted — server identity not verified</option
+                      >
+                      <option value="verify_identity"
+                        >System trust — verify certificate and identity</option
+                      >
+                      <option value="custom_ca"
+                        >Custom CA — verify certificate and identity</option
+                      >
+                    </select>
+                  </label>
+                  {#if profileForm.tls_mode === 'disabled'}
+                    <div class="inline-warning" role="alert">
+                      The database password, SQL, and returned data will cross
+                      the network without TLS. Use only on an explicitly trusted
+                      local development endpoint.
+                    </div>
+                  {:else if profileForm.tls_mode === 'required'}
+                    <div class="inline-warning" role="alert">
+                      Transport is encrypted, but the server certificate and
+                      host identity are not verified.
+                    </div>
+                  {/if}
+                  {#if profileForm.tls_mode === 'custom_ca'}
+                    <div class="profile-file-card compact">
+                      <div class="profile-file-status">
+                        <span>Trusted CA certificate</span>
+                        <strong>{selectedTlsCaName ?? 'No CA selected'}</strong>
+                        <small>
+                          The sensitive path remains native and is omitted from
+                          diagnostics.
+                        </small>
+                      </div>
+                      <div class="profile-file-actions">
+                        <button
+                          type="button"
+                          onclick={() => void chooseTlsFile('pick_tls_ca_file')}
+                          >Choose CA…</button
+                        >
+                        {#if selectedTlsCaName}
+                          <button
+                            type="button"
+                            class="quiet"
+                            onclick={clearTlsCa}>Remove</button
+                          >
+                        {/if}
+                      </div>
+                    </div>
+                  {/if}
+                  {#if profileForm.tls_mode === 'verify_identity' || profileForm.tls_mode === 'custom_ca'}
+                    <details class="client-identity-details">
+                      <summary>
+                        <span>
+                          <strong>Client certificate authentication</strong>
+                          <small>
+                            {selectedTlsClientCertificateName ||
+                            selectedTlsClientKeyName
+                              ? `${selectedTlsClientCertificateName ?? 'No certificate'} · ${selectedTlsClientKeyName ?? 'no private key'}`
+                              : 'Optional certificate and private key'}
+                          </small>
+                        </span>
+                        <Icon name="chevron-down" size={14} />
+                      </summary>
+                      <div class="client-identity-content">
+                        <p>
+                          Certificate and PEM private-key contents remain native
+                          and never enter profile JSON or diagnostics. Encrypted
+                          PKCS#8 keys can use the optional passphrase in
+                          Credentials.
+                        </p>
+                        <div class="profile-file-actions">
+                          <button
+                            type="button"
+                            onclick={() =>
+                              void chooseTlsFile(
+                                'pick_tls_client_certificate_file'
+                              )}>Choose certificate…</button
+                          >
+                          <button
+                            type="button"
+                            onclick={() =>
+                              void chooseTlsFile('pick_tls_client_key_file')}
+                            >Choose private key…</button
+                          >
+                          {#if selectedTlsClientCertificateName || selectedTlsClientKeyName}
+                            <button
+                              type="button"
+                              class="quiet"
+                              onclick={clearTlsClientIdentity}
+                              >Remove identity</button
+                            >
+                          {/if}
+                        </div>
+                      </div>
+                    </details>
                   {/if}
                 </div>
-                {#if !selectedSqliteName}
-                  <small>
-                    Select one exact local file. QueryNot does not scan folders.
-                    Creating a new database file is planned for a later release.
-                  </small>
-                {/if}
-              </div>
-              <label class="check-row field-full">
-                <input type="checkbox" bind:checked={profileForm.read_only} />
-                <span
-                  >Enforce read-only access in every native tab and metadata
-                  session</span
-                >
-              </label>
-            {:else}
-              <label class="field">
-                <span>Host</span>
-                <input
-                  required
-                  maxlength="255"
-                  autocomplete="off"
-                  bind:value={profileForm.host}
-                />
-              </label>
-              <label class="field">
-                <span>Port</span>
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  max="65535"
-                  bind:value={profileForm.port}
-                />
-              </label>
-              <label class="field">
-                <span>Username</span>
-                <input
-                  maxlength="255"
-                  autocomplete="username"
-                  bind:value={profileForm.username}
-                />
-              </label>
-              <label class="field">
-                <span>Default database (optional)</span>
-                <input
-                  maxlength="255"
-                  autocomplete="off"
-                  bind:value={profileForm.default_database}
-                />
-              </label>
-              <label class="field field-full">
-                <span>TLS mode</span>
-                <select bind:value={profileForm.tls_mode}>
-                  <option value="disabled"
-                    >Unencrypted — trusted local development only</option
-                  >
-                  <option value="required"
-                    >Require encryption without identity verification</option
-                  >
-                  <option value="verify_identity"
-                    >System trust — verify certificate and identity</option
-                  >
-                  <option value="custom_ca"
-                    >Custom CA — verify certificate and identity</option
-                  >
-                </select>
-                <small>
-                  Verified modes fail closed. QueryNot never silently downgrades
-                  transport or identity verification.
-                </small>
-              </label>
-              {#if profileForm.tls_mode === 'disabled'}
-                <div class="inline-warning field-full" role="alert">
-                  The database password, SQL, and returned data will cross the
-                  network without TLS. Use only on an explicitly trusted local
-                  development endpoint.
-                </div>
-              {:else if profileForm.tls_mode === 'required'}
-                <div class="inline-warning field-full" role="alert">
-                  Transport is encrypted, but the server certificate and host
-                  identity are not verified.
-                </div>
-              {/if}
-              {#if profileForm.tls_mode === 'custom_ca'}
-                <div class="file-summary field-full">
-                  <span>Trusted CA certificate</span>
-                  <strong>{selectedTlsCaName ?? 'No CA selected'}</strong>
-                  <small>
-                    The native boundary retains the path as sensitive local-file
-                    metadata; diagnostics omit it.
-                  </small>
-                  <div class="profile-actions">
-                    <button
-                      type="button"
-                      onclick={() => void chooseTlsFile('pick_tls_ca_file')}
-                      >Choose CA</button
-                    >
-                    {#if selectedTlsCaName}
-                      <button type="button" onclick={clearTlsCa}>Remove</button>
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-              {#if profileForm.tls_mode === 'verify_identity' || profileForm.tls_mode === 'custom_ca'}
-                <div class="file-summary field-full">
-                  <span>Client certificate authentication (optional)</span>
-                  <strong>
-                    {selectedTlsClientCertificateName ?? 'No certificate'} · {selectedTlsClientKeyName ??
-                      'no private key'}
-                  </strong>
-                  <small>
-                    Certificate and PEM private-key contents remain native and
-                    are never copied into profile JSON or diagnostics. Encrypted
-                    PKCS#8 keys can be unlocked with the optional passphrase
-                    below.
-                  </small>
-                  <div class="profile-actions">
-                    <button
-                      type="button"
-                      onclick={() =>
-                        void chooseTlsFile('pick_tls_client_certificate_file')}
-                      >Choose certificate</button
-                    >
-                    <button
-                      type="button"
-                      onclick={() =>
-                        void chooseTlsFile('pick_tls_client_key_file')}
-                      >Choose private key</button
-                    >
-                    {#if selectedTlsClientCertificateName || selectedTlsClientKeyName}
-                      <button type="button" onclick={clearTlsClientIdentity}
-                        >Remove client identity</button
-                      >
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-              <label class="field field-full">
-                <span>Password (optional)</span>
-                <input
-                  type="password"
-                  maxlength="16384"
-                  autocomplete="new-password"
-                  bind:value={profileForm.password}
-                />
-                <small>The field is cleared after every native response.</small>
-              </label>
-              {#if selectedTlsClientKeyName || profileForm.tls_client_key_grant_id}
-                <label class="field field-full">
-                  <span>Encrypted PKCS#8 client-key passphrase (optional)</span>
-                  <input
-                    type="password"
-                    maxlength="16384"
-                    autocomplete="new-password"
-                    bind:value={profileForm.client_key_passphrase}
-                  />
-                  <small>
-                    Used only in native memory to unlock an encrypted PKCS#8 PEM
-                    key; decrypted key material is passed to TLS in memory and
-                    is never written to QueryNot storage.
-                  </small>
-                </label>
-              {/if}
-              <fieldset class="field-full secret-choice">
-                <legend>Credential handling</legend>
-                <label>
-                  <input
-                    type="radio"
-                    value="none"
-                    bind:group={profileForm.secret_mode}
-                  />
-                  Do not submit a credential
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="vault"
-                    bind:group={profileForm.secret_mode}
-                  />
-                  Save through the operating-system vault
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="session"
-                    bind:group={profileForm.secret_mode}
-                  />
-                  Keep in native memory for this session only
-                </label>
-              </fieldset>
-            {/if}
+              </section>
 
-            <label class="field">
-              <span>Connection timeout (seconds)</span>
-              <input
-                required
-                type="number"
-                min="5"
-                max="120"
-                bind:value={profileForm.connection_timeout_seconds}
-              />
-            </label>
-            <label class="check-row align-end">
-              <input
-                type="checkbox"
-                disabled={!editingProfileId ||
-                  !profiles.find((p) => p.id === editingProfileId)
-                    ?.has_saved_secret}
-                bind:checked={profileForm.automatic_reconnect}
-              />
-              <span>Allow automatic reconnect with saved credential</span>
-            </label>
+              <section
+                class="profile-section"
+                aria-labelledby="profile-credentials-heading"
+              >
+                <div class="profile-section-heading">
+                  <h3 id="profile-credentials-heading">Credentials</h3>
+                  <p>Choose explicitly whether and where a secret is kept.</p>
+                </div>
+                <div class="profile-section-content">
+                  {#if editingProfileHasSavedSecret}
+                    <div class="saved-credential-state">
+                      <span>
+                        <strong>Saved credential available</strong>
+                        <small>Protected by the operating-system vault.</small>
+                      </span>
+                      <button
+                        type="button"
+                        class="quiet"
+                        disabled={busy}
+                        onclick={() => void removeSavedSecret()}
+                        >Remove saved credential</button
+                      >
+                    </div>
+                  {/if}
+                  <fieldset class="credential-choice">
+                    <legend class="sr-only">Credential handling</legend>
+                    <label>
+                      <input
+                        type="radio"
+                        value="none"
+                        bind:group={profileForm.secret_mode}
+                      />
+                      <span>
+                        <strong
+                          >{editingProfileHasSavedSecret
+                            ? 'Keep saved credential'
+                            : 'No credential'}</strong
+                        >
+                        <small>
+                          {editingProfileHasSavedSecret
+                            ? 'Leave the existing vault item unchanged.'
+                            : 'Save this connection without a password.'}
+                        </small>
+                      </span>
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        value="vault"
+                        bind:group={profileForm.secret_mode}
+                      />
+                      <span>
+                        <strong>Save in OS vault</strong>
+                        <small>Available across app restarts.</small>
+                      </span>
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        value="session"
+                        bind:group={profileForm.secret_mode}
+                      />
+                      <span>
+                        <strong>Use for this session</strong>
+                        <small>Native memory only until the app closes.</small>
+                      </span>
+                    </label>
+                  </fieldset>
+                  {#if profileForm.secret_mode !== 'none'}
+                    <div class="credential-fields">
+                      <label class="field">
+                        <span>Password <small>Optional</small></span>
+                        <input
+                          type="password"
+                          maxlength="16384"
+                          autocomplete="new-password"
+                          bind:value={profileForm.password}
+                        />
+                      </label>
+                      {#if selectedTlsClientKeyName || profileForm.tls_client_key_grant_id}
+                        <label class="field">
+                          <span>
+                            Encrypted PKCS#8 client-key passphrase
+                            <small>Optional</small>
+                          </span>
+                          <input
+                            type="password"
+                            maxlength="16384"
+                            autocomplete="new-password"
+                            bind:value={profileForm.client_key_passphrase}
+                          />
+                        </label>
+                      {/if}
+                      <p class="profile-note field-full">
+                        Credential fields clear after every native response.
+                      </p>
+                    </div>
+                  {/if}
+                </div>
+              </section>
+
+              <section
+                class="profile-section"
+                aria-labelledby="profile-behavior-heading"
+              >
+                <div class="profile-section-heading">
+                  <h3 id="profile-behavior-heading">Connection behavior</h3>
+                  <p>Bounded connection attempts and reconnect eligibility.</p>
+                </div>
+                <div class="profile-section-content profile-behavior-grid">
+                  <label class="field profile-timeout-field">
+                    <span>Connection timeout (seconds)</span>
+                    <input
+                      required
+                      type="number"
+                      min="5"
+                      max="120"
+                      bind:value={profileForm.connection_timeout_seconds}
+                    />
+                  </label>
+                  {#if editingProfileHasSavedSecret}
+                    <label class="check-row profile-check-row">
+                      <input
+                        type="checkbox"
+                        bind:checked={profileForm.automatic_reconnect}
+                      />
+                      <span>
+                        <strong>Allow automatic reconnect</strong>
+                        <small>Uses the saved OS-vault credential.</small>
+                      </span>
+                    </label>
+                  {:else}
+                    <p class="profile-note">
+                      Automatic reconnect is configured later and requires a
+                      saved OS-vault credential.
+                    </p>
+                  {/if}
+                </div>
+              </section>
+            {/if}
           </div>
 
-          {#if editingProfileId && profiles.find((p) => p.id === editingProfileId)?.has_saved_secret}
-            <div class="inline-warning">
-              <span>This profile has an OS-vault credential reference.</span>
-              <button type="button" onclick={() => void removeSavedSecret()}
-                >Remove saved secret</button
+          <div class="profile-footer">
+            <span>
+              {editingProfileId
+                ? 'Saving changes does not reconnect this profile.'
+                : 'Saving keeps this connection offline until you choose Connect.'}
+            </span>
+            <div class="modal-actions">
+              <button type="button" class="quiet" onclick={closeModal}
+                >Cancel</button
               >
+              <button
+                type="submit"
+                class="primary"
+                disabled={busy ||
+                  (!editingProfileId &&
+                    connectionSource === 'file' &&
+                    !profileForm.file_grant_id)}
+              >
+                {editingProfileId ? 'Save changes' : 'Save connection'}
+              </button>
             </div>
-          {/if}
-
-          <div class="modal-actions">
-            <button type="button" class="quiet" onclick={closeModal}
-              >Cancel</button
-            >
-            <button
-              type="submit"
-              class="primary"
-              disabled={busy ||
-                (!editingProfileId &&
-                  connectionSource === 'file' &&
-                  !profileForm.file_grant_id)}
-            >
-              {editingProfileId ? 'Save profile' : 'Create profile'}
-            </button>
           </div>
         </form>
       {:else if modal === 'delete-profile'}
@@ -4430,12 +4636,7 @@
             <p class="eyebrow">Recoverable two-step deletion</p>
             <h2 id="modal-title">Delete connection profile?</h2>
           </div>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="Close"
-            onclick={closeModal}><Icon name="close" /></button
-          >
+          {@render modalCloseButton()}
         </div>
         <p class="modal-copy">
           QueryNot will remove profile metadata, schema cache, and its vault
@@ -4469,227 +4670,285 @@
           >
         </div>
       {:else if modal === 'settings'}
-        <form onsubmit={persistSettings}>
-          <div class="modal-header">
+        <form class="settings-form" onsubmit={persistSettings}>
+          <div class="modal-header settings-header">
             <div>
               <p class="eyebrow">Local preferences</p>
               <h2 id="modal-title">Settings</h2>
+              <p class="settings-intro">
+                Preferences stay on this device and apply after you save.
+              </p>
             </div>
-            <button
-              type="button"
-              class="icon-button"
-              aria-label="Close"
-              onclick={closeModal}><Icon name="close" /></button
-            >
+            {@render modalCloseButton()}
           </div>
-          <div class="settings-grid">
-            <section>
-              <h3>Appearance and editor</h3>
-              <label class="field">
-                <span>Theme</span>
-                <select bind:value={settingsDraft.theme}>
-                  <option value="system">System</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                  <option value="forest">Forest</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>UI scale: {settingsDraft.ui_scale_percent}%</span>
-                <input
-                  type="range"
-                  min="75"
-                  max="200"
-                  step="5"
-                  bind:value={settingsDraft.ui_scale_percent}
-                />
-                <small>
-                  The workspace previews this value. Settings keeps its opening
-                  size until it is reopened.
-                </small>
-              </label>
-              <label class="check-row">
-                <input
-                  type="checkbox"
-                  bind:checked={settingsDraft.editor_word_wrap}
-                />
-                <span>Editor word wrap</span>
-              </label>
-              <label class="check-row">
-                <input
-                  type="checkbox"
-                  bind:checked={settingsDraft.formatter_uppercase_keywords}
-                />
-                <span>Formatter uppercases keywords</span>
-              </label>
-              <label class="field">
-                <span>Formatter indentation</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="8"
-                  bind:value={settingsDraft.formatter_indent_spaces}
-                />
-              </label>
-            </section>
+          <div class="settings-scroll">
+            <div class="settings-columns">
+              <div class="settings-column">
+                <section
+                  class="settings-section"
+                  aria-labelledby="settings-appearance-heading"
+                >
+                  <div class="settings-section-heading">
+                    <h3 id="settings-appearance-heading">Appearance</h3>
+                    <p>Theme and interface size.</p>
+                  </div>
+                  <label class="field">
+                    <span>Theme</span>
+                    <select bind:value={settingsDraft.theme}>
+                      <option value="system">System</option>
+                      <option value="light">Light</option>
+                      <option value="dark">Dark</option>
+                      <option value="forest">Forest</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>UI scale: {settingsDraft.ui_scale_percent}%</span>
+                    <input
+                      type="range"
+                      min="75"
+                      max="200"
+                      step="5"
+                      bind:value={settingsDraft.ui_scale_percent}
+                    />
+                    <small>
+                      The workspace previews this value. Settings keeps its
+                      opening size until it is reopened.
+                    </small>
+                  </label>
+                </section>
 
-            <section>
-              <h3>Query defaults</h3>
-              <label class="field">
-                <span>Connection timeout (seconds)</span>
-                <input
-                  type="number"
-                  min="5"
-                  max="120"
-                  bind:value={settingsDraft.connection_timeout_seconds}
-                />
-              </label>
-              <label class="field">
-                <span>Result tranche rows</span>
-                <input
-                  type="number"
-                  min="100"
-                  max="50000"
-                  bind:value={settingsDraft.result_tranche_rows}
-                />
-              </label>
-              <label class="field">
-                <span>Table page rows</span>
-                <input
-                  type="number"
-                  min="25"
-                  max="1000"
-                  bind:value={settingsDraft.table_page_rows}
-                />
-              </label>
-              <label class="field">
-                <span>Table font</span>
-                <select bind:value={settingsDraft.table_font_family}>
-                  <option value="monospace">Monospace</option>
-                  <option value="system">System sans serif</option>
-                </select>
-              </label>
-              <label class="field">
-                <span
-                  >Table text size: {settingsDraft.table_font_size_px}px</span
+                <section
+                  class="settings-section"
+                  aria-labelledby="settings-editor-heading"
                 >
-                <input
-                  type="range"
-                  min="10"
-                  max="20"
-                  step="1"
-                  bind:value={settingsDraft.table_font_size_px}
-                />
-              </label>
-              <label class="check-row">
-                <input
-                  type="checkbox"
-                  bind:checked={settingsDraft.session_restoration_enabled}
-                />
-                <span>Restore drafts and tabs offline</span>
-              </label>
-              <p class="settings-note">
-                Restored SQL text can contain sensitive literals. Drafts are
-                local and saved after one second of inactivity; staged table
-                edits are excluded.
-              </p>
-              {#if clearDraftConfirmation}
-                <div class="confirm-strip" role="alert">
-                  <span
-                    >Clear the saved recovery snapshot but keep current tabs
-                    open?</span
-                  >
-                  <button
-                    type="button"
-                    onclick={() => (clearDraftConfirmation = false)}
-                    >Keep</button
-                  >
-                  <button
-                    type="button"
-                    onclick={() => void clearSavedWorkspace()}>Clear</button
-                  >
-                </div>
-              {:else}
-                <button
-                  type="button"
-                  onclick={() => (clearDraftConfirmation = true)}
-                >
-                  Clear saved draft recovery…
-                </button>
-              {/if}
-              <p class="settings-note">
-                Automatic reconnect defaults off and requires a saved credential
-                per profile.
-              </p>
-            </section>
+                  <div class="settings-section-heading">
+                    <h3 id="settings-editor-heading">Editor & formatting</h3>
+                    <p>Reading and SQL formatting defaults.</p>
+                  </div>
+                  <label class="check-row">
+                    <input
+                      type="checkbox"
+                      bind:checked={settingsDraft.editor_word_wrap}
+                    />
+                    <span>Editor word wrap</span>
+                  </label>
+                  <label class="check-row">
+                    <input
+                      type="checkbox"
+                      bind:checked={settingsDraft.formatter_uppercase_keywords}
+                    />
+                    <span>Formatter uppercases keywords</span>
+                  </label>
+                  <label class="field settings-compact-field">
+                    <span>Formatter indentation</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="8"
+                      bind:value={settingsDraft.formatter_indent_spaces}
+                    />
+                  </label>
+                </section>
 
-            <section>
-              <h3>History and local diagnostics</h3>
-              <label class="check-row">
-                <input
-                  type="checkbox"
-                  bind:checked={settingsDraft.history_enabled}
-                />
-                <span>Keep local query history</span>
-              </label>
-              <label class="field">
-                <span>History retention (days)</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="3650"
-                  bind:value={settingsDraft.history_retention_days}
-                />
-              </label>
-              <label class="check-row">
-                <input
-                  type="checkbox"
-                  bind:checked={settingsDraft.operational_log_enabled}
-                />
-                <span>Keep redacted local operational log</span>
-              </label>
-              <label class="field">
-                <span>Log retention (days)</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="7"
-                  bind:value={settingsDraft.operational_log_retention_days}
-                />
-              </label>
-              <p class="settings-note">
-                The log is capped at 5 MiB and never has a secret/value debug
-                mode.
-              </p>
-              <div class="settings-buttons">
-                <button type="button" onclick={() => void openDiagnostics()}
-                  >Preview diagnostics</button
+                <section
+                  class="settings-section"
+                  aria-labelledby="settings-results-heading"
                 >
-                <button
-                  type="button"
-                  onclick={() => (clearLogConfirmation = true)}
-                  >Clear local log</button
-                >
+                  <div class="settings-section-heading">
+                    <h3 id="settings-results-heading">Results & tables</h3>
+                    <p>Batch sizes and grid typography.</p>
+                  </div>
+                  <div class="settings-field-grid">
+                    <label class="field">
+                      <span>Result tranche rows</span>
+                      <input
+                        type="number"
+                        min="100"
+                        max="50000"
+                        bind:value={settingsDraft.result_tranche_rows}
+                      />
+                    </label>
+                    <label class="field">
+                      <span>Table page rows</span>
+                      <input
+                        type="number"
+                        min="25"
+                        max="1000"
+                        bind:value={settingsDraft.table_page_rows}
+                      />
+                    </label>
+                  </div>
+                  <label class="field">
+                    <span>Table font</span>
+                    <select bind:value={settingsDraft.table_font_family}>
+                      <option value="monospace">Monospace</option>
+                      <option value="system">System sans serif</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span
+                      >Table text size: {settingsDraft.table_font_size_px}px</span
+                    >
+                    <input
+                      type="range"
+                      min="10"
+                      max="20"
+                      step="1"
+                      bind:value={settingsDraft.table_font_size_px}
+                    />
+                  </label>
+                </section>
               </div>
-              {#if clearLogConfirmation}
-                <div class="confirm-strip" role="alert">
-                  <span>Clear the redacted local log?</span>
-                  <button
-                    type="button"
-                    onclick={() => (clearLogConfirmation = false)}>Keep</button
-                  >
-                  <button
-                    type="button"
-                    onclick={() => void clearOperationalLog()}>Clear</button
-                  >
-                </div>
-              {/if}
-            </section>
 
-            <section class="updater-settings" aria-live="polite">
+              <div class="settings-column">
+                <section
+                  class="settings-section"
+                  aria-labelledby="settings-connection-heading"
+                >
+                  <div class="settings-section-heading">
+                    <h3 id="settings-connection-heading">
+                      Connections & recovery
+                    </h3>
+                    <p>Timeouts and local workspace restoration.</p>
+                  </div>
+                  <label class="field settings-compact-field">
+                    <span>Connection timeout (seconds)</span>
+                    <input
+                      type="number"
+                      min="5"
+                      max="120"
+                      bind:value={settingsDraft.connection_timeout_seconds}
+                    />
+                  </label>
+                  <label class="check-row">
+                    <input
+                      type="checkbox"
+                      bind:checked={settingsDraft.session_restoration_enabled}
+                    />
+                    <span>Restore drafts and tabs offline</span>
+                  </label>
+                  <p class="settings-note">
+                    Restored SQL text can contain sensitive literals. Drafts are
+                    local and saved after one second of inactivity; staged table
+                    edits are excluded.
+                  </p>
+                  {#if clearDraftConfirmation}
+                    <div class="confirm-strip" role="alert">
+                      <span
+                        >Clear the saved recovery snapshot but keep current tabs
+                        open?</span
+                      >
+                      <button
+                        type="button"
+                        onclick={() => (clearDraftConfirmation = false)}
+                        >Keep</button
+                      >
+                      <button
+                        type="button"
+                        onclick={() => void clearSavedWorkspace()}>Clear</button
+                      >
+                    </div>
+                  {:else}
+                    <button
+                      type="button"
+                      class="settings-secondary-action"
+                      onclick={() => (clearDraftConfirmation = true)}
+                    >
+                      Clear saved draft recovery…
+                    </button>
+                  {/if}
+                  <p class="settings-note">
+                    Automatic reconnect defaults off and requires a saved
+                    credential per profile.
+                  </p>
+                </section>
+
+                <section
+                  class="settings-section"
+                  aria-labelledby="settings-history-heading"
+                >
+                  <div class="settings-section-heading">
+                    <h3 id="settings-history-heading">History & diagnostics</h3>
+                    <p>Local retention and redacted troubleshooting data.</p>
+                  </div>
+                  <label class="check-row">
+                    <input
+                      type="checkbox"
+                      bind:checked={settingsDraft.history_enabled}
+                    />
+                    <span>Keep local query history</span>
+                  </label>
+                  <label class="field settings-compact-field">
+                    <span>History retention (days)</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="3650"
+                      bind:value={settingsDraft.history_retention_days}
+                    />
+                  </label>
+                  <label class="check-row">
+                    <input
+                      type="checkbox"
+                      bind:checked={settingsDraft.operational_log_enabled}
+                    />
+                    <span>Keep redacted local operational log</span>
+                  </label>
+                  <label class="field settings-compact-field">
+                    <span>Log retention (days)</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="7"
+                      bind:value={settingsDraft.operational_log_retention_days}
+                    />
+                  </label>
+                  <p class="settings-note">
+                    The log is capped at 5 MiB and never has a secret/value
+                    debug mode.
+                  </p>
+                  <div class="settings-buttons">
+                    <button
+                      type="button"
+                      class="settings-secondary-action"
+                      onclick={() => void openDiagnostics()}
+                      >Preview diagnostics</button
+                    >
+                    <button
+                      type="button"
+                      class="settings-secondary-action"
+                      onclick={() => (clearLogConfirmation = true)}
+                      >Clear local log</button
+                    >
+                  </div>
+                  {#if clearLogConfirmation}
+                    <div class="confirm-strip" role="alert">
+                      <span>Clear the redacted local log?</span>
+                      <button
+                        type="button"
+                        onclick={() => (clearLogConfirmation = false)}
+                        >Keep</button
+                      >
+                      <button
+                        type="button"
+                        onclick={() => void clearOperationalLog()}>Clear</button
+                      >
+                    </div>
+                  {/if}
+                </section>
+              </div>
+            </div>
+
+            <section
+              class="settings-section updater-settings"
+              aria-labelledby="settings-updater-heading"
+              aria-live="polite"
+            >
               <div class="updater-heading">
                 <div>
-                  <h3>Signed application updates</h3>
+                  <h3 id="settings-updater-heading">
+                    Signed application updates
+                  </h3>
                   <p class="settings-note">
                     Installed version {__APP_VERSION__}
                   </p>
@@ -4773,37 +5032,39 @@
             </section>
           </div>
 
-          <div class="settings-reset">
-            {#if resetConfirmation}
-              <div class="confirm-strip" role="alert">
-                <span
-                  >Reset settings only? Profiles, history, and drafts stay
-                  intact.</span
-                >
+          <div class="settings-footer">
+            <div class="settings-reset">
+              {#if resetConfirmation}
+                <div class="confirm-strip" role="alert">
+                  <span
+                    >Reset settings only? Profiles, history, and drafts stay
+                    intact.</span
+                  >
+                  <button
+                    type="button"
+                    onclick={() => (resetConfirmation = false)}>Cancel</button
+                  >
+                  <button type="button" onclick={() => void resetSettings()}
+                    >Confirm reset</button
+                  >
+                </div>
+              {:else}
                 <button
                   type="button"
-                  onclick={() => (resetConfirmation = false)}>Cancel</button
+                  class="quiet"
+                  onclick={() => (resetConfirmation = true)}
+                  >Reset settings…</button
                 >
-                <button type="button" onclick={() => void resetSettings()}
-                  >Confirm reset</button
-                >
-              </div>
-            {:else}
-              <button
-                type="button"
-                class="quiet"
-                onclick={() => (resetConfirmation = true)}
-                >Reset settings…</button
+              {/if}
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="quiet" onclick={closeModal}
+                >Cancel</button
               >
-            {/if}
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="quiet" onclick={closeModal}
-              >Cancel</button
-            >
-            <button type="submit" class="primary" disabled={busy}
-              >Save settings</button
-            >
+              <button type="submit" class="primary" disabled={busy}
+                >Save settings</button
+              >
+            </div>
           </div>
         </form>
       {:else if modal === 'file-review' && fileReview}
@@ -4812,12 +5073,7 @@
             <p class="eyebrow">External-change review</p>
             <h2 id="modal-title">Compare {fileReview.displayName}</h2>
           </div>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="Close"
-            onclick={closeModal}><Icon name="close" /></button
-          >
+          {@render modalCloseButton()}
         </div>
         <p class="modal-copy">
           The in-memory draft remains authoritative. QueryNot will not overwrite
@@ -4853,12 +5109,7 @@
             <p class="eyebrow">Preview before local export</p>
             <h2 id="modal-title">Redacted diagnostics</h2>
           </div>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="Close"
-            onclick={closeModal}><Icon name="close" /></button
-          >
+          {@render modalCloseButton()}
         </div>
         <p class="modal-copy">
           This bundle contains build/runtime identity, safe categories, and
@@ -4911,12 +5162,7 @@
             <p class="eyebrow">Immutable execution confirmation</p>
             <h2 id="modal-title">Review destructive statement ranges</h2>
           </div>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="Cancel execution confirmation"
-            onclick={closeModal}><Icon name="close" /></button
-          >
+          {@render modalCloseButton('Cancel execution confirmation')}
         </div>
         <p class="modal-copy">
           QueryNot flagged every range before running any statement. Approval is

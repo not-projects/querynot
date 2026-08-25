@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-08-25
+
+### Changed
+
+- Rebalanced the application header and connected query workbench so document menus, global utilities, connection status, execution, filtering, selection, copy, value inspection, and export controls use clearer grouping and consistent compact sizing, while result status and retained-row copy scope remain explicit.
+- Reorganized Settings into purpose-based, natural-height sections with quieter secondary controls and a persistent action footer, keeping Save, Cancel, and reset access stable while preferences scroll independently at constrained sizes and high UI scales.
+- Reworked Add connection around endpoint, transport, credential, and behavior sections with persistent actions, explicit credential storage choices, progressive client-certificate controls, file-first SQLite setup, and no irrelevant reconnect control for file profiles.
+- Simplified current-view export so the exact filtered and sorted row indexes are captured when Export is chosen, removing continuous parent-state synchronization without changing server-order export or CSV safety behavior.
+
 ## [0.1.6] - 2026-08-24
 
 ### Added

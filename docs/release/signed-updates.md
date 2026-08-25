@@ -27,7 +27,7 @@ Every platform candidate job validates presence and document shape without print
 1. Push the clean release-preparation commit to `master`.
 2. Manually dispatch `CI` on `master`.
 3. Review all jobs, the four platform artifacts, and the combined `querynot-release-candidate` artifact. The combined candidate must contain seven installable packages, two additional macOS updater archives, seven matching signatures, the eight-key `latest.json`, `SHA256SUMS`, four inspection reports, and the combined manifest/checksum/candidate reports.
-4. Manually dispatch `Publish reviewed signed release` with that successful CI run ID and the exact confirmation `publish-v0.1.6`.
+4. Manually dispatch `Publish reviewed signed release` with that successful CI run ID and the exact confirmation `publish-v0.1.7`.
 5. The workflow resolves and checks out the candidate run's exact commit, validates and cryptographically verifies all 18 public assets, creates a draft, downloads it, byte-compares every asset with the pre-draft publication plan, re-verifies the checksums, feed, and signatures, then publishes it as the stable release.
 
 The publication workflow has no signing secrets and runs no build or packaging command. A failed run can leave a draft release for inspection; automation does not overwrite an existing tag or asset. The public package matrix is Windows x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS Intel/Apple-silicon DMG, with the updater payload mapping documented in ADR 0016.

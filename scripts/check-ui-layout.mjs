@@ -13,6 +13,36 @@ process.env.TMP = queryNotBrowserTemp;
 const { chromium } = await import('playwright');
 const reportPath = resolve(root, 'artifacts', 'ui-layout-report.json');
 const screenshotPath = resolve(root, 'artifacts', 'ui-layout-settings.png');
+const settingsUpdatesScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-settings-updates.png'
+);
+const highScaleSettingsScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-settings-200.png'
+);
+const connectionServerScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-connection-server.png'
+);
+const connectionSecurityScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-connection-security.png'
+);
+const connectionFileScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-connection-file.png'
+);
+const highScaleConnectionScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-connection-200.png'
+);
 const workbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -43,6 +73,17 @@ const valueViewerScreenshotPath = resolve(
   'artifacts',
   'ui-layout-value-viewer.png'
 );
+const rowSelectionScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-row-selection.png'
+);
+const compactWorkbenchScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-workbench-720.png'
+);
+const headerScreenshotPath = resolve(root, 'artifacts', 'ui-layout-header.png');
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
 
@@ -127,6 +168,52 @@ try {
     JSON.stringify(options) ===
       JSON.stringify(['System', 'Light', 'Dark', 'Forest']),
     'theme names do not match PostNot'
+  );
+
+  const settingsHierarchy = await page
+    .locator('.settings-dialog')
+    .evaluate((element) => {
+      const bounds = (selector) => {
+        const target = element.querySelector(selector);
+        if (!target) throw new Error(`settings ${selector} is missing`);
+        return target.getBoundingClientRect().toJSON();
+      };
+      const columns = element.querySelector('.settings-columns');
+      return {
+        headings: Array.from(
+          element.querySelectorAll('.settings-section h3')
+        ).map((heading) => heading.textContent?.trim() ?? ''),
+        column_tracks: columns
+          ? getComputedStyle(columns).gridTemplateColumns.split(' ').length
+          : 0,
+        card: element.getBoundingClientRect().toJSON(),
+        header: bounds('.settings-header'),
+        content: bounds('.settings-scroll'),
+        footer: bounds('.settings-footer'),
+        save: bounds('button[type="submit"]')
+      };
+    });
+  assert(
+    JSON.stringify(settingsHierarchy.headings) ===
+      JSON.stringify([
+        'Appearance',
+        'Editor & formatting',
+        'Results & tables',
+        'Connections & recovery',
+        'History & diagnostics',
+        'Signed application updates'
+      ]),
+    `Settings hierarchy is incomplete (${JSON.stringify(settingsHierarchy.headings)})`
+  );
+  assert(
+    settingsHierarchy.column_tracks === 2,
+    `wide Settings did not render two preference columns (${settingsHierarchy.column_tracks})`
+  );
+  assert(
+    settingsHierarchy.header.bottom <= settingsHierarchy.content.top + 1 &&
+      settingsHierarchy.content.bottom <= settingsHierarchy.footer.top + 1 &&
+      settingsHierarchy.save.bottom <= settingsHierarchy.card.bottom + 1,
+    'Settings header, scroll region, and persistent actions overlap'
   );
 
   const dialogThemes = [];
@@ -246,19 +333,47 @@ try {
   const highScaleDialog = await page.evaluate(() => {
     const backdrop = document.querySelector('.modal-backdrop');
     const card = document.querySelector('.modal-card');
-    if (!(backdrop instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+    const content = document.querySelector('.settings-scroll');
+    const header = document.querySelector('.settings-header');
+    const footer = document.querySelector('.settings-footer');
+    const save = document.querySelector(
+      '.settings-footer button[type="submit"]'
+    );
+    const close = document.querySelector('.settings-header .icon-button');
+    if (
+      !(backdrop instanceof HTMLElement) ||
+      !(card instanceof HTMLElement) ||
+      !(content instanceof HTMLElement) ||
+      !(header instanceof HTMLElement) ||
+      !(footer instanceof HTMLElement) ||
+      !(save instanceof HTMLElement) ||
+      !(close instanceof HTMLElement)
+    ) {
       throw new Error('high-scale Settings dialog is missing');
     }
     const backdropBounds = backdrop.getBoundingClientRect();
     const cardBounds = card.getBoundingClientRect();
+    const contentBounds = content.getBoundingClientRect();
+    const headerBounds = header.getBoundingClientRect();
+    const footerBounds = footer.getBoundingClientRect();
+    const saveBounds = save.getBoundingClientRect();
+    const closeBounds = close.getBoundingClientRect();
     return {
       backdrop_transform: getComputedStyle(backdrop).transform,
       backdrop_top: backdropBounds.top,
       backdrop_bottom: backdropBounds.bottom,
       card_top: cardBounds.top,
       card_bottom: cardBounds.bottom,
-      card_client_height: card.clientHeight,
-      card_scroll_height: card.scrollHeight,
+      content_top: contentBounds.top,
+      content_bottom: contentBounds.bottom,
+      content_client_height: content.clientHeight,
+      content_scroll_height: content.scrollHeight,
+      header_bottom: headerBounds.bottom,
+      footer_top: footerBounds.top,
+      save_top: saveBounds.top,
+      save_bottom: saveBounds.bottom,
+      close_top: closeBounds.top,
+      close_bottom: closeBounds.bottom,
       viewport_height: window.innerHeight
     };
   });
@@ -272,31 +387,61 @@ try {
     `200% Settings dialog escaped the viewport (${highScaleDialog.card_top}..${highScaleDialog.card_bottom} of ${highScaleDialog.viewport_height})`
   );
   assert(
-    highScaleDialog.card_scroll_height > highScaleDialog.card_client_height,
-    '200% Settings dialog does not expose an internal scroll range'
+    highScaleDialog.content_scroll_height >
+      highScaleDialog.content_client_height,
+    '200% Settings content does not expose an internal scroll range'
   );
+  assert(
+    highScaleDialog.header_bottom <= highScaleDialog.content_top + 1 &&
+      highScaleDialog.content_bottom <= highScaleDialog.footer_top + 1 &&
+      highScaleDialog.save_top >= 0 &&
+      highScaleDialog.save_bottom <= highScaleDialog.viewport_height &&
+      highScaleDialog.close_top >= 0 &&
+      highScaleDialog.close_bottom <= highScaleDialog.viewport_height,
+    'Settings title, content, and primary actions are not simultaneously reachable at 200%'
+  );
+  await page.screenshot({ path: highScaleSettingsScreenshotPath });
+
+  await page.getByRole('button', { name: 'Reset settings…' }).click();
+  const highScaleReset = await page
+    .locator('.settings-footer')
+    .evaluate((element) => {
+      const buttons = Array.from(element.querySelectorAll('button')).map(
+        (button) => {
+          const bounds = button.getBoundingClientRect();
+          return {
+            label: button.textContent?.trim() ?? '',
+            left: bounds.left,
+            right: bounds.right,
+            top: bounds.top,
+            bottom: bounds.bottom
+          };
+        }
+      );
+      return {
+        client_width: element.clientWidth,
+        scroll_width: element.scrollWidth,
+        buttons
+      };
+    });
+  assert(
+    highScaleReset.scroll_width <= highScaleReset.client_width &&
+      highScaleReset.buttons.every(
+        (button) =>
+          button.left >= 0 &&
+          button.right <= 1280 &&
+          button.top >= 0 &&
+          button.bottom <= 600
+      ),
+    `reset confirmation escaped the 200% Settings footer (${JSON.stringify(highScaleReset)})`
+  );
+  await page
+    .locator('.settings-reset')
+    .getByRole('button', { name: 'Cancel' })
+    .click();
+  highScaleDialog.reset_confirmation = highScaleReset;
 
   const highScaleSave = page.getByRole('button', { name: 'Save settings' });
-  await highScaleSave.scrollIntoViewIfNeeded();
-  const highScaleSaveBounds = await highScaleSave.evaluate((element) => {
-    const bounds = element.getBoundingClientRect();
-    return { top: bounds.top, bottom: bounds.bottom };
-  });
-  assert(
-    highScaleSaveBounds.top >= 0 && highScaleSaveBounds.bottom <= 600,
-    'bottom Settings action cannot be scrolled into the 200% viewport'
-  );
-  const highScaleClose = page.getByRole('button', { name: 'Close' });
-  await highScaleClose.scrollIntoViewIfNeeded();
-  const highScaleCloseBounds = await highScaleClose.evaluate((element) => {
-    const bounds = element.getBoundingClientRect();
-    return { top: bounds.top, bottom: bounds.bottom };
-  });
-  assert(
-    highScaleCloseBounds.top >= 0 && highScaleCloseBounds.bottom <= 600,
-    'top Settings action cannot be scrolled back into the 200% viewport'
-  );
-
   await page
     .locator('.modal-card input[type="range"]')
     .first()
@@ -304,11 +449,277 @@ try {
       element.value = '100';
       element.dispatchEvent(new Event('input', { bubbles: true }));
     });
-  await highScaleSave.scrollIntoViewIfNeeded();
   await highScaleSave.click();
   await page.locator('.modal-card').waitFor({ state: 'detached' });
   await page.setViewportSize({ width: widths[0], height: 1068 });
   await page.getByRole('button', { name: 'Settings' }).first().click();
+
+  const connectionPage = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: 'reduce'
+  });
+  await connectionPage.goto(`http://127.0.0.1:${address.port}`, {
+    waitUntil: 'networkidle'
+  });
+  await connectionPage
+    .getByRole('button', { name: 'Create connection' })
+    .first()
+    .click();
+  await connectionPage.locator('.profile-dialog').waitFor();
+
+  const connectionServer = await connectionPage
+    .locator('.profile-dialog')
+    .evaluate((element) => {
+      const bounds = (selector) => {
+        const target = element.querySelector(selector);
+        if (!target) throw new Error(`connection ${selector} is missing`);
+        return target.getBoundingClientRect().toJSON();
+      };
+      const clientIdentity = element.querySelector('.client-identity-details');
+      return {
+        headings: Array.from(
+          element.querySelectorAll('.profile-section h3')
+        ).map((heading) => heading.textContent?.trim() ?? ''),
+        source_labels: Array.from(
+          element.querySelectorAll('.connection-source-choice label strong')
+        ).map((label) => label.textContent?.trim() ?? ''),
+        card: element.getBoundingClientRect().toJSON(),
+        header: bounds('.profile-header'),
+        content: bounds('.profile-scroll'),
+        footer: bounds('.profile-footer'),
+        save: bounds('button[type="submit"]'),
+        password_count: element.querySelectorAll('input[type="password"]')
+          .length,
+        client_identity_open:
+          clientIdentity instanceof HTMLDetailsElement && clientIdentity.open,
+        content_client_height:
+          element.querySelector('.profile-scroll')?.clientHeight ?? 0,
+        content_scroll_height:
+          element.querySelector('.profile-scroll')?.scrollHeight ?? 0
+      };
+    });
+  assert(
+    JSON.stringify(connectionServer.headings) ===
+      JSON.stringify([
+        'Connection details',
+        'Transport security',
+        'Credentials',
+        'Connection behavior'
+      ]) &&
+      JSON.stringify(connectionServer.source_labels) ===
+        JSON.stringify(['Server', 'Database file']),
+    `server connection hierarchy is incomplete (${JSON.stringify(connectionServer)})`
+  );
+  assert(
+    connectionServer.password_count === 0 &&
+      !connectionServer.client_identity_open,
+    'optional connection credentials are expanded before the user requests them'
+  );
+  assert(
+    connectionServer.header.bottom <= connectionServer.content.top + 1 &&
+      connectionServer.content.bottom <= connectionServer.footer.top + 1 &&
+      connectionServer.save.bottom <= connectionServer.card.bottom + 1,
+    'server connection header, content, and persistent actions overlap'
+  );
+  await connectionPage.screenshot({ path: connectionServerScreenshotPath });
+
+  await connectionPage.locator('input[value="vault"]').check();
+  await connectionPage.locator('input[type="password"]').waitFor();
+  await connectionPage.getByLabel('TLS mode').selectOption('disabled');
+  const unsafeTlsWarning = await connectionPage
+    .getByRole('alert')
+    .textContent();
+  assert(
+    unsafeTlsWarning?.includes('without TLS'),
+    'unencrypted connection mode lost its explicit warning'
+  );
+  await connectionPage.getByLabel('TLS mode').selectOption('custom_ca');
+  await connectionPage.getByText('No CA selected', { exact: true }).waitFor();
+  await connectionPage.locator('.client-identity-details summary').click();
+  const connectionSecurity = await connectionPage.evaluate(() => {
+    const dialog = document.querySelector('.profile-dialog');
+    const details = document.querySelector('.client-identity-details');
+    if (
+      !(dialog instanceof HTMLElement) ||
+      !(details instanceof HTMLDetailsElement)
+    ) {
+      throw new Error('advanced connection security state is missing');
+    }
+    return {
+      client_identity_open: details.open,
+      password_visible: Boolean(dialog.querySelector('input[type="password"]')),
+      has_custom_ca: dialog.textContent?.includes('No CA selected') ?? false,
+      scroll_width: dialog.scrollWidth,
+      client_width: dialog.clientWidth
+    };
+  });
+  assert(
+    connectionSecurity.client_identity_open &&
+      connectionSecurity.password_visible &&
+      connectionSecurity.has_custom_ca &&
+      connectionSecurity.scroll_width <= connectionSecurity.client_width,
+    `advanced connection security is clipped or incomplete (${JSON.stringify(connectionSecurity)})`
+  );
+  await connectionPage.locator('.profile-scroll').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await connectionPage.screenshot({ path: connectionSecurityScreenshotPath });
+
+  await connectionPage
+    .locator('.connection-source-choice label')
+    .nth(1)
+    .click();
+  const connectionFile = await connectionPage
+    .locator('.profile-dialog')
+    .evaluate((element) => ({
+      headings: Array.from(element.querySelectorAll('.profile-section h3')).map(
+        (heading) => heading.textContent?.trim() ?? ''
+      ),
+      text: element.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+      card: element.getBoundingClientRect().toJSON(),
+      save_disabled:
+        element.querySelector('button[type="submit"]') instanceof
+          HTMLButtonElement &&
+        element.querySelector('button[type="submit"]').disabled,
+      content_client_width:
+        element.querySelector('.profile-scroll')?.clientWidth ?? 0,
+      content_scroll_width:
+        element.querySelector('.profile-scroll')?.scrollWidth ?? 0
+    }));
+  assert(
+    JSON.stringify(connectionFile.headings) ===
+      JSON.stringify(['Database file', 'Profile details']) &&
+      !connectionFile.text.includes('Automatic reconnect') &&
+      connectionFile.save_disabled,
+    `file connection exposes irrelevant or unsafe controls (${JSON.stringify(connectionFile)})`
+  );
+  assert(
+    connectionFile.card.height < connectionServer.card.height &&
+      connectionFile.content_scroll_width <=
+        connectionFile.content_client_width,
+    'file connection keeps the tall server-dialog footprint or overflows'
+  );
+  await connectionPage.screenshot({ path: connectionFileScreenshotPath });
+
+  await connectionPage.setViewportSize({ width: 720, height: 700 });
+  const compactConnectionFile = await connectionPage.evaluate(() => {
+    const card = document.querySelector('.profile-dialog');
+    const content = document.querySelector('.profile-scroll');
+    const footer = document.querySelector('.profile-footer');
+    if (
+      !(card instanceof HTMLElement) ||
+      !(content instanceof HTMLElement) ||
+      !(footer instanceof HTMLElement)
+    ) {
+      throw new Error('compact file connection is missing');
+    }
+    return {
+      viewport_width: window.innerWidth,
+      document_scroll_width: document.documentElement.scrollWidth,
+      card: card.getBoundingClientRect().toJSON(),
+      content_client_width: content.clientWidth,
+      content_scroll_width: content.scrollWidth,
+      footer: footer.getBoundingClientRect().toJSON()
+    };
+  });
+  assert(
+    compactConnectionFile.document_scroll_width <=
+      compactConnectionFile.viewport_width &&
+      compactConnectionFile.content_scroll_width <=
+        compactConnectionFile.content_client_width &&
+      compactConnectionFile.card.left >= -1 &&
+      compactConnectionFile.card.right <=
+        compactConnectionFile.viewport_width + 1 &&
+      compactConnectionFile.footer.bottom <= 700,
+    `720px file connection escaped its viewport (${JSON.stringify(compactConnectionFile)})`
+  );
+
+  await connectionPage.getByRole('button', { name: 'Close' }).click();
+  await connectionPage.setViewportSize({ width: widths[0], height: 1068 });
+  await connectionPage
+    .getByRole('button', { name: 'Settings' })
+    .first()
+    .click();
+  await connectionPage
+    .locator('.modal-card input[type="range"]')
+    .first()
+    .evaluate((element) => {
+      element.value = '200';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  await connectionPage.getByRole('button', { name: 'Save settings' }).click();
+  await connectionPage.setViewportSize({ width: 1280, height: 600 });
+  await connectionPage
+    .locator('button[aria-label="Create connection profile"]')
+    .click();
+  await connectionPage.locator('.profile-dialog').waitFor();
+  const highScaleConnection = await connectionPage.evaluate(() => {
+    const backdrop = document.querySelector('.modal-backdrop');
+    const card = document.querySelector('.profile-dialog');
+    const content = document.querySelector('.profile-scroll');
+    const header = document.querySelector('.profile-header');
+    const footer = document.querySelector('.profile-footer');
+    const save = document.querySelector(
+      '.profile-footer button[type="submit"]'
+    );
+    const close = document.querySelector('.profile-header .icon-button');
+    if (
+      !(backdrop instanceof HTMLElement) ||
+      !(card instanceof HTMLElement) ||
+      !(content instanceof HTMLElement) ||
+      !(header instanceof HTMLElement) ||
+      !(footer instanceof HTMLElement) ||
+      !(save instanceof HTMLElement) ||
+      !(close instanceof HTMLElement)
+    ) {
+      throw new Error('high-scale connection dialog is incomplete');
+    }
+    const cardBounds = card.getBoundingClientRect();
+    const contentBounds = content.getBoundingClientRect();
+    const headerBounds = header.getBoundingClientRect();
+    const footerBounds = footer.getBoundingClientRect();
+    const saveBounds = save.getBoundingClientRect();
+    const closeBounds = close.getBoundingClientRect();
+    return {
+      backdrop_transform: getComputedStyle(backdrop).transform,
+      card: cardBounds.toJSON(),
+      content_top: contentBounds.top,
+      content_bottom: contentBounds.bottom,
+      content_client_height: content.clientHeight,
+      content_scroll_height: content.scrollHeight,
+      header_bottom: headerBounds.bottom,
+      footer_top: footerBounds.top,
+      save: saveBounds.toJSON(),
+      close: closeBounds.toJSON(),
+      viewport_height: window.innerHeight
+    };
+  });
+  assert(
+    highScaleConnection.backdrop_transform.startsWith('matrix(2,') &&
+      highScaleConnection.card.top >= -1 &&
+      highScaleConnection.card.bottom <=
+        highScaleConnection.viewport_height + 1 &&
+      highScaleConnection.content_scroll_height >
+        highScaleConnection.content_client_height &&
+      highScaleConnection.header_bottom <=
+        highScaleConnection.content_top + 1 &&
+      highScaleConnection.content_bottom <=
+        highScaleConnection.footer_top + 1 &&
+      highScaleConnection.save.top >= 0 &&
+      highScaleConnection.save.bottom <= highScaleConnection.viewport_height &&
+      highScaleConnection.close.top >= 0 &&
+      highScaleConnection.close.bottom <= highScaleConnection.viewport_height,
+    `200% connection dialog is not fully reachable (${JSON.stringify(highScaleConnection)})`
+  );
+  await connectionPage.screenshot({ path: highScaleConnectionScreenshotPath });
+  await connectionPage.close();
+  const connectionDialog = {
+    server: connectionServer,
+    security: connectionSecurity,
+    file: connectionFile,
+    compact_file: compactConnectionFile,
+    reopened_200_percent: highScaleConnection
+  };
 
   const editorPage = await browser.newPage({
     viewport: { width: 1280, height: 800 },
@@ -885,6 +1296,20 @@ try {
     const firstGridCellStyle = firstGridCell
       ? getComputedStyle(firstGridCell)
       : null;
+    const controlMetrics = (selectors) =>
+      Array.from(document.querySelectorAll(selectors)).map((element) => {
+        const bounds = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          label: element.textContent?.trim().replace(/\s+/g, ' ') ?? '',
+          height: bounds.height,
+          left: bounds.left,
+          right: bounds.right,
+          background: style.backgroundColor,
+          color: style.color,
+          border: style.borderTopColor
+        };
+      });
     return {
       document_scroll_width: document.documentElement.scrollWidth,
       viewport_width: window.innerWidth,
@@ -901,9 +1326,30 @@ try {
       table_font_size: firstGridCellStyle?.fontSize ?? '',
       table_font_family: firstGridCellStyle?.fontFamily ?? '',
       topbar: rect('.topbar'),
+      topbar_background: getComputedStyle(
+        document.querySelector('.topbar') ?? document.body
+      ).backgroundColor,
+      brand: rect('.brand'),
+      connection_summary: rect('.connection-summary'),
+      connection_summary_background: getComputedStyle(
+        document.querySelector('.connection-summary') ?? document.body
+      ).backgroundColor,
+      header_controls: controlMetrics('.topbar-control'),
       toolbar_group_count: document.querySelectorAll(
         '.query-toolbar > .toolbar-group'
       ).length,
+      execution_controls: controlMetrics(
+        '.toolbar-execution > button, .toolbar-execution > label > select'
+      ),
+      execution_group: rect('.toolbar-execution'),
+      document_group: rect('.toolbar-document'),
+      result_actions: controlMetrics(
+        '.result-actions > button, .result-actions > details > summary'
+      ),
+      result_context:
+        document.querySelector('.results-context')?.textContent?.trim() ?? '',
+      loaded_label:
+        document.querySelector('.loaded-label')?.textContent?.trim() ?? '',
       footer_shortcuts:
         document
           .querySelector('footer > span:last-child')
@@ -946,8 +1392,115 @@ try {
     'main header exceeds the compact 56px bound'
   );
   assert(
+    JSON.stringify(
+      populatedWorkbench.header_controls.map((control) => control.label)
+    ) === JSON.stringify(['File', 'History', 'Settings']) &&
+      Math.max(
+        ...populatedWorkbench.header_controls.map((control) => control.height)
+      ) -
+        Math.min(
+          ...populatedWorkbench.header_controls.map((control) => control.height)
+        ) <=
+        1 &&
+      populatedWorkbench.header_controls.every(
+        (control) => control.border === 'rgba(0, 0, 0, 0)'
+      ),
+    `application utilities do not form one quiet control tier (${JSON.stringify(populatedWorkbench.header_controls)})`
+  );
+  assert(
+    populatedWorkbench.brand.right <=
+      populatedWorkbench.header_controls[0].left &&
+      populatedWorkbench.header_controls[0].right <=
+        populatedWorkbench.connection_summary.left &&
+      populatedWorkbench.connection_summary.right <=
+        populatedWorkbench.header_controls[1].left &&
+      populatedWorkbench.header_controls[1].right <=
+        populatedWorkbench.header_controls[2].left &&
+      populatedWorkbench.connection_summary_background !==
+        populatedWorkbench.topbar_background,
+    'header does not separate document navigation, connection status, and global utilities'
+  );
+
+  await workbenchPage.locator('.topbar').screenshot({
+    path: headerScreenshotPath
+  });
+  const fileTrigger = workbenchPage.getByRole('button', {
+    name: 'File',
+    exact: true
+  });
+  await fileTrigger.click();
+  const fileMenu = workbenchPage.getByRole('menu', { name: 'File' });
+  await fileMenu.getByRole('menuitem', { name: /New query/ }).waitFor();
+  const fileMenuLayout = await workbenchPage.evaluate(() => {
+    const trigger = document
+      .querySelector('.file-trigger')
+      ?.getBoundingClientRect();
+    const menu = document
+      .querySelector('.file-menu-popover')
+      ?.getBoundingClientRect();
+    if (!trigger || !menu) throw new Error('File menu geometry is incomplete');
+    return {
+      trigger: trigger.toJSON(),
+      menu: menu.toJSON(),
+      viewport_width: window.innerWidth
+    };
+  });
+  assert(
+    fileMenuLayout.menu.top >= fileMenuLayout.trigger.bottom &&
+      fileMenuLayout.menu.left >= 0 &&
+      fileMenuLayout.menu.right <= fileMenuLayout.viewport_width,
+    `File menu escaped its product-side trigger (${JSON.stringify(fileMenuLayout)})`
+  );
+  await fileTrigger.press('Escape');
+  await fileMenu.waitFor({ state: 'detached' });
+  assert(
+    await fileTrigger.evaluate((element) => document.activeElement === element),
+    'Escape did not return focus to the File trigger'
+  );
+  populatedWorkbench.file_menu = fileMenuLayout;
+  assert(
     populatedWorkbench.toolbar_group_count === 2,
     'query actions are not split into two clear groups'
+  );
+  assert(
+    populatedWorkbench.document_group.left >=
+      populatedWorkbench.execution_group.right,
+    'document controls are not visually separated from execution controls'
+  );
+  assert(
+    Math.max(
+      ...populatedWorkbench.execution_controls.map((control) => control.height)
+    ) -
+      Math.min(
+        ...populatedWorkbench.execution_controls.map(
+          (control) => control.height
+        )
+      ) <=
+      1,
+    `execution controls have unstable heights (${JSON.stringify(populatedWorkbench.execution_controls)})`
+  );
+  assert(
+    populatedWorkbench.execution_controls[0].background !==
+      populatedWorkbench.execution_controls[1].background,
+    'Run is not visually distinct from the secondary Run all action'
+  );
+  assert(
+    JSON.stringify(
+      populatedWorkbench.result_actions.map((control) => control.label)
+    ) === JSON.stringify(['Copy rows', 'Open value', 'Export']) &&
+      Math.max(
+        ...populatedWorkbench.result_actions.map((control) => control.height)
+      ) -
+        Math.min(
+          ...populatedWorkbench.result_actions.map((control) => control.height)
+        ) <=
+        1,
+    `result actions do not form one consistent control tier (${JSON.stringify(populatedWorkbench.result_actions)})`
+  );
+  assert(
+    populatedWorkbench.result_context === '1 result set · succeeded' &&
+      populatedWorkbench.loaded_label === '1 loaded row',
+    `result status is duplicated or unclear (${populatedWorkbench.result_context}; ${populatedWorkbench.loaded_label})`
   );
   assert(
     populatedWorkbench.footer_shortcuts ===
@@ -992,6 +1545,46 @@ try {
       /Mono|monospace/i.test(populatedWorkbench.table_font_family),
     `saved table typography did not reach the result grid (${populatedWorkbench.table_font_family} ${populatedWorkbench.table_font_size})`
   );
+
+  const copyMenu = workbenchPage.locator('.copy-options');
+  const exportMenu = workbenchPage.locator('.export-options');
+  await copyMenu.locator('summary').click();
+  await copyMenu
+    .getByRole('button', { name: 'Loaded rows', exact: true })
+    .waitFor();
+  await exportMenu.locator('summary').click();
+  await exportMenu
+    .getByText('CSV keeps raw spreadsheet-formula prefixes')
+    .waitFor();
+  const resultMenuState = await workbenchPage.evaluate(() => {
+    const copy = document.querySelector('.copy-options');
+    const exportOptions = document.querySelector('.export-options');
+    const popover = exportOptions
+      ?.querySelector('.action-popover')
+      ?.getBoundingClientRect();
+    const results = document
+      .querySelector('#query-results')
+      ?.getBoundingClientRect();
+    if (!(copy instanceof HTMLDetailsElement))
+      throw new Error('copy menu is missing');
+    if (!(exportOptions instanceof HTMLDetailsElement) || !popover || !results)
+      throw new Error('export menu geometry is incomplete');
+    return {
+      copy_open: copy.open,
+      export_open: exportOptions.open,
+      popover: popover.toJSON(),
+      results: results.toJSON()
+    };
+  });
+  assert(
+    !resultMenuState.copy_open &&
+      resultMenuState.export_open &&
+      resultMenuState.popover.left >= resultMenuState.results.left &&
+      resultMenuState.popover.right <= resultMenuState.results.right,
+    `result action menus overlap or escape the pane (${JSON.stringify(resultMenuState)})`
+  );
+  await exportMenu.locator('summary').click();
+  populatedWorkbench.result_action_menus = resultMenuState;
 
   const horizontalScrollers = await workbenchPage.evaluate(() =>
     ['.grid-shell', '.grid-header-viewport', '.grid-viewport']
@@ -1095,6 +1688,7 @@ try {
       rowSelectionActions.clear_selection,
     `row selection has no visible purpose (${JSON.stringify(rowSelectionActions)})`
   );
+  await workbenchPage.screenshot({ path: rowSelectionScreenshotPath });
   await workbenchPage
     .getByRole('button', { name: 'Clear selection', exact: true })
     .click();
@@ -1315,6 +1909,8 @@ try {
         .querySelector('.grid-row')
         ?.getBoundingClientRect();
       const footer = document.querySelector('footer')?.getBoundingClientRect();
+      const topbar = document.querySelector('.topbar');
+      const brandContext = document.querySelector('.brand-context');
       if (!main || !results || !firstRow || !footer)
         throw new Error('responsive workbench geometry is incomplete');
       return {
@@ -1324,6 +1920,14 @@ try {
         results: results.toJSON(),
         first_row: firstRow.toJSON(),
         footer: footer.toJSON(),
+        topbar_client_width: topbar?.clientWidth ?? 0,
+        topbar_scroll_width: topbar?.scrollWidth ?? 0,
+        brand_context_display: brandContext
+          ? getComputedStyle(brandContext).display
+          : 'missing',
+        header_controls: Array.from(
+          document.querySelectorAll('.topbar-control')
+        ).map((element) => element.textContent?.trim() ?? ''),
         visible_tabs: Array.from(
           document.querySelectorAll('[role="tab"] .tab-title')
         ).map((element) => element.textContent?.trim() ?? '')
@@ -1334,6 +1938,18 @@ try {
       `${width}px populated workbench has page-level horizontal overflow`
     );
     assert(
+      layout.topbar_scroll_width <= layout.topbar_client_width &&
+        JSON.stringify(layout.header_controls) ===
+          JSON.stringify(['File', 'History', 'Settings']),
+      `${width}px application header clipped or lost a utility`
+    );
+    if (width === 720) {
+      assert(
+        layout.brand_context_display === 'none',
+        '720px header did not prioritize product and utility controls'
+      );
+    }
+    assert(
       layout.results.bottom <= layout.footer.top &&
         layout.first_row.bottom <= layout.results.bottom,
       `${width}px populated result escaped its workbench pane`
@@ -1343,6 +1959,9 @@ try {
         JSON.stringify(['fractions query', 'armors query', 'fractions']),
       `${width}px populated tabs lost connection scope`
     );
+    if (width === 720) {
+      await workbenchPage.screenshot({ path: compactWorkbenchScreenshotPath });
+    }
     populatedResponsiveLayouts.push(layout);
   }
 
@@ -1444,6 +2063,13 @@ try {
 
   mkdirSync(dirname(reportPath), { recursive: true });
   await page.screenshot({ path: screenshotPath, fullPage: true });
+  await page.locator('.settings-scroll').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await page.screenshot({
+    path: settingsUpdatesScreenshotPath,
+    fullPage: true
+  });
   const report = {
     schema_version: 1,
     status: 'pass',
@@ -1452,20 +2078,31 @@ try {
     viewport_height: 1068,
     layouts,
     dialog_themes: dialogThemes,
+    settings_hierarchy: settingsHierarchy,
     scale_preview: {
       baseline: baselineScale,
       scaled: scalePreview,
       reopened_200_percent: highScaleDialog
     },
+    connection_dialog: connectionDialog,
     editor_focus: editorFocus,
     populated_workbench: populatedWorkbench,
     theme_labels: options,
     screenshots: [
       'artifacts/ui-layout-settings.png',
+      'artifacts/ui-layout-settings-updates.png',
+      'artifacts/ui-layout-settings-200.png',
+      'artifacts/ui-layout-connection-server.png',
+      'artifacts/ui-layout-connection-security.png',
+      'artifacts/ui-layout-connection-file.png',
+      'artifacts/ui-layout-connection-200.png',
       'artifacts/ui-layout-autocomplete.png',
       'artifacts/ui-layout-workbench.png',
       'artifacts/ui-layout-workbench-150.png',
       'artifacts/ui-layout-value-viewer.png',
+      'artifacts/ui-layout-row-selection.png',
+      'artifacts/ui-layout-workbench-720.png',
+      'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png'
     ]

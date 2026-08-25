@@ -59,10 +59,28 @@ describe('Phase 1 workbench', () => {
     flushSync();
 
     const dialog = document.querySelector('[role="dialog"]');
-    expect(dialog?.textContent).toContain('Connection type');
+    expect(dialog?.textContent).toContain('Add connection');
+    expect(dialog?.textContent).toContain('Connect to');
     expect(dialog?.textContent).toContain('Server');
-    expect(dialog?.textContent).toContain('File');
+    expect(dialog?.textContent).toContain('Database file');
+    expect(dialog?.textContent).toContain('Connection details');
+    expect(dialog?.textContent).toContain('Transport security');
+    expect(dialog?.textContent).toContain('Credentials');
+    expect(dialog?.textContent).toContain('Connection behavior');
     expect(dialog?.textContent).not.toContain('Create SQLite file');
+    expect(dialog?.querySelector('input[type="password"]')).toBeNull();
+    expect(
+      dialog?.querySelector<HTMLDetailsElement>('.client-identity-details')
+        ?.open
+    ).toBe(false);
+    expect(button('Save connection').disabled).toBe(false);
+
+    const vaultChoice = dialog?.querySelector<HTMLInputElement>(
+      'input[value="vault"]'
+    );
+    vaultChoice?.click();
+    flushSync();
+    expect(dialog?.querySelector('input[type="password"]')).not.toBeNull();
 
     const fileChoice = dialog?.querySelectorAll<HTMLInputElement>(
       'input[name="connection-source"]'
@@ -70,7 +88,13 @@ describe('Phase 1 workbench', () => {
     fileChoice?.click();
     flushSync();
     expect(dialog?.textContent).toContain('Choose database file…');
-    expect(button('Create profile').disabled).toBe(true);
+    expect(dialog?.textContent).toContain('Open read-only');
+    expect(dialog?.textContent).not.toContain('Automatic reconnect');
+    const fileDialogText = dialog?.textContent ?? '';
+    expect(fileDialogText.indexOf('Database file')).toBeLessThan(
+      fileDialogText.indexOf('Profile details')
+    );
+    expect(button('Save connection').disabled).toBe(true);
   });
 
   it('renders an accessible settings dialog with all documented local defaults', async () => {
@@ -82,7 +106,11 @@ describe('Phase 1 workbench', () => {
     const dialog = document.querySelector('[role="dialog"]');
     expect(dialog?.getAttribute('aria-modal')).toBe('true');
     expect(dialog?.closest('.theme-context')).not.toBeNull();
-    expect(dialog?.textContent).toContain('Appearance and editor');
+    expect(dialog?.textContent).toContain('Appearance');
+    expect(dialog?.textContent).toContain('Editor & formatting');
+    expect(dialog?.textContent).toContain('Results & tables');
+    expect(dialog?.textContent).toContain('Connections & recovery');
+    expect(dialog?.textContent).toContain('History & diagnostics');
     expect(dialog?.textContent).toContain('Connection timeout');
     expect(dialog?.textContent).toContain('Result tranche rows');
     expect(dialog?.textContent).toContain('Table page rows');
@@ -91,7 +119,7 @@ describe('Phase 1 workbench', () => {
     expect(dialog?.textContent).toContain('History retention');
     expect(dialog?.textContent).toContain('Restore drafts and tabs offline');
     expect(dialog?.textContent).toContain('Signed application updates');
-    expect(dialog?.textContent).toContain('Installed version 0.1.6');
+    expect(dialog?.textContent).toContain('Installed version 0.1.7');
     expect(dialog?.textContent).toContain(
       'Update checks are available in installed desktop builds.'
     );
@@ -99,6 +127,8 @@ describe('Phase 1 workbench', () => {
     expect(dialog?.querySelector('option[value="system"]')?.textContent).toBe(
       'System'
     );
+    expect(dialog?.querySelector('.settings-scroll')).not.toBeNull();
+    expect(dialog?.querySelector('.settings-footer')).not.toBeNull();
     expect(button('Save settings').disabled).toBe(false);
   });
 

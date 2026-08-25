@@ -114,7 +114,6 @@ describe('Phase 2 SQLite boundaries', () => {
     mounted = mount(ResultGrid, {
       target: document.body,
       props: {
-        resultSetId: 'result',
         statementIndex: 0,
         columns,
         rows,
@@ -125,7 +124,6 @@ describe('Phase 2 SQLite boundaries', () => {
         onloadmore: () => undefined,
         ondiscard: () => undefined,
         onexport: () => undefined,
-        onviewchange: () => undefined,
         onstatus: () => undefined
       }
     });
@@ -137,9 +135,7 @@ describe('Phase 2 SQLite boundaries', () => {
     ).toBe('10000');
     expect(document.querySelector('img')).toBeNull();
     expect(document.body.textContent).toContain('<img src=x onerror=alert(1)>');
-    expect(document.body.textContent).toContain(
-      'Loaded rows only · 10000/10000'
-    );
+    expect(document.body.textContent).toContain('10000 loaded rows');
     expect(document.body.textContent).toContain('Statement 1');
   });
 
@@ -188,6 +184,12 @@ describe('Phase 2 SQLite boundaries', () => {
 
   it('makes row selection actionable and safely opens wrapped and formatted values on demand', async () => {
     let copied = '';
+    let exportRequest: {
+      format: 'csv' | 'json';
+      currentView: boolean;
+      nullToken: string;
+      viewIndexes: number[];
+    } | null = null;
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
@@ -202,7 +204,6 @@ describe('Phase 2 SQLite boundaries', () => {
     mounted = mount(ResultGrid, {
       target: document.body,
       props: {
-        resultSetId: 'hostile-result',
         statementIndex: 2,
         columns: [
           { name: 'text', declared_type: 'TEXT', nullable: true },
@@ -252,8 +253,14 @@ describe('Phase 2 SQLite boundaries', () => {
         durationMs: 4,
         onloadmore: () => undefined,
         ondiscard: () => undefined,
-        onexport: () => undefined,
-        onviewchange: () => undefined,
+        onexport: (format, currentView, nullToken, viewIndexes) => {
+          exportRequest = {
+            format,
+            currentView,
+            nullToken,
+            viewIndexes: [...viewIndexes]
+          };
+        },
         onstatus: () => undefined
       }
     });
@@ -273,6 +280,30 @@ describe('Phase 2 SQLite boundaries', () => {
     );
     if (exportOptions) exportOptions.open = true;
     expect(exportOptions?.open).toBe(true);
+
+    const filter = document.querySelector<HTMLInputElement>(
+      'input[aria-label="Filter loaded rows"]'
+    );
+    if (filter) {
+      filter.value = 'large';
+      filter.dispatchEvent(new Event('input', { bubbles: true }));
+      flushSync();
+    }
+    const currentViewCsv = Array.from(
+      exportOptions?.querySelectorAll<HTMLButtonElement>('button') ?? []
+    ).find((button) => button.textContent?.trim() === 'Current-view CSV');
+    currentViewCsv?.click();
+    expect(exportRequest).toEqual({
+      format: 'csv',
+      currentView: true,
+      nullToken: '\\N',
+      viewIndexes: [1]
+    });
+    if (filter) {
+      filter.value = '';
+      filter.dispatchEvent(new Event('input', { bubbles: true }));
+      flushSync();
+    }
 
     document
       .querySelector<HTMLInputElement>(
