@@ -48,6 +48,11 @@ const workbenchScreenshotPath = resolve(
   'artifacts',
   'ui-layout-workbench.png'
 );
+const sidebarScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-sidebar.png'
+);
 const largeScaleWorkbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -67,6 +72,11 @@ const historyScreenshotPath = resolve(
   root,
   'artifacts',
   'ui-layout-history.png'
+);
+const historyDrawerScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-history-drawer.png'
 );
 const valueViewerScreenshotPath = resolve(
   root,
@@ -1321,6 +1331,21 @@ try {
       emissary_action_fits:
         Boolean(emissaryAction) &&
         emissaryAction.scrollWidth <= emissaryAction.clientWidth,
+      emissary_state:
+        document
+          .querySelector('[data-profile-id="emissary"] .connection-state')
+          ?.textContent?.trim() ?? '',
+      sidebar_header_controls: controlMetrics(
+        'aside .pane-heading .icon-button'
+      ),
+      schema_row_actions: Array.from(
+        document.querySelectorAll('.schema-tree .schema-row-action')
+      ).map((element) => ({
+        label: element.getAttribute('aria-label') ?? '',
+        text: element.textContent?.trim() ?? '',
+        opacity: getComputedStyle(element).opacity,
+        has_svg: Boolean(element.querySelector('svg'))
+      })),
       visible_tabs: visibleTabs,
       result_column_widths: resultColumnWidths,
       table_font_size: firstGridCellStyle?.fontSize ?? '',
@@ -1381,6 +1406,36 @@ try {
   assert(
     populatedWorkbench.emissary_action_fits,
     'connection action text is clipped'
+  );
+  assert(
+    populatedWorkbench.emissary_state === 'Connected',
+    `connection state is not explicit (${populatedWorkbench.emissary_state})`
+  );
+  assert(
+    populatedWorkbench.sidebar_header_controls.length === 3 &&
+      Math.max(
+        ...populatedWorkbench.sidebar_header_controls.map(
+          (control) => control.height
+        )
+      ) -
+        Math.min(
+          ...populatedWorkbench.sidebar_header_controls.map(
+            (control) => control.height
+          )
+        ) <=
+        1,
+    `sidebar header controls do not share one compact tier (${JSON.stringify(populatedWorkbench.sidebar_header_controls)})`
+  );
+  assert(
+    populatedWorkbench.schema_row_actions.length >= 4 &&
+      populatedWorkbench.schema_row_actions.every(
+        (action) =>
+          action.label.length > 0 &&
+          action.text.length === 0 &&
+          action.opacity === '0' &&
+          action.has_svg
+      ),
+    `schema row actions remain visually noisy or unlabeled (${JSON.stringify(populatedWorkbench.schema_row_actions)})`
   );
   assert(
     JSON.stringify(populatedWorkbench.visible_tabs) ===
@@ -1819,6 +1874,32 @@ try {
     results_70_percent: split70
   };
   await workbenchPage.screenshot({ path: workbenchScreenshotPath });
+  await workbenchPage
+    .locator('aside')
+    .screenshot({ path: sidebarScreenshotPath });
+  const firstSchemaObject = workbenchPage.locator('.schema-tree li').first();
+  await firstSchemaObject.hover();
+  const schemaActionsOnHover = await firstSchemaObject
+    .locator('.schema-row-action')
+    .evaluateAll((elements) =>
+      elements.map((element) => getComputedStyle(element).opacity)
+    );
+  assert(
+    schemaActionsOnHover.length === 2 &&
+      schemaActionsOnHover.every((opacity) => opacity === '1'),
+    `schema row actions do not reveal on hover (${JSON.stringify(schemaActionsOnHover)})`
+  );
+  const firstSchemaCopy = firstSchemaObject.getByRole('button', {
+    name: /Copy qualified name/
+  });
+  await firstSchemaCopy.focus();
+  assert(
+    (await firstSchemaCopy.evaluate(
+      (element) => getComputedStyle(element).opacity
+    )) === '1',
+    'schema row actions do not remain visible to keyboard focus'
+  );
+  await workbenchPage.locator('.topbar').hover();
 
   const mainBeforeHistory = await workbenchPage
     .locator('main')
@@ -1831,7 +1912,7 @@ try {
   const historyDrawer = workbenchPage.locator('#history-drawer');
   await historyDrawer.waitFor();
   await workbenchPage
-    .getByRole('button', { name: /completed · Emissary/i })
+    .getByRole('button', { name: /open completed query from Emissary/i })
     .waitFor();
   const historyOverlay = await workbenchPage.evaluate(() => {
     const main = document.querySelector('main')?.getBoundingClientRect();
@@ -1844,6 +1925,9 @@ try {
     const search = document.querySelector(
       '#history-drawer input[type="search"]'
     );
+    const entryCode = document.querySelector('.history-main code');
+    const deleteButton = document.querySelector('.history-delete');
+    const closeButton = document.querySelector('.close-button');
     if (!main || !workbench || !drawer || !search)
       throw new Error('history overlay geometry is incomplete');
     return {
@@ -1851,6 +1935,29 @@ try {
       workbench: workbench.toJSON(),
       drawer: drawer.toJSON(),
       search_focused: document.activeElement === search,
+      heading_context:
+        document
+          .querySelector('.history-heading-copy > p')
+          ?.textContent?.trim() ?? '',
+      entry_profile:
+        document
+          .querySelector('.history-entry-heading strong')
+          ?.textContent?.trim() ?? '',
+      entry_status:
+        document.querySelector('.history-status')?.textContent?.trim() ?? '',
+      entry_sql_white_space: entryCode
+        ? getComputedStyle(entryCode).whiteSpace
+        : '',
+      open_label:
+        document.querySelector('.history-open-label')?.textContent?.trim() ??
+        '',
+      privacy_summary:
+        document
+          .querySelector('.history-privacy summary')
+          ?.textContent?.trim() ?? '',
+      control_heights: [deleteButton, closeButton].map(
+        (element) => element?.getBoundingClientRect().height ?? 0
+      ),
       document_scroll_width: document.documentElement.scrollWidth,
       viewport_width: window.innerWidth
     };
@@ -1869,10 +1976,42 @@ try {
   );
   assert(historyOverlay.search_focused, 'History did not focus search on open');
   assert(
+    historyOverlay.heading_context === 'Queries saved on this device' &&
+      historyOverlay.entry_profile === 'Emissary' &&
+      historyOverlay.entry_status === 'Completed' &&
+      historyOverlay.entry_sql_white_space === 'pre-wrap' &&
+      historyOverlay.open_label === 'Open query' &&
+      historyOverlay.privacy_summary ===
+        'Stored locally · SQL and metadata only',
+    `History hierarchy or intent is unclear (${JSON.stringify(historyOverlay)})`
+  );
+  assert(
+    Math.max(...historyOverlay.control_heights) -
+      Math.min(...historyOverlay.control_heights) <=
+      1,
+    `History icon controls use inconsistent sizing (${JSON.stringify(historyOverlay.control_heights)})`
+  );
+  assert(
     historyOverlay.document_scroll_width <= historyOverlay.viewport_width,
     'History drawer introduced page-level horizontal overflow'
   );
   await workbenchPage.screenshot({ path: historyScreenshotPath });
+  await historyDrawer.screenshot({ path: historyDrawerScreenshotPath });
+  await workbenchPage.locator('.history-privacy summary').click();
+  assert(
+    await workbenchPage.locator('.history-privacy p').isVisible(),
+    'History privacy guidance does not expand on request'
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Clear all history…' })
+    .click();
+  await workbenchPage
+    .getByRole('button', { name: 'Keep', exact: true })
+    .click();
+  assert(
+    (await workbenchPage.locator('.confirm-strip').count()) === 0,
+    'History clear confirmation does not return to the safe state'
+  );
   await workbenchPage
     .locator('#history-drawer input[type="search"]')
     .press('Escape');
@@ -2104,7 +2243,9 @@ try {
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-schema-150.png',
-      'artifacts/ui-layout-history.png'
+      'artifacts/ui-layout-history.png',
+      'artifacts/ui-layout-sidebar.png',
+      'artifacts/ui-layout-history-drawer.png'
     ]
   };
   writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);

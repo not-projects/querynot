@@ -3580,11 +3580,13 @@
                       />
                     </span>
                     {denseMetadataText(namespace.name)}
-                    <small>{namespace.state}</small>
+                    {#if namespace.state !== 'loaded'}
+                      <small>{namespace.state}</small>
+                    {/if}
                   </button>
                   <button
                     type="button"
-                    class="schema-copy"
+                    class="schema-row-action namespace-refresh"
                     aria-label={`Refresh ${namespace.name} metadata`}
                     title={`Refresh ${namespace.name} metadata`}
                     onclick={() => void refreshNamespace(namespace.name)}
@@ -3619,18 +3621,20 @@
                           </button>
                           <button
                             type="button"
-                            class="schema-copy"
+                            class="schema-row-action"
                             aria-label={`Copy qualified name for ${object.name}`}
+                            title={`Copy qualified name for ${object.name}`}
                             onclick={() => void copyQualifiedName(object)}
-                            >Copy</button
+                            ><Icon name="copy" size={13} /></button
                           >
                           {#if object.kind === 'table' || object.kind === 'view'}
                             <button
                               type="button"
-                              class="schema-copy"
+                              class="schema-row-action"
                               aria-label={`Start query for ${object.name}`}
+                              title={`Start query for ${object.name}`}
                               onclick={() => void startQueryForObject(object)}
-                              >Query</button
+                              ><Icon name="query" size={13} /></button
                             >
                           {/if}
                         </li>

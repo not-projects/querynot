@@ -10,7 +10,7 @@ import {
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Phase 5 history and current release boundary', () => {
-  it('keeps 0.1.7 versions aligned and updater generation enabled', () => {
+  it('keeps 0.1.8 versions aligned and updater generation enabled', () => {
     const packageJson = JSON.parse(read('package.json'));
     const packageLock = JSON.parse(read('package-lock.json'));
     const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
@@ -19,7 +19,7 @@ describe('Phase 5 history and current release boundary', () => {
     const tauriCargo = read('src-tauri/Cargo.toml');
     const fixtureCargo = read('crates/querynot-fixture-harness/Cargo.toml');
 
-    expect(packageJson.version).toBe('0.1.7');
+    expect(packageJson.version).toBe('0.1.8');
     expect(packageLock.version).toBe(packageJson.version);
     expect(packageLock.packages[''].version).toBe(packageJson.version);
     expect(tauri.version).toBe(packageJson.version);

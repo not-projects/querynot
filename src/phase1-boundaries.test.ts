@@ -78,8 +78,9 @@ describe('Phase 1 native boundaries', () => {
     );
     const connectionList = read('src/lib/components/ConnectionList.svelte');
     expect(connectionList).toContain(
-      'grid-template-columns: minmax(0, 1fr) auto auto;'
+      'grid-template-columns: minmax(0, 1fr) auto;'
     );
+    expect(connectionList).toContain('connection-action-controls');
     expect(connectionList).toContain('text-overflow: ellipsis;');
     expect(connectionList).toContain('class="connection-action"');
     expect(css).toMatch(

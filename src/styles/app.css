@@ -338,7 +338,7 @@ button:hover:not(:disabled) {
   display: grid;
   grid-row: 3;
   min-height: 0;
-  grid-template-columns: minmax(280px, 19rem) minmax(0, 1fr);
+  grid-template-columns: minmax(272px, 18.5rem) minmax(0, 1fr);
 }
 
 aside {
@@ -361,7 +361,22 @@ aside {
 }
 
 .pane-heading {
+  min-height: 32px;
   justify-content: space-between;
+}
+
+aside .pane-heading .icon-button {
+  width: 28px;
+  min-height: 28px;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+aside .pane-heading .icon-button:hover:not(:disabled),
+aside .pane-heading .icon-button:focus-visible {
+  border-color: transparent;
+  color: var(--accent);
+  background: var(--surface-raised);
 }
 
 .pane-heading h2 {
@@ -500,7 +515,7 @@ main.has-query-results .editor-workspace {
   display: grid;
   min-height: 0;
   margin: 0;
-  padding-top: 7px;
+  padding-top: 6px;
   grid-template-rows: repeat(3, auto) minmax(0, 1fr);
   gap: 5px;
 }
@@ -515,14 +530,10 @@ main.has-query-results .editor-workspace {
   gap: 2px;
 }
 
-.schema-tool {
-  width: 28px;
-  min-height: 26px;
-}
-
 .schema-tool.active {
-  color: var(--accent-text);
-  background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .schema-state {
@@ -591,7 +602,7 @@ main.has-query-results .editor-workspace {
 
 .schema-tree button {
   min-height: 28px;
-  padding: 3px 6px;
+  padding: 3px 5px;
   overflow: hidden;
   border: 0;
   color: var(--text);
@@ -599,6 +610,13 @@ main.has-query-results .editor-workspace {
   text-overflow: ellipsis;
   white-space: nowrap;
   background: transparent;
+}
+
+.schema-tree > div:hover,
+.schema-tree li:hover,
+.schema-tree > div:focus-within,
+.schema-tree li:focus-within {
+  background: color-mix(in srgb, var(--surface-raised) 66%, transparent);
 }
 
 .schema-tree > div {
@@ -612,6 +630,7 @@ main.has-query-results .editor-workspace {
   min-width: 0;
   align-items: center;
   gap: 5px;
+  font-weight: 650;
 }
 
 .schema-tree > div > button:first-child small {
@@ -622,15 +641,16 @@ main.has-query-results .editor-workspace {
 
 .schema-tree ul {
   grid-column: 1 / -1;
-  margin: 0 0 0 14px;
-  padding: 0;
+  margin: 0 0 2px 17px;
+  padding: 0 0 0 7px;
+  border-inline-start: 1px solid var(--divider);
   list-style: none;
 }
 
 .schema-tree li {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) repeat(2, auto);
+  grid-template-columns: minmax(0, 1fr) repeat(2, 26px);
   align-items: center;
 }
 
@@ -641,11 +661,29 @@ main.has-query-results .editor-workspace {
   gap: 5px;
 }
 
-.schema-tree .schema-copy {
+.schema-tree .schema-row-action {
   display: grid;
+  width: 26px;
+  min-height: 26px;
+  padding: 0;
   place-items: center;
+  border-radius: 4px;
   color: var(--muted);
-  font-size: 0.6rem;
+  opacity: 0;
+}
+
+.schema-tree > div:hover > .namespace-refresh,
+.schema-tree > div:focus-within > .namespace-refresh,
+.schema-tree li:hover > .schema-row-action,
+.schema-tree li:focus-within > .schema-row-action,
+.schema-tree .schema-row-action:focus-visible {
+  opacity: 1;
+}
+
+.schema-tree .schema-row-action:hover:not(:disabled),
+.schema-tree .schema-row-action:focus-visible {
+  color: var(--accent);
+  background: var(--surface-raised);
 }
 
 .schema-icon {
@@ -659,6 +697,10 @@ main.has-query-results .editor-workspace {
 .schema-tree li[aria-selected='true'] {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   box-shadow: inset 2px 0 var(--accent);
+}
+
+.schema-tree li[aria-selected='true'] > .schema-row-action {
+  opacity: 1;
 }
 
 .safety-context {
@@ -1642,10 +1684,6 @@ footer {
   height: 6px;
   border-radius: 50%;
   background: var(--accent);
-}
-
-.workbench {
-  grid-template-columns: minmax(256px, 17.5rem) minmax(0, 1fr);
 }
 
 aside {

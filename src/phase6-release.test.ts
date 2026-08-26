@@ -202,13 +202,13 @@ describe('Phase 6 publication boundary', () => {
 
   it('accepts only the exact signed cross-platform updater assets and feed keys', () => {
     const names = {
-      'windows-nsis-x64': 'QueryNot_0.1.7_x64-setup.exe',
-      'windows-msi-x64': 'QueryNot_0.1.7_x64_en-US.msi',
-      'linux-appimage-x64': 'QueryNot_0.1.7_amd64.AppImage',
-      'linux-deb-x64': 'QueryNot_0.1.7_amd64.deb',
-      'linux-rpm-x64': 'QueryNot-0.1.7-1.x86_64.rpm',
-      'macos-dmg-x64': 'QueryNot_0.1.7_x64.dmg',
-      'macos-dmg-aarch64': 'QueryNot_0.1.7_aarch64.dmg',
+      'windows-nsis-x64': 'QueryNot_0.1.8_x64-setup.exe',
+      'windows-msi-x64': 'QueryNot_0.1.8_x64_en-US.msi',
+      'linux-appimage-x64': 'QueryNot_0.1.8_amd64.AppImage',
+      'linux-deb-x64': 'QueryNot_0.1.8_amd64.deb',
+      'linux-rpm-x64': 'QueryNot-0.1.8-1.x86_64.rpm',
+      'macos-dmg-x64': 'QueryNot_0.1.8_x64.dmg',
+      'macos-dmg-aarch64': 'QueryNot_0.1.8_aarch64.dmg',
       'macos-updater-x64': 'QueryNot_x64.app.tar.gz',
       'macos-updater-aarch64': 'QueryNot_aarch64.app.tar.gz'
     } as const;
@@ -246,7 +246,7 @@ describe('Phase 6 publication boundary', () => {
       payloads.map((payload) => [payload.id, payload])
     );
     const latest = {
-      version: '0.1.7',
+      version: '0.1.8',
       notes: 'Release notes',
       pub_date: '2026-08-14T00:00:00.000Z',
       platforms: Object.fromEntries(
@@ -256,7 +256,7 @@ describe('Phase 6 publication boundary', () => {
             key,
             {
               signature: 'A'.repeat(80),
-              url: `https://github.com/not-projects/querynot/releases/download/v0.1.7/${payload.name}`
+              url: `https://github.com/not-projects/querynot/releases/download/v0.1.8/${payload.name}`
             }
           ];
         })
@@ -267,8 +267,8 @@ describe('Phase 6 publication boundary', () => {
       .join('\n')}\n`;
 
     const publicationPlan = validateUpdatePublicationContract({
-      version: '0.1.7',
-      requestedTag: 'v0.1.7',
+      version: '0.1.8',
+      requestedTag: 'v0.1.8',
       releaseNotes: 'Release notes',
       artifacts,
       payloads,
@@ -310,8 +310,8 @@ describe('Phase 6 publication boundary', () => {
       validateRoundTripPlan(
         completePlan,
         { publicRecords: uniquePublicRecords } as never,
-        '0.1.7',
-        'v0.1.7',
+        '0.1.8',
+        'v0.1.8',
         sourceCommit
       )
     ).not.toThrow();
@@ -323,14 +323,14 @@ describe('Phase 6 publication boundary', () => {
             index === 0 ? { ...record, sha256: 'f'.repeat(64) } : record
           )
         } as never,
-        '0.1.7',
-        'v0.1.7',
+        '0.1.8',
+        'v0.1.8',
         sourceCommit
       )
     ).toThrow('do not byte-match');
 
     const draftMetadata = {
-      tag_name: 'v0.1.7',
+      tag_name: 'v0.1.8',
       target_commitish: sourceCommit,
       draft: true,
       prerelease: false,
@@ -346,8 +346,8 @@ describe('Phase 6 publication boundary', () => {
       validateReleaseAssetMetadata({
         plan: completePlan,
         release: draftMetadata,
-        version: '0.1.7',
-        requestedTag: 'v0.1.7',
+        version: '0.1.8',
+        requestedTag: 'v0.1.8',
         sourceCommit,
         expectedDraft: true
       })
@@ -361,8 +361,8 @@ describe('Phase 6 publication boundary', () => {
             index === 0 ? { ...asset, digest: null } : asset
           )
         },
-        version: '0.1.7',
-        requestedTag: 'v0.1.7',
+        version: '0.1.8',
+        requestedTag: 'v0.1.8',
         sourceCommit,
         expectedDraft: true
       })
@@ -371,8 +371,8 @@ describe('Phase 6 publication boundary', () => {
       validateReleaseAssetMetadata({
         plan: completePlan,
         release: { ...draftMetadata, draft: false },
-        version: '0.1.7',
-        requestedTag: 'v0.1.7',
+        version: '0.1.8',
+        requestedTag: 'v0.1.8',
         sourceCommit,
         expectedDraft: true
       })
@@ -380,8 +380,8 @@ describe('Phase 6 publication boundary', () => {
 
     expect(() =>
       validateUpdatePublicationContract({
-        version: '0.1.7',
-        requestedTag: 'v0.1.7',
+        version: '0.1.8',
+        requestedTag: 'v0.1.8',
         releaseNotes: 'Release\nnotes',
         artifacts,
         payloads,
@@ -393,8 +393,8 @@ describe('Phase 6 publication boundary', () => {
     latest.platforms['linux-x86_64'].signature = 'B'.repeat(80);
     expect(() =>
       validateUpdatePublicationContract({
-        version: '0.1.7',
-        requestedTag: 'v0.1.7',
+        version: '0.1.8',
+        requestedTag: 'v0.1.8',
         releaseNotes: 'Release notes',
         artifacts,
         payloads,

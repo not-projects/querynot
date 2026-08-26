@@ -6,9 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-08-26
+
 ### Changed
 
 - Streamlined signed releases by reusing successful exact-commit CI for candidate packaging, retaining unrecompressed artifacts briefly, reviewing compact evidence, verifying GitHub's server-computed asset digests instead of routinely downloading every draft package, and keeping full-package verification as an on-demand audit.
+- Reworked Connections, Schema, and local History around one compact control tier, explicit connection states, quieter on-demand schema actions, readable query records, and progressively disclosed local-storage guidance without changing connection, metadata, or query-reopen behavior.
 
 ## [0.1.7] - 2026-08-25
 

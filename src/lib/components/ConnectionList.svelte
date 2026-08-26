@@ -35,6 +35,24 @@
     onduplicateprofile,
     ondeleteprofile
   }: Props = $props();
+
+  function profileEndpoint(profile: ProfileView) {
+    return profile.kind === 'sqlite'
+      ? (profile.file_name ?? 'Selected database file')
+      : `${profile.host}:${profile.port}`;
+  }
+
+  function connectionState(profileId: string) {
+    const operation = connectionOperations[profileId];
+    if (operation === 'test') return 'Testing';
+    if (operation === 'connect') return 'Connecting';
+    return connections[profileId] ? 'Connected' : 'Offline';
+  }
+
+  function connectionStateAccessibleLabel(profileId: string) {
+    const state = connectionState(profileId);
+    return state === 'Testing' ? 'Testing connection' : state;
+  }
 </script>
 
 <nav class="connection-list" aria-label="Saved connections">
@@ -50,80 +68,75 @@
         aria-pressed={activeProfileId === profile.id}
         onclick={() => onselectprofile(profile)}
       >
-        <span class="engine-mark" aria-hidden="true">
-          {profile.kind === 'sqlite' ? 'SQ' : 'MY'}
+        <span class="profile-icon" aria-hidden="true">
+          <Icon name="database" size={15} />
         </span>
         <span class="connection-copy">
           <strong title={profile.name}>{profile.name}</strong>
-          <small
-            title={profile.kind === 'sqlite'
-              ? (profile.file_name ?? 'Selected database file')
-              : `${profile.host}:${profile.port}`}
-          >
-            {profile.kind === 'sqlite'
-              ? (profile.file_name ?? 'Selected database file')
-              : `${profile.host}:${profile.port}`}
+          <small title={profileEndpoint(profile)}>
+            <span class="connection-endpoint">{profileEndpoint(profile)}</span>
+            <span aria-hidden="true">·</span>
+            <span class="engine-label">
+              {profile.kind === 'sqlite' ? 'SQLite' : 'MySQL'}
+            </span>
           </small>
         </span>
-        <span
-          class:connected={Boolean(connections[profile.id])}
-          class:working={Boolean(connectionOperations[profile.id])}
-          class="connection-status"
-          aria-label={connectionOperations[profile.id]
-            ? connectionOperations[profile.id] === 'test'
-              ? 'Testing connection'
-              : 'Connecting'
-            : connections[profile.id]
-              ? 'Connected'
-              : 'Offline'}
-          title={connectionOperations[profile.id]
-            ? connectionOperations[profile.id] === 'test'
-              ? 'Testing connection'
-              : 'Connecting'
-            : connections[profile.id]
-              ? 'Connected'
-              : 'Offline'}
-        ></span>
       </button>
 
-      {#if connectionOperations[profile.id]}
-        <button
-          type="button"
-          class="connection-action"
-          aria-label={`Cancel ${connectionOperations[profile.id]} for ${profile.name}`}
-          onclick={() => oncancelconnection(profile)}>Cancel</button
+      <div class="connection-row-actions">
+        <span
+          class="connection-state"
+          data-state={connectionState(profile.id).toLowerCase()}
+          aria-label={connectionStateAccessibleLabel(profile.id)}
         >
-      {:else if connections[profile.id]}
-        <button
-          type="button"
-          class="connection-action"
-          onclick={() => ondisconnect(profile)}>Disconnect</button
-        >
-      {:else}
-        <button
-          type="button"
-          class="connection-action"
-          onclick={() => onconnect(profile)}>Connect</button
-        >
-      {/if}
+          <span aria-hidden="true"></span>
+          {connectionState(profile.id)}
+        </span>
+        <div class="connection-action-controls">
+          {#if connectionOperations[profile.id]}
+            <button
+              type="button"
+              class="connection-action"
+              data-intent="cancel"
+              aria-label={`Cancel ${connectionOperations[profile.id]} for ${profile.name}`}
+              onclick={() => oncancelconnection(profile)}>Cancel</button
+            >
+          {:else if connections[profile.id]}
+            <button
+              type="button"
+              class="connection-action"
+              data-intent="disconnect"
+              onclick={() => ondisconnect(profile)}>Disconnect</button
+            >
+          {:else}
+            <button
+              type="button"
+              class="connection-action"
+              data-intent="connect"
+              onclick={() => onconnect(profile)}>Connect</button
+            >
+          {/if}
 
-      <details class="connection-overflow">
-        <summary aria-label={`More actions for ${profile.name}`}
-          ><Icon name="more" /></summary
-        >
-        <div>
-          <button type="button" onclick={() => ontest(profile)}>Test</button>
-          <button type="button" onclick={() => oneditprofile(profile)}
-            >Edit</button
-          >
-          <button type="button" onclick={() => onduplicateprofile(profile)}
-            >Duplicate</button
-          >
-          <button type="button" onclick={() => ondeleteprofile(profile)}
-            >Delete</button
-          >
+          <details class="connection-overflow">
+            <summary aria-label={`More actions for ${profile.name}`}
+              ><Icon name="more" size={15} /></summary
+            >
+            <div>
+              <button type="button" onclick={() => ontest(profile)}>Test</button
+              >
+              <button type="button" onclick={() => oneditprofile(profile)}
+                >Edit</button
+              >
+              <button type="button" onclick={() => onduplicateprofile(profile)}
+                >Duplicate</button
+              >
+              <button type="button" onclick={() => ondeleteprofile(profile)}
+                >Delete</button
+              >
+            </div>
+          </details>
         </div>
-      </details>
+      </div>
     </div>
   {/each}
 
@@ -138,17 +151,13 @@
       aria-pressed={offlineActive}
       onclick={onselectoffline}
     >
-      <span class="engine-mark offline-mark" aria-hidden="true"
+      <span class="profile-icon offline-mark" aria-hidden="true"
         ><Icon name="offline" size={15} /></span
       >
       <span class="connection-copy">
         <strong>Offline</strong>
+        <small>Local files and drafts</small>
       </span>
-      <span
-        class="connection-status"
-        aria-label="Offline workspace"
-        title="Offline workspace"
-      ></span>
     </button>
   </div>
 </nav>
@@ -161,8 +170,8 @@
     min-height: 0;
     align-content: start;
     grid-auto-rows: max-content;
-    margin-block: 0.4rem 0;
-    gap: 0.12rem;
+    margin-block: 0.35rem 0;
+    gap: 0.15rem;
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -171,34 +180,34 @@
     position: relative;
     display: grid;
     min-width: 0;
-    min-height: 2.35rem;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    min-height: 3.1rem;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.15rem;
-    padding: 0.15rem;
+    gap: 0.2rem;
+    padding: 0.12rem;
     border: 1px solid transparent;
     border-radius: 4px;
   }
 
   .connection-row:hover,
   .connection-row:focus-within {
-    background: color-mix(in srgb, var(--surface-raised) 58%, transparent);
+    background: color-mix(in srgb, var(--surface-raised) 64%, transparent);
   }
 
   .connection-row.active {
     border-color: transparent;
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
+    background: color-mix(in srgb, var(--accent) 9%, var(--surface-raised));
     box-shadow: inset 2px 0 var(--accent);
   }
 
   .connection-main {
     display: grid;
     min-width: 0;
-    min-height: 2rem;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 2.55rem;
+    grid-template-columns: 1.55rem minmax(0, 1fr);
     align-items: center;
-    padding: 0.25rem 0.3rem;
-    gap: 0.45rem;
+    padding: 0.28rem 0.32rem;
+    gap: 0.42rem;
     border: 0;
     text-align: left;
     background: transparent;
@@ -207,11 +216,7 @@
   .connection-copy {
     display: grid;
     min-width: 0;
-    gap: 0.08rem;
-  }
-
-  .offline-row .connection-main {
-    min-height: 1.9rem;
+    gap: 0.12rem;
   }
 
   .connection-copy strong,
@@ -222,53 +227,102 @@
   }
 
   .connection-copy strong {
-    font-size: 0.76rem;
+    min-width: 0;
+    flex: 1 1 auto;
+    font-size: 0.75rem;
+    line-height: 1.15;
   }
 
   .connection-copy small {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.24rem;
     color: var(--muted);
-    font-size: 0.64rem;
+    font-size: 0.61rem;
   }
 
-  .engine-mark {
+  .connection-endpoint {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .engine-label {
+    flex: 0 0 auto;
+    color: color-mix(in srgb, var(--muted) 82%, var(--text));
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .profile-icon {
     display: grid;
-    width: 1.65rem;
-    height: 1.65rem;
+    width: 1.5rem;
+    height: 1.5rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--divider));
-    border-radius: 4px;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 8%, transparent);
-    font-size: 0.54rem;
-    font-weight: 800;
+    border-radius: 5px;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--surface-raised) 72%, transparent);
   }
 
-  .connection-status {
-    width: 0.5rem;
-    height: 0.5rem;
+  .connection-state {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--muted);
+    font-size: 0.55rem;
+    font-weight: 650;
+  }
+
+  .connection-state > span {
+    width: 0.38rem;
+    height: 0.38rem;
     border-radius: 50%;
-    background: var(--muted);
+    background: currentColor;
   }
 
-  .connection-status.connected {
-    background: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+  .connection-state[data-state='connected'],
+  .connection-state[data-state='testing'],
+  .connection-state[data-state='connecting'] {
+    color: var(--accent);
   }
 
-  .connection-status.working {
-    border: 1px solid var(--accent);
+  .connection-state[data-state='testing'] > span,
+  .connection-state[data-state='connecting'] > span {
     background: transparent;
+    box-shadow: inset 0 0 0 1px currentColor;
+  }
+
+  .connection-row-actions {
+    display: grid;
+    justify-items: end;
+    align-content: center;
+    gap: 0.1rem;
+  }
+
+  .connection-action-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
   }
 
   .connection-action {
-    min-width: 3.7rem;
+    min-width: 3.55rem;
     min-height: 1.75rem;
-    padding: 0.2rem 0.4rem;
-    border-color: transparent;
+    padding: 0.2rem 0.38rem;
+    border-color: color-mix(in srgb, var(--divider) 78%, transparent);
     color: var(--muted);
-    background: transparent;
-    font-size: 0.62rem;
+    background: color-mix(in srgb, var(--surface-raised) 55%, transparent);
+    font-size: 0.59rem;
+    font-weight: 650;
+  }
+
+  .connection-action[data-intent='connect'] {
+    color: var(--accent);
   }
 
   details {
@@ -279,7 +333,7 @@
     display: grid;
     width: 1.75rem;
     min-width: 1.75rem;
-    min-height: 1.8rem;
+    min-height: 1.75rem;
     padding: 0;
     place-items: center;
     border: 0;
@@ -288,6 +342,13 @@
     background: transparent;
     list-style: none;
     cursor: pointer;
+  }
+
+  summary:hover,
+  summary:focus-visible,
+  details[open] summary {
+    color: var(--text);
+    background: var(--surface-raised);
   }
 
   summary::-webkit-details-marker {
@@ -316,14 +377,13 @@
   }
 
   .offline-row {
-    margin-block-start: 0.35rem;
+    margin-block-start: 0.28rem;
     border-block-start-color: var(--divider);
     border-radius: 0 0 6px 6px;
   }
 
   .offline-mark {
     color: var(--muted);
-    border: 1px solid var(--divider);
-    background: var(--surface-raised);
+    background: transparent;
   }
 </style>
