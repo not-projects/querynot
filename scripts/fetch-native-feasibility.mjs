@@ -61,7 +61,20 @@ for (const input of manifest.inputs) {
   try {
     const result = spawnSync(
       'curl',
-      ['-fL', '--retry', '3', '--output', partial, input.url],
+      [
+        '--fail',
+        '--location',
+        '--retry',
+        '5',
+        '--retry-all-errors',
+        '--retry-delay',
+        '2',
+        '--connect-timeout',
+        '30',
+        '--output',
+        partial,
+        input.url
+      ],
       { cwd: cache, stdio: 'inherit' }
     );
     if (result.error) throw result.error;

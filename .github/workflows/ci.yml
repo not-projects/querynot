@@ -4,13 +4,31 @@ on:
   pull_request:
   push:
     branches: [master]
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  change-scope:
+    runs-on: ubuntu-24.04
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+      reason: ${{ steps.scope.outputs.reason }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Classify documentation-only changes
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/ci-change-scope.mjs --base "$BASE_SHA" --head "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
   frontend-and-policy:
+    needs: change-scope
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -21,17 +39,25 @@ jobs:
       - run: npm ci
       - run: npm run test:contracts
       - run: npm run test:traceability
-      - run: npm run test:dependencies
-      - run: npm audit --audit-level=high
-      - run: npm run check
       - run: npm run test:unit
+      - run: npm run format:check
+      - run: npm run test:dependencies
+        if: needs.change-scope.outputs.full == 'true'
+      - run: npm audit --audit-level=high
+        if: needs.change-scope.outputs.full == 'true'
+      - run: npm run check
+        if: needs.change-scope.outputs.full == 'true'
       - name: Install Chromium for UI layout checks
+        if: needs.change-scope.outputs.full == 'true'
         run: npx playwright install --with-deps chromium
       - run: npm run test:ui-layout
+        if: needs.change-scope.outputs.full == 'true'
       - run: npm run build
-      - run: npm run format:check
+        if: needs.change-scope.outputs.full == 'true'
 
   native-core:
+    needs: change-scope
+    if: needs.change-scope.outputs.full == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -55,6 +81,8 @@ jobs:
       - run: cargo clippy --locked -p querynot-core --all-targets -- -D warnings
 
   native-dependency-review:
+    needs: change-scope
+    if: needs.change-scope.outputs.full == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -66,6 +94,8 @@ jobs:
       - run: cargo deny check advisories licenses bans sources
 
   desktop-linux:
+    needs: change-scope
+    if: needs.change-scope.outputs.full == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -88,6 +118,8 @@ jobs:
       - run: cargo check --locked --workspace --all-targets
 
   desktop-windows-macos:
+    needs: change-scope
+    if: needs.change-scope.outputs.full == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -106,140 +138,3 @@ jobs:
           key: ${{ matrix.runner }}
       - run: npm ci
       - run: cargo check --locked --workspace --all-targets
-
-  checksum-pinned-feasibility:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - uses: dtolnay/rust-toolchain@1.97.0
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: ./ -> target
-      - run: npm ci
-      - run: npm run fixtures:fetch:native
-      - run: npm run test:feasibility:native
-      - uses: actions/upload-artifact@v4
-        with:
-          name: phase-0-feasibility
-          path: evidence/phase-0/feasibility-report.json
-
-  release-candidate-packages:
-    if: github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: windows-2022
-            target_id: windows-x64
-            package_script: package:windows
-            binary: target/release-candidate-windows/release/querynot.exe
-            bundle_directory: target/release-candidate-windows/release/bundle
-            expected_formats: nsis,msi
-            artifact_name: querynot-windows-x64
-          - runner: ubuntu-22.04
-            target_id: linux-x64
-            package_script: package:linux
-            binary: target/release-candidate-linux/release/querynot
-            bundle_directory: target/release-candidate-linux/release/bundle
-            expected_formats: deb,rpm,appimage
-            artifact_name: querynot-linux-x64
-          - runner: macos-15-intel
-            target_id: macos-x64
-            package_script: package:macos
-            binary: target/release-candidate-macos/release/querynot
-            bundle_directory: target/release-candidate-macos/release/bundle
-            expected_formats: dmg
-            artifact_name: querynot-macos-x64
-          - runner: macos-15
-            target_id: macos-aarch64
-            package_script: package:macos
-            binary: target/release-candidate-macos/release/querynot
-            bundle_directory: target/release-candidate-macos/release/bundle
-            expected_formats: dmg
-            artifact_name: querynot-macos-aarch64
-    runs-on: ${{ matrix.runner }}
-    env:
-      QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-    steps:
-      - uses: actions/checkout@v5
-      - name: Install Tauri system dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - uses: dtolnay/rust-toolchain@1.97.0
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: ./ -> target
-          key: ${{ matrix.runner }}
-      - run: npm ci
-      - name: Validate dedicated updater signing identity
-        run: npm run release:validate-updater-signing
-      - run: npm run ${{ matrix.package_script }}
-      - name: Prepare retained candidate records
-        run: node -e "require('node:fs').mkdirSync('artifacts/release-candidate',{recursive:true})"
-      - name: Inspect candidate package
-        run: npm run release:inspect -- --binary ${{ matrix.binary }} --directory ${{ matrix.bundle_directory }} --expect ${{ matrix.expected_formats }} --report artifacts/release-candidate/inspection-${{ matrix.target_id }}.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}
-          if-no-files-found: error
-          path: |
-            target/release-candidate-*/release/bundle/**/*.exe
-            target/release-candidate-*/release/bundle/**/*.msi
-            target/release-candidate-*/release/bundle/**/*.AppImage
-            target/release-candidate-*/release/bundle/**/*.deb
-            target/release-candidate-*/release/bundle/**/*.rpm
-            target/release-candidate-*/release/bundle/**/*.dmg
-            target/release-candidate-*/release/bundle/**/*.app.tar.gz
-            target/release-candidate-*/release/bundle/**/*.sig
-            artifacts/release-candidate/inspection-${{ matrix.target_id }}.json
-
-  assemble-release-candidate:
-    if: github.event_name == 'workflow_dispatch'
-    needs: release-candidate-packages
-    runs-on: ubuntu-24.04
-    env:
-      QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: querynot-*-x64
-          path: artifacts/candidate/packages
-          merge-multiple: true
-      - uses: actions/download-artifact@v4
-        with:
-          name: querynot-macos-aarch64
-          path: artifacts/candidate/packages
-      - name: Build the combined signed updater manifest
-        run: npm run release:create-updater-manifest -- --directory artifacts/candidate/packages --output artifacts/candidate/latest.json --report artifacts/candidate/updater-manifest-report.json
-      - name: Hash the complete installable package set
-        run: npm run release:checksums -- --directory artifacts/candidate/packages --output artifacts/candidate/SHA256SUMS --manifest artifacts/candidate/checksums.json --require-complete
-      - name: Resolve the candidate tag
-        id: release
-        shell: bash
-        run: |
-          version="$(node -p "require('./package.json').version")"
-          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
-      - name: Verify the complete candidate before retention
-        run: npm run release:validate-update-candidate -- --directory artifacts/candidate --tag "${{ steps.release.outputs.tag }}" --report artifacts/candidate/candidate-validation.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: querynot-release-candidate
-          if-no-files-found: error
-          path: artifacts/candidate/**

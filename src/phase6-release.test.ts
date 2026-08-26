@@ -10,6 +10,7 @@ import {
   validateRoundTripPlan,
   validateUpdatePublicationContract
 } from '../scripts/release-update-publication.mjs';
+import { validateReleaseAssetMetadata } from '../scripts/verify-release-asset-metadata.mjs';
 import {
   distributableArtifacts,
   updaterPlatformBindings,
@@ -139,7 +140,7 @@ describe('Phase 6 publication boundary', () => {
     );
   });
 
-  it('publishes only by manual confirmation after a round-trip draft check', () => {
+  it('publishes only by manual confirmation after exact GitHub digest checks', () => {
     const workflow = read('.github/workflows/release.yml');
     const notes = read('docs/release/0.1.1-notes.md');
     const triage = read('docs/release/failure-triage.md');
@@ -150,17 +151,20 @@ describe('Phase 6 publication boundary', () => {
     expect(workflow).toContain('contents: write');
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).toContain('candidate_run_id');
+    expect(workflow).toContain('actions/workflows/release-candidate.yml/runs');
+    expect(workflow).toContain('run-id: ${{ steps.candidate.outputs.run_id }}');
     expect(workflow).toContain('publish-v<package-version>');
     expect(workflow).toContain(
       'PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}'
     );
     expect(workflow).not.toContain('--confirm "${{ inputs.confirmation }}"');
     expect(workflow).toContain('release:prepare-update-publication');
-    expect(workflow.match(/QUERYNOT_UPDATER_PUBLIC_KEY:/g)).toHaveLength(2);
+    expect(workflow.match(/QUERYNOT_UPDATER_PUBLIC_KEY:/g)).toHaveLength(1);
     expect(read('scripts/release-update-publication.mjs')).toContain(
       'verifyUpdaterSignature'
     );
     expect(workflow).toContain('gh release create "$RELEASE_TAG"');
+    expect(workflow).toContain('if gh release view "$RELEASE_TAG"');
     expect(workflow).toContain('--draft');
     expect(workflow).toContain('--target "$RELEASE_SOURCE"');
     expect(workflow).toContain(
@@ -169,11 +173,14 @@ describe('Phase 6 publication boundary', () => {
     expect(workflow).toContain(
       'gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish'
     );
-    expect(workflow).toContain('gh release download "$RELEASE_TAG"');
-    expect(workflow).toContain('release:verify-update-publication');
+    expect(workflow).not.toContain('gh release download "$RELEASE_TAG"');
+    expect(workflow).toContain('release:verify-asset-metadata');
     expect(workflow).toContain('--plan artifacts/publication-plan.json');
-    expect(read('scripts/release-update-publication.mjs')).toContain(
-      'round_trip_candidate_byte_verification'
+    expect(workflow).toContain('--draft true');
+    expect(workflow).toContain('--draft false');
+    expect(workflow).toContain('releases/latest/download/latest.json');
+    expect(read('scripts/verify-release-asset-metadata.mjs')).toContain(
+      'github_release_asset_sha256_digests'
     );
     expect(workflow).toContain(
       'gh release edit "$RELEASE_TAG" --draft=false --latest'
@@ -321,6 +328,55 @@ describe('Phase 6 publication boundary', () => {
         sourceCommit
       )
     ).toThrow('do not byte-match');
+
+    const draftMetadata = {
+      tag_name: 'v0.1.7',
+      target_commitish: sourceCommit,
+      draft: true,
+      prerelease: false,
+      assets: uniquePublicRecords.map((record, index) => ({
+        id: index + 1,
+        name: record.name,
+        state: 'uploaded',
+        size: record.bytes,
+        digest: `sha256:${record.sha256}`
+      }))
+    };
+    expect(() =>
+      validateReleaseAssetMetadata({
+        plan: completePlan,
+        release: draftMetadata,
+        version: '0.1.7',
+        requestedTag: 'v0.1.7',
+        sourceCommit,
+        expectedDraft: true
+      })
+    ).not.toThrow();
+    expect(() =>
+      validateReleaseAssetMetadata({
+        plan: completePlan,
+        release: {
+          ...draftMetadata,
+          assets: draftMetadata.assets.map((asset, index) =>
+            index === 0 ? { ...asset, digest: null } : asset
+          )
+        },
+        version: '0.1.7',
+        requestedTag: 'v0.1.7',
+        sourceCommit,
+        expectedDraft: true
+      })
+    ).toThrow('size or SHA-256 digest');
+    expect(() =>
+      validateReleaseAssetMetadata({
+        plan: completePlan,
+        release: { ...draftMetadata, draft: false },
+        version: '0.1.7',
+        requestedTag: 'v0.1.7',
+        sourceCommit,
+        expectedDraft: true
+      })
+    ).toThrow('expected tag, source, or state');
 
     expect(() =>
       validateUpdatePublicationContract({

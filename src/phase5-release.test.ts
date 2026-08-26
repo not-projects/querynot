@@ -48,10 +48,12 @@ describe('Phase 5 history and current release boundary', () => {
   });
 
   it('builds and combines the PostNot-aligned desktop candidate matrix only on manual dispatch', () => {
-    const workflow = read('.github/workflows/ci.yml');
+    const workflow = read('.github/workflows/release-candidate.yml');
     const candidate = workflow.split('  release-candidate-packages:')[1];
 
-    expect(candidate).toContain("if: github.event_name == 'workflow_dispatch'");
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain('Reuse successful full CI');
+    expect(workflow).toContain('-f head_sha="$GITHUB_SHA"');
     expect(candidate).toContain('runner: windows-2022');
     expect(candidate).toContain('runner: ubuntu-22.04');
     expect(candidate).toContain('runner: macos-15-intel');
@@ -72,6 +74,9 @@ describe('Phase 5 history and current release boundary', () => {
     expect(workflow).toContain('npm run release:create-updater-manifest');
     expect(workflow).toContain('npm run release:checksums');
     expect(workflow).toContain('npm run release:validate-update-candidate');
+    expect(workflow).toContain('name: querynot-release-review');
+    expect(workflow).toContain('compression-level: 0');
+    expect(workflow).toContain('retention-days: 14');
     expect(candidate).toContain(
       'QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}'
     );
@@ -86,10 +91,11 @@ describe('Phase 5 history and current release boundary', () => {
 
   it('matches PostNot shared CI action and toolchain conventions', () => {
     const ci = read('.github/workflows/ci.yml');
+    const candidate = read('.github/workflows/release-candidate.yml');
     const release = read('.github/workflows/release.yml');
     const toolchain = read('rust-toolchain.toml');
 
-    for (const workflow of [ci, release]) {
+    for (const workflow of [ci, candidate, release]) {
       expect(workflow).toContain('actions/checkout@v5');
       expect(workflow).toContain('actions/setup-node@v5');
       expect(workflow).toContain('node-version: 24');
@@ -100,16 +106,22 @@ describe('Phase 5 history and current release boundary', () => {
     expect(toolchain).toContain('channel = "1.97.0"');
     expect(ci).toContain('npx playwright install --with-deps chromium');
     expect(ci).toContain('npm run test:ui-layout');
-    expect(ci).toContain('checksum-pinned-feasibility:');
-    expect(ci).toContain('npm run fixtures:fetch:native');
-    expect(ci).toContain('npm run test:feasibility:native');
-    expect(ci).not.toContain('- run: npm run test:feasibility\n');
+    expect(candidate).toContain('checksum-pinned-feasibility:');
+    expect(candidate).toContain('npm run fixtures:fetch:native');
+    expect(candidate).toContain('npm run test:feasibility:native');
+    expect(candidate).not.toContain('- run: npm run test:feasibility\n');
+    expect(read('scripts/fetch-native-feasibility.mjs')).toContain(
+      "'--retry-all-errors'"
+    );
   });
 
   it('keeps matrix build caches OS-runner specific', () => {
     const ci = read('.github/workflows/ci.yml');
+    const candidate = read('.github/workflows/release-candidate.yml');
 
-    expect(ci.match(/key: \$\{\{ matrix\.runner \}\}/g)).toHaveLength(4);
+    expect(
+      `${ci}\n${candidate}`.match(/key: \$\{\{ matrix\.runner \}\}/g)
+    ).toHaveLength(4);
   });
 
   it('invokes the pinned Tauri CLI without a platform shell shim', () => {

@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       candidate_run_id:
-        description: Successful master CI run ID that produced the reviewed signed candidate
-        required: true
+        description: Optional candidate run ID; blank selects the latest successful candidate for this exact master commit
+        required: false
         type: string
       confirmation:
         description: Type publish-v<package-version> after reviewing the candidate
@@ -25,19 +25,26 @@ jobs:
       actions: read
       contents: write
     steps:
-      - name: Resolve the exact successful CI candidate source
+      - name: Resolve the exact successful signed candidate source
         id: candidate
         env:
           GH_TOKEN: ${{ github.token }}
-          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          REQUESTED_RUN_ID: ${{ inputs.candidate_run_id }}
         run: |
-          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}")"
-          test "$(jq -r .name <<<"$run_json")" = "CI"
+          candidate_run_id="$REQUESTED_RUN_ID"
+          if test -z "$candidate_run_id"; then
+            runs_json="$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/release-candidate.yml/runs" -f branch=master -f event=workflow_dispatch -f status=success -f head_sha="$GITHUB_SHA" -F per_page=100)"
+            candidate_run_id="$(jq -r --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "master" and .event == "workflow_dispatch" and .conclusion == "success")][0].id // empty' <<<"$runs_json")"
+          fi
+          test -n "$candidate_run_id"
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_run_id}")"
+          test "$(jq -r .name <<<"$run_json")" = "Build signed release candidate"
           test "$(jq -r .event <<<"$run_json")" = "workflow_dispatch"
           test "$(jq -r .head_branch <<<"$run_json")" = "master"
           test "$(jq -r .conclusion <<<"$run_json")" = "success"
           candidate_sha="$(jq -r .head_sha <<<"$run_json")"
           test "${#candidate_sha}" = "40"
+          echo "run_id=$candidate_run_id" >> "$GITHUB_OUTPUT"
           echo "sha=$candidate_sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v5
         with:
@@ -54,7 +61,7 @@ jobs:
           path: artifacts/candidate
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
-          run-id: ${{ inputs.candidate_run_id }}
+          run-id: ${{ steps.candidate.outputs.run_id }}
       - name: Resolve and confirm the candidate version
         id: release
         env:
@@ -76,39 +83,69 @@ jobs:
           --tag "${{ steps.release.outputs.tag }}"
           --confirm "$PUBLISH_CONFIRMATION"
           --report artifacts/publication-plan.json
-      - name: Create and verify an unpublished draft at the candidate commit
+      - name: Create or reuse an unpublished draft at the candidate commit
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
           RELEASE_SOURCE: ${{ steps.candidate.outputs.sha }}
         run: |
-          gh release create "$RELEASE_TAG" artifacts/publication/* --draft --target "$RELEASE_SOURCE" --title "QueryNot $RELEASE_VERSION" --notes-file "docs/release/${RELEASE_VERSION}-notes.md"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = "true"
+            test "$(gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish)" = "$RELEASE_SOURCE"
+          else
+            gh release create "$RELEASE_TAG" artifacts/publication/* --draft --target "$RELEASE_SOURCE" --title "QueryNot $RELEASE_VERSION" --notes-file "docs/release/${RELEASE_VERSION}-notes.md"
+          fi
           test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = "true"
           test "$(gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish)" = "$RELEASE_SOURCE"
-      - name: Round-trip the draft assets
+      - name: Read GitHub's draft asset digests
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
-        run: gh release download "$RELEASE_TAG" --dir artifacts/release-roundtrip
-      - name: Verify the draft bytes before publication
-        env:
-          QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
+        run: gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > artifacts/release-draft.json
+      - name: Verify the exact draft inventory without downloading packages
         run: >-
-          npm run release:verify-update-publication --
-          --directory artifacts/release-roundtrip
-          --tag "${{ steps.release.outputs.tag }}"
+          npm run release:verify-asset-metadata --
+          --release artifacts/release-draft.json
           --plan artifacts/publication-plan.json
-          --report artifacts/publication-verification.json
+          --version "${{ steps.release.outputs.version }}"
+          --tag "${{ steps.release.outputs.tag }}"
+          --source "${{ steps.candidate.outputs.sha }}"
+          --draft true
+          --report artifacts/draft-asset-verification.json
       - name: Publish the verified draft as the stable release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: gh release edit "$RELEASE_TAG" --draft=false --latest
+      - name: Verify the public inventory and updater endpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_SOURCE: ${{ steps.candidate.outputs.sha }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > artifacts/release-public.json
+          npm run release:verify-asset-metadata -- --release artifacts/release-public.json --plan artifacts/publication-plan.json --version "$RELEASE_VERSION" --tag "$RELEASE_TAG" --source "$RELEASE_SOURCE" --draft false --report artifacts/public-asset-verification.json
+          mkdir -p artifacts/public-smoke
+          expected_latest="$(jq -r .latest.sha256 artifacts/publication-plan.json)"
+          expected_checksums="$(jq -r .checksum.sha256 artifacts/publication-plan.json)"
+          for attempt in 1 2 3 4 5; do
+            curl --fail --location --retry 3 --retry-all-errors --retry-delay 2 --output artifacts/public-smoke/latest.json "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/latest.json"
+            curl --fail --location --retry 3 --retry-all-errors --retry-delay 2 --output artifacts/public-smoke/SHA256SUMS "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/SHA256SUMS"
+            if test "$(sha256sum artifacts/public-smoke/latest.json | cut -d ' ' -f 1)" = "$expected_latest" && test "$(sha256sum artifacts/public-smoke/SHA256SUMS | cut -d ' ' -f 1)" = "$expected_checksums"; then
+              break
+            fi
+            test "$attempt" -lt 5
+            sleep "$((attempt * 2))"
+          done
+          test "$(jq -r .version artifacts/public-smoke/latest.json)" = "$RELEASE_VERSION"
       - uses: actions/upload-artifact@v4
         with:
           name: querynot-${{ steps.release.outputs.tag }}-publication-evidence
           if-no-files-found: error
+          retention-days: 30
           path: |
             artifacts/publication-plan.json
-            artifacts/publication-verification.json
+            artifacts/draft-asset-verification.json
+            artifacts/public-asset-verification.json

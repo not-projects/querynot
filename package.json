@@ -43,6 +43,7 @@
     "release:verify-publication": "node scripts/release-publication.mjs verify",
     "release:prepare-update-publication": "node scripts/release-update-publication.mjs prepare",
     "release:verify-update-publication": "node scripts/release-update-publication.mjs verify",
+    "release:verify-asset-metadata": "node scripts/verify-release-asset-metadata.mjs",
     "format": "prettier --write \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "format:check": "prettier --check \"src/**/*.{svelte,ts,css}\" \"scripts/**/*.mjs\" \"*.{json,js,ts}\"",
     "tauri": "tauri"

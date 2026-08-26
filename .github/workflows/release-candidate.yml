@@ -1,0 +1,200 @@
+name: Build signed release candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: querynot-signed-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  validate-source:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      ci_run_id: ${{ steps.ci.outputs.run_id }}
+    steps:
+      - name: Reuse successful full CI for this exact master commit
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF_NAME" = "master"
+          runs_json="$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" -f branch=master -f event=push -f status=success -f head_sha="$GITHUB_SHA" -F per_page=100)"
+          run_id="$(jq -r --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "master" and .event == "push" and .conclusion == "success")][0].id // empty' <<<"$runs_json")"
+          test -n "$run_id"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Reusing successful CI run ${run_id} for ${GITHUB_SHA}." >> "$GITHUB_STEP_SUMMARY"
+
+  checksum-pinned-feasibility:
+    needs: validate-source
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./ -> target
+      - run: npm ci
+      - run: npm run fixtures:fetch:native
+      - run: npm run test:feasibility:native
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase-0-feasibility
+          retention-days: 14
+          path: evidence/phase-0/feasibility-report.json
+
+  release-candidate-packages:
+    needs: validate-source
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            target_id: windows-x64
+            package_script: package:windows
+            binary: target/release-candidate-windows/release/querynot.exe
+            bundle_directory: target/release-candidate-windows/release/bundle
+            expected_formats: nsis,msi
+            artifact_name: querynot-windows-x64
+          - runner: ubuntu-22.04
+            target_id: linux-x64
+            package_script: package:linux
+            binary: target/release-candidate-linux/release/querynot
+            bundle_directory: target/release-candidate-linux/release/bundle
+            expected_formats: deb,rpm,appimage
+            artifact_name: querynot-linux-x64
+          - runner: macos-15-intel
+            target_id: macos-x64
+            package_script: package:macos
+            binary: target/release-candidate-macos/release/querynot
+            bundle_directory: target/release-candidate-macos/release/bundle
+            expected_formats: dmg
+            artifact_name: querynot-macos-x64
+          - runner: macos-15
+            target_id: macos-aarch64
+            package_script: package:macos
+            binary: target/release-candidate-macos/release/querynot
+            bundle_directory: target/release-candidate-macos/release/bundle
+            expected_formats: dmg
+            artifact_name: querynot-macos-aarch64
+    runs-on: ${{ matrix.runner }}
+    env:
+      QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Tauri system dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./ -> target
+          key: ${{ matrix.runner }}
+      - run: npm ci
+      - name: Validate dedicated updater signing identity
+        run: npm run release:validate-updater-signing
+      - run: npm run ${{ matrix.package_script }}
+      - name: Prepare retained candidate records
+        run: node -e "require('node:fs').mkdirSync('artifacts/release-candidate',{recursive:true})"
+      - name: Inspect candidate package
+        run: npm run release:inspect -- --binary ${{ matrix.binary }} --directory ${{ matrix.bundle_directory }} --expect ${{ matrix.expected_formats }} --report artifacts/release-candidate/inspection-${{ matrix.target_id }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+          path: |
+            target/release-candidate-*/release/bundle/**/*.exe
+            target/release-candidate-*/release/bundle/**/*.msi
+            target/release-candidate-*/release/bundle/**/*.AppImage
+            target/release-candidate-*/release/bundle/**/*.deb
+            target/release-candidate-*/release/bundle/**/*.rpm
+            target/release-candidate-*/release/bundle/**/*.dmg
+            target/release-candidate-*/release/bundle/**/*.app.tar.gz
+            target/release-candidate-*/release/bundle/**/*.sig
+            artifacts/release-candidate/inspection-${{ matrix.target_id }}.json
+
+  assemble-release-candidate:
+    needs:
+      - validate-source
+      - checksum-pinned-feasibility
+      - release-candidate-packages
+    runs-on: ubuntu-24.04
+    env:
+      QUERYNOT_UPDATER_PUBLIC_KEY: ${{ vars.QUERYNOT_UPDATER_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: querynot-*-x64
+          path: artifacts/candidate/packages
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: querynot-macos-aarch64
+          path: artifacts/candidate/packages
+      - name: Build the combined signed updater manifest
+        run: npm run release:create-updater-manifest -- --directory artifacts/candidate/packages --output artifacts/candidate/latest.json --report artifacts/candidate/updater-manifest-report.json
+      - name: Hash the complete installable package set
+        run: npm run release:checksums -- --directory artifacts/candidate/packages --output artifacts/candidate/SHA256SUMS --manifest artifacts/candidate/checksums.json --require-complete
+      - name: Resolve the candidate tag
+        id: release
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+      - name: Verify the complete candidate before retention
+        run: npm run release:validate-update-candidate -- --directory artifacts/candidate --tag "${{ steps.release.outputs.tag }}" --report artifacts/candidate/candidate-validation.json
+      - name: Retain the compact human-review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: querynot-release-review
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            artifacts/candidate/candidate-validation.json
+            artifacts/candidate/checksums.json
+            artifacts/candidate/SHA256SUMS
+            artifacts/candidate/latest.json
+            artifacts/candidate/updater-manifest-report.json
+            artifacts/candidate/packages/**/inspection-*.json
+      - name: Retain the publication candidate without recompressing packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: querynot-release-candidate
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+          path: artifacts/candidate/**
+      - name: Summarize the reviewed candidate
+        env:
+          CANDIDATE_TAG: ${{ steps.release.outputs.tag }}
+          VALIDATION_RUN_ID: ${{ needs.validate-source.outputs.ci_run_id }}
+        run: |
+          echo "## ${CANDIDATE_TAG} signed candidate ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Reused full CI: ${VALIDATION_RUN_ID}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Review: querynot-release-review" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Publication auto-selects this run for the unchanged commit; run ID ${GITHUB_RUN_ID} remains available as a recovery override." >> "$GITHUB_STEP_SUMMARY"

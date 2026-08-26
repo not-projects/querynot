@@ -467,20 +467,17 @@ function validateCandidateEvidence(paths, assets, version, sourceCommit) {
 }
 
 /**
- * Compare every downloaded draft asset with the publication plan produced
- * immediately before draft creation. This is separate from semantic manifest,
- * checksum, and signature validation so even harmless-looking byte changes are
- * rejected by the round trip.
+ * Validate and index the exact public asset records in a publication plan.
+ * Both GitHub metadata verification and the optional full-download audit use
+ * this one contract so the fast and deep paths cannot drift.
  *
  * @param {any} plan
- * @param {ReturnType<typeof collectPublicAssets>} assets
  * @param {string} version
  * @param {string} requestedTag
  * @param {string} sourceCommit
  */
-export function validateRoundTripPlan(
+export function publicationPlanRecords(
   plan,
-  assets,
   version,
   requestedTag,
   sourceCommit
@@ -519,6 +516,33 @@ export function validateRoundTripPlan(
     );
     plannedByName.set(record.name, record);
   }
+  return plannedByName;
+}
+
+/**
+ * Compare every downloaded release asset with the publication plan. This is
+ * retained as an optional deep audit; normal publication verifies GitHub's
+ * server-computed SHA-256 asset digests without downloading the large files.
+ *
+ * @param {any} plan
+ * @param {ReturnType<typeof collectPublicAssets>} assets
+ * @param {string} version
+ * @param {string} requestedTag
+ * @param {string} sourceCommit
+ */
+export function validateRoundTripPlan(
+  plan,
+  assets,
+  version,
+  requestedTag,
+  sourceCommit
+) {
+  const plannedByName = publicationPlanRecords(
+    plan,
+    version,
+    requestedTag,
+    sourceCommit
+  );
   requireCondition(
     plannedByName.size === assets.publicRecords.length &&
       assets.publicRecords.every(

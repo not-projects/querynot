@@ -1,5 +1,7 @@
 # ADR 0016: Cross-platform signed distribution
 
+> [ADR 0017](0017-streamlined-signed-release-automation.md) supersedes only the routine post-upload full-download verification and candidate-workflow orchestration described below. The platform, signing, inventory, and no-rebuild boundaries remain authoritative.
+
 - Status: Accepted for `0.1.5`
 - Date: 2026-08-23
 - Decision owner: QueryNot product owner

@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Streamlined signed releases by reusing successful exact-commit CI for candidate packaging, retaining unrecompressed artifacts briefly, reviewing compact evidence, verifying GitHub's server-computed asset digests instead of routinely downloading every draft package, and keeping full-package verification as an on-demand audit.
+
 ## [0.1.7] - 2026-08-25
 
 ### Changed
