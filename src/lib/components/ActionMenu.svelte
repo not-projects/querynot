@@ -16,6 +16,8 @@
     danger?: boolean;
     disabled?: boolean;
     separatorBefore?: boolean;
+    shortcut?: string;
+    ariaShortcut?: string;
   }
 
   interface Props {
@@ -27,7 +29,7 @@
     meta?: string;
     align?: FloatingPanelAlign;
     triggerText?: string;
-    triggerIcon?: IconName;
+    triggerIcon?: IconName | null;
     class?: string;
   }
 
@@ -208,7 +210,9 @@
     onclick={toggleMenu}
     onkeydown={handleTriggerKeydown}
   >
-    <Icon name={triggerIcon} size={triggerText ? 13 : 15} />
+    {#if triggerIcon}
+      <Icon name={triggerIcon} size={triggerText ? 13 : 15} />
+    {/if}
     {#if triggerText}
       <span>{triggerText}</span>
       <Icon name="chevron-down" size={12} />
@@ -246,6 +250,7 @@
             role="menuitem"
             class:danger={item.danger}
             disabled={item.disabled}
+            aria-keyshortcuts={item.ariaShortcut}
             onclick={() => selectItem(item)}
           >
             <span class="action-menu-icon" aria-hidden="true">
@@ -255,6 +260,7 @@
               <strong>{item.label}</strong>
               {#if item.description}<small>{item.description}</small>{/if}
             </span>
+            {#if item.shortcut}<kbd>{item.shortcut}</kbd>{/if}
           </button>
         {/each}
       </div>
@@ -369,7 +375,7 @@
     display: grid;
     width: 100%;
     min-height: 2.65rem;
-    grid-template-columns: 1.35rem minmax(0, 1fr);
+    grid-template-columns: 1.35rem minmax(0, 1fr) auto;
     align-items: center;
     padding: 6px 7px;
     gap: 5px;
@@ -422,6 +428,37 @@
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .action-menu-items kbd {
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.57rem;
+    white-space: nowrap;
+  }
+
+  .action-menu.topbar-file-menu {
+    place-items: stretch;
+  }
+
+  .action-menu.topbar-file-menu .action-menu-trigger.labeled {
+    min-height: 30px;
+    padding: 4px 7px;
+    border-color: transparent;
+    color: var(--text);
+    background: transparent;
+    font-size: 0.72rem;
+  }
+
+  .action-menu.topbar-file-menu .action-menu-trigger.labeled:hover,
+  .action-menu.topbar-file-menu .action-menu-trigger.labeled:focus-visible,
+  .action-menu.topbar-file-menu.open .action-menu-trigger.labeled {
+    border-color: transparent;
+    background: var(--surface-subtle);
+  }
+
+  .action-menu.topbar-file-menu .action-menu-popover {
+    width: 18rem;
   }
 
   .action-menu-separator {

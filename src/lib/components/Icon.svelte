@@ -11,6 +11,7 @@
     | 'database'
     | 'edited'
     | 'export'
+    | 'folder-open'
     | 'history'
     | 'more'
     | 'offline'
@@ -21,6 +22,7 @@
     | 'search'
     | 'refresh'
     | 'run'
+    | 'save'
     | 'settings'
     | 'table'
     | 'trash'
@@ -61,6 +63,9 @@
   {:else if name === 'export'}
     <path d="M12 3v12m-4-4 4 4 4-4" />
     <path d="M5 14v5h14v-5" />
+  {:else if name === 'folder-open'}
+    <path d="M3 7.5h7l2-2h9v3.5" />
+    <path d="M3 7.5v11h16l2-9H7l-2 2" />
   {:else if name === 'history'}
     <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
     <path d="M3 3v5h5M12 7v5l3 2" />
@@ -97,6 +102,9 @@
     <path d="M6.1 8.5A7 7 0 0 1 18.4 7L20 12M4 12l1.6 5a7 7 0 0 0 12.3-1.5" />
   {:else if name === 'run'}
     <path d="m8 5 11 7-11 7V5Z" fill="currentColor" stroke="none" />
+  {:else if name === 'save'}
+    <path d="M5 4h12l2 2v14H5V4Z" />
+    <path d="M8 4v6h8V4M8 20v-6h8v6" />
   {:else if name === 'query'}
     <path d="M6 4h9l3 3v13H6V4Z" />
     <path d="M14 4v4h4M9 12h6M9 16h4" />

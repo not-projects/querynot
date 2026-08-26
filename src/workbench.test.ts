@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from 'node:fs';
+
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -46,10 +48,26 @@ describe('Phase 1 workbench', () => {
     ).toBe(false);
 
     button('File').click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     flushSync();
-    expect(document.querySelector('[role="menu"]')?.textContent).toContain(
-      'Open SQL file…'
+    const fileItems = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+    ];
+    expect(
+      fileItems.map((item) => item.querySelector('strong')?.textContent)
+    ).toEqual(['New query', 'Open SQL file…', 'Save', 'Save as…']);
+    expect(fileItems[0]?.textContent).toContain('Create an offline draft');
+    expect(fileItems[2]?.textContent).toContain(
+      'Available when a query tab is active'
     );
+    expect(fileItems[2]?.disabled).toBe(true);
+    expect(fileItems[3]?.disabled).toBe(true);
+    expect(fileItems[0]?.getAttribute('aria-keyshortcuts')).toMatch(/N$/);
+    expect(document.activeElement).toBe(fileItems[0]);
+
+    const appSource = readFileSync('src/App.svelte', 'utf8');
+    expect(appSource).not.toContain('class="file-menu-popover"');
+    expect(appSource).toContain('aria-label="Editor controls"');
   });
 
   it('chooses Server or File inside one create-connection dialog', async () => {

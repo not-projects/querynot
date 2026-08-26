@@ -250,9 +250,6 @@
   let pendingFileDrainPromise: Promise<void> | null = null;
   let executionEventQueue = Promise.resolve();
   let closingWindow = $state(false);
-  let fileMenuOpen = $state(false);
-  let fileMenuButton: HTMLButtonElement | undefined;
-  let fileMenuElement: HTMLElement | undefined;
   let mainElement: HTMLElement | undefined;
   let sidebarElement: HTMLElement | undefined;
   let historyButton: HTMLButtonElement | undefined;
@@ -307,6 +304,63 @@
       (activeResults.length || activeExecution?.error)
     )
   );
+  const fileActionItems = $derived.by((): ActionMenuItem[] => {
+    const queryTab = activeTab?.kind === 'query' ? activeTab : null;
+    return [
+      {
+        id: 'new-query',
+        label: 'New query',
+        description: activeProfile
+          ? `Create in ${activeProfile.name}`
+          : 'Create an offline draft',
+        icon: 'plus',
+        shortcut: `${shortcutModifier}+N`,
+        ariaShortcut: `${ariaShortcutModifier}+N`
+      },
+      {
+        id: 'open-sql',
+        label: 'Open SQL file…',
+        description: 'Review a local file in an offline draft',
+        icon: 'folder-open',
+        shortcut: `${shortcutModifier}+O`,
+        ariaShortcut: `${ariaShortcutModifier}+O`
+      },
+      {
+        id: 'save',
+        label: 'Save',
+        description: queryTab
+          ? queryTab.source_file_grant_id
+            ? 'Write changes to the linked local file'
+            : 'Choose a local SQL file'
+          : 'Available when a query tab is active',
+        icon: 'save',
+        disabled: !queryTab,
+        separatorBefore: true,
+        shortcut: `${shortcutModifier}+S`,
+        ariaShortcut: `${ariaShortcutModifier}+S`
+      },
+      {
+        id: 'save-as',
+        label: 'Save as…',
+        description: 'Write a copy to another local SQL file',
+        icon: 'save',
+        disabled: !queryTab,
+        shortcut: `${shortcutModifier}+Shift+S`,
+        ariaShortcut: `${ariaShortcutModifier}+Shift+S`
+      },
+      ...(queryTab?.source_file_grant_id
+        ? [
+            {
+              id: 'review-disk',
+              label: 'Review disk version',
+              description: 'Compare without replacing the in-memory draft',
+              icon: 'view' as const,
+              separatorBefore: true
+            }
+          ]
+        : [])
+    ];
+  });
   const resultsPercent = $derived(
     clampResultsPercent(workspace.panel_sizes.results_percent)
   );
@@ -1013,20 +1067,6 @@
     dialogElement = element;
     return () => {
       if (dialogElement === element) dialogElement = undefined;
-    };
-  };
-
-  const captureFileMenu: Attachment<HTMLElement> = (element) => {
-    fileMenuElement = element;
-    return () => {
-      if (fileMenuElement === element) fileMenuElement = undefined;
-    };
-  };
-
-  const captureFileMenuButton: Attachment<HTMLButtonElement> = (element) => {
-    fileMenuButton = element;
-    return () => {
-      if (fileMenuButton === element) fileMenuButton = undefined;
     };
   };
 
@@ -3160,36 +3200,13 @@
     });
   }
 
-  function closeFileMenu(returnFocus = false) {
-    if (!fileMenuOpen) return;
-    fileMenuOpen = false;
-    if (returnFocus) void tick().then(() => fileMenuButton?.focus());
-  }
-
-  function handleDocumentPointerdown(event: PointerEvent) {
-    const target = event.target;
-    if (
-      fileMenuOpen &&
-      target instanceof Node &&
-      !fileMenuElement?.contains(target)
-    ) {
-      closeFileMenu();
-    }
-  }
-
-  function createQueryFromFileMenu() {
-    closeFileMenu();
-    void createOfflineTab(activeProfile?.id ?? null);
-  }
-
-  function openSqlFromFileMenu() {
-    closeFileMenu();
-    void openSqlFile();
-  }
-
-  function saveSqlFromFileMenu(saveAs: boolean) {
-    closeFileMenu();
-    void saveActiveSqlFile(saveAs);
+  function selectFileAction(itemId: string) {
+    if (itemId === 'new-query')
+      void createOfflineTab(activeProfile?.id ?? null);
+    else if (itemId === 'open-sql') void openSqlFile();
+    else if (itemId === 'save') void saveActiveSqlFile(false);
+    else if (itemId === 'save-as') void saveActiveSqlFile(true);
+    else if (itemId === 'review-disk') void reviewActiveSqlFile();
   }
 
   function setResultsPercent(value: number, announce = false) {
@@ -3320,10 +3337,7 @@
   function handleWindowKeydown(event: KeyboardEvent) {
     if (modal) return;
     const primaryModifier = primaryModifierPressed(event, macPrimaryShortcuts);
-    if (fileMenuOpen && event.key === 'Escape') {
-      event.preventDefault();
-      closeFileMenu(true);
-    } else if (primaryModifier && event.key === '1') {
+    if (primaryModifier && event.key === '1') {
       event.preventDefault();
       document.getElementById('connections-heading')?.focus();
     } else if (primaryModifier && event.key === '2') {
@@ -3382,7 +3396,6 @@
 </svelte:head>
 
 <svelte:window onkeydown={handleWindowKeydown} />
-<svelte:document onpointerdown={handleDocumentPointerdown} />
 
 <div
   class="app-shell"
@@ -3398,47 +3411,16 @@
         <h1>QueryNot</h1>
         <span class="brand-context">Not Projects · local SQL client</span>
       </div>
-      <div class="file-menu" {@attach captureFileMenu}>
-        <button
-          type="button"
-          class="quiet topbar-control file-trigger"
-          aria-haspopup="menu"
-          aria-expanded={fileMenuOpen}
-          {@attach captureFileMenuButton}
-          onclick={() => (fileMenuOpen = !fileMenuOpen)}
-        >
-          File
-          <Icon name="chevron-down" size={12} />
-        </button>
-        {#if fileMenuOpen}
-          <div class="file-menu-popover" role="menu" aria-label="File">
-            <button
-              type="button"
-              role="menuitem"
-              onclick={createQueryFromFileMenu}
-              >New query <kbd>{shortcutModifier}+N</kbd></button
-            >
-            <button type="button" role="menuitem" onclick={openSqlFromFileMenu}
-              >Open SQL file… <kbd>{shortcutModifier}+O</kbd></button
-            >
-            <span class="menu-divider" aria-hidden="true"></span>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={activeTab?.kind !== 'query'}
-              onclick={() => saveSqlFromFileMenu(false)}
-              >Save <kbd>{shortcutModifier}+S</kbd></button
-            >
-            <button
-              type="button"
-              role="menuitem"
-              disabled={activeTab?.kind !== 'query'}
-              onclick={() => saveSqlFromFileMenu(true)}
-              >Save as… <kbd>{shortcutModifier}+Shift+S</kbd></button
-            >
-          </div>
-        {/if}
-      </div>
+      <ActionMenu
+        class="topbar-file-menu"
+        label="File"
+        menuLabel="File"
+        triggerText="File"
+        triggerIcon={null}
+        align="start"
+        items={fileActionItems}
+        onselect={selectFileAction}
+      />
     </div>
     <nav class="topbar-actions" aria-label="Application utilities">
       <span class="connection-summary">
@@ -3981,7 +3963,7 @@
               <div
                 class="toolbar-group toolbar-document"
                 role="group"
-                aria-label="Query document controls"
+                aria-label="Editor controls"
               >
                 <button
                   type="button"
@@ -3989,26 +3971,6 @@
                   aria-keyshortcuts="Shift+Alt+F"
                   onclick={() => void formatEditor()}>Format</button
                 >
-                <button
-                  type="button"
-                  onclick={() => void saveActiveSqlFile(false)}
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onclick={() => void saveActiveSqlFile(true)}
-                >
-                  Save as…
-                </button>
-                {#if activeTab?.source_file_grant_id}
-                  <button
-                    type="button"
-                    onclick={() => void reviewActiveSqlFile()}
-                  >
-                    Review disk version
-                  </button>
-                {/if}
               </div>
             </div>
             {#key activeTab?.id}

@@ -139,6 +139,16 @@ const compactWorkbenchScreenshotPath = resolve(
   'ui-layout-workbench-720.png'
 );
 const headerScreenshotPath = resolve(root, 'artifacts', 'ui-layout-header.png');
+const fileMenuScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-file-menu.png'
+);
+const compactFileMenuScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-file-menu-720.png'
+);
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
 
@@ -1667,7 +1677,9 @@ try {
       connection_summary_background: getComputedStyle(
         document.querySelector('.connection-summary') ?? document.body
       ).backgroundColor,
-      header_controls: controlMetrics('.topbar-control'),
+      header_controls: controlMetrics(
+        '.topbar-file-menu > button, .topbar-control'
+      ),
       toolbar_group_count: document.querySelectorAll(
         '.query-toolbar > .toolbar-group'
       ).length,
@@ -1676,6 +1688,7 @@ try {
       ),
       execution_group: rect('.toolbar-execution'),
       document_group: rect('.toolbar-document'),
+      document_controls: controlMetrics('.toolbar-document > button'),
       result_actions: controlMetrics(
         '.result-actions > button, .result-actions > * > button:first-child'
       ),
@@ -1820,27 +1833,67 @@ try {
   await fileTrigger.click();
   const fileMenu = workbenchPage.getByRole('menu', { name: 'File' });
   await fileMenu.getByRole('menuitem', { name: /New query/ }).waitFor();
+  const firstFileItem = fileMenu.getByRole('menuitem', {
+    name: /New query/
+  });
+  assert(
+    await firstFileItem.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'File did not focus its first command'
+  );
   const fileMenuLayout = await workbenchPage.evaluate(() => {
     const trigger = document
-      .querySelector('.file-trigger')
+      .querySelector('.topbar-file-menu > button')
       ?.getBoundingClientRect();
     const menu = document
-      .querySelector('.file-menu-popover')
+      .querySelector('.topbar-file-menu .action-menu-popover')
       ?.getBoundingClientRect();
     if (!trigger || !menu) throw new Error('File menu geometry is incomplete');
     return {
       trigger: trigger.toJSON(),
       menu: menu.toJSON(),
+      items: Array.from(
+        document.querySelectorAll('.topbar-file-menu [role="menuitem"]')
+      ).map((item) => ({
+        label: item.querySelector('strong')?.textContent?.trim() ?? '',
+        description: item.querySelector('small')?.textContent?.trim() ?? '',
+        shortcut: item.querySelector('kbd')?.textContent?.trim() ?? '',
+        has_icon: Boolean(item.querySelector('svg')),
+        disabled: item.hasAttribute('disabled')
+      })),
+      separators: document.querySelectorAll(
+        '.topbar-file-menu [role="separator"]'
+      ).length,
       viewport_width: window.innerWidth
     };
   });
   assert(
     fileMenuLayout.menu.top >= fileMenuLayout.trigger.bottom &&
       fileMenuLayout.menu.left >= 0 &&
-      fileMenuLayout.menu.right <= fileMenuLayout.viewport_width,
+      fileMenuLayout.menu.right <= fileMenuLayout.viewport_width &&
+      JSON.stringify(fileMenuLayout.items.map((item) => item.label)) ===
+        JSON.stringify(['New query', 'Open SQL file…', 'Save', 'Save as…']) &&
+      fileMenuLayout.items.every(
+        (item) =>
+          item.description.length > 0 &&
+          item.shortcut.length > 0 &&
+          item.has_icon &&
+          !item.disabled
+      ) &&
+      fileMenuLayout.separators === 1,
     `File menu escaped its product-side trigger (${JSON.stringify(fileMenuLayout)})`
   );
-  await fileTrigger.press('Escape');
+  await firstFileItem.press('End');
+  const lastFileItem = fileMenu.getByRole('menuitem', { name: /Save as…/ });
+  assert(
+    await lastFileItem.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'End did not focus the last available File command'
+  );
+  await workbenchPage.screenshot({ path: fileMenuScreenshotPath });
+  await lastFileItem.press('Escape');
   await fileMenu.waitFor({ state: 'detached' });
   assert(
     await fileTrigger.evaluate((element) => document.activeElement === element),
@@ -1855,6 +1908,12 @@ try {
     populatedWorkbench.document_group.left >=
       populatedWorkbench.execution_group.right,
     'document controls are not visually separated from execution controls'
+  );
+  assert(
+    JSON.stringify(
+      populatedWorkbench.document_controls.map((control) => control.label)
+    ) === JSON.stringify(['Format']),
+    `local-file actions still compete with File in the editor toolbar (${JSON.stringify(populatedWorkbench.document_controls)})`
   );
   assert(
     Math.max(
@@ -2482,7 +2541,9 @@ try {
           ? getComputedStyle(brandContext).display
           : 'missing',
         header_controls: Array.from(
-          document.querySelectorAll('.topbar-control')
+          document.querySelectorAll(
+            '.topbar-file-menu > button, .topbar-control'
+          )
         ).map((element) => element.textContent?.trim() ?? ''),
         visible_tabs: Array.from(
           document.querySelectorAll('[role="tab"] .tab-title')
@@ -2517,6 +2578,23 @@ try {
     );
     if (width === 720) {
       await workbenchPage.screenshot({ path: compactWorkbenchScreenshotPath });
+      await fileTrigger.click();
+      await fileMenu.waitFor();
+      const compactFileMenu = await workbenchPage
+        .locator('.topbar-file-menu .action-menu-popover')
+        .boundingBox();
+      assert(
+        compactFileMenu &&
+          compactFileMenu.x >= 0 &&
+          compactFileMenu.x + compactFileMenu.width <= width &&
+          compactFileMenu.y >= 0 &&
+          compactFileMenu.y + compactFileMenu.height <= 800,
+        `720px File menu escaped its viewport (${JSON.stringify(compactFileMenu)})`
+      );
+      await workbenchPage.screenshot({ path: compactFileMenuScreenshotPath });
+      await workbenchPage.keyboard.press('Escape');
+      await fileMenu.waitFor({ state: 'detached' });
+      layout.file_menu = compactFileMenu;
       await exportTrigger.click();
       await exportDialog.waitFor();
       const compactExport = await exportDialog.boundingBox();
@@ -2681,6 +2759,8 @@ try {
       'artifacts/ui-layout-results-status.png',
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
+      'artifacts/ui-layout-file-menu.png',
+      'artifacts/ui-layout-file-menu-720.png',
       'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png',
       'artifacts/ui-layout-sidebar.png',
