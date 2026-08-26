@@ -782,6 +782,29 @@ main.has-query-results .editor-workspace {
   line-height: 1.45;
 }
 
+.result-state {
+  display: grid;
+  min-height: 7rem;
+  flex: 1 1 auto;
+  align-content: center;
+  justify-items: center;
+  padding: 22px;
+  gap: 5px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.result-state h3 {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.result-state > p:last-child {
+  max-width: 31rem;
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
 .safety-flags {
   display: grid;
   max-height: 280px;
@@ -1687,7 +1710,7 @@ aside {
   border-left: 1px solid var(--divider);
 }
 
-.context-bar > :nth-last-child(2) {
+.context-bar > :last-child {
   margin-left: auto;
 }
 
@@ -1737,10 +1760,6 @@ main.has-query-results .editor-workspace {
 
 .results-context strong.failed {
   color: var(--danger);
-}
-
-.editor-execution-status {
-  margin-left: auto;
 }
 
 .code-editor-frame {

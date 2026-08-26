@@ -74,6 +74,7 @@ tabs[0].dirty = true;
 tabs[1].dirty = true;
 const commandLog = [];
 let createdTabCount = 0;
+let executionCount = 0;
 window.__QUERYNOT_FIXTURE_COMMANDS__ = commandLog;
 
 function queryTab(id, title, profileId, profileLabel, position) {
@@ -163,11 +164,15 @@ function event(eventType, overrides = {}) {
   };
 }
 
-async function emitOneRowResult() {
-  await emit('query_execution', event('started'));
+async function emitOneRowResult(executionId) {
+  await emit(
+    'query_execution',
+    event('started', { execution_id: executionId })
+  );
   await emit(
     'query_execution',
     event('batch', {
+      execution_id: executionId,
       result_set_id: 'layout-result',
       sequence: 0,
       statement_index: 0,
@@ -205,6 +210,7 @@ async function emitOneRowResult() {
   await emit(
     'query_execution',
     event('result_terminal', {
+      execution_id: executionId,
       result_set_id: 'layout-result',
       sequence: 1,
       statement_index: 0,
@@ -217,9 +223,91 @@ async function emitOneRowResult() {
   await emit(
     'query_execution',
     event('finished', {
+      execution_id: executionId,
       statements_completed: 1,
       received_rows: 1,
       duration_ms: 16,
+      transaction: { automatic: true, certainty: 'clean' }
+    })
+  );
+}
+
+async function emitRowlessResult(executionId) {
+  await emit(
+    'query_execution',
+    event('started', { execution_id: executionId })
+  );
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  await emit(
+    'query_execution',
+    event('finished', {
+      execution_id: executionId,
+      statements_completed: 1,
+      received_rows: 0,
+      duration_ms: 700,
+      transaction: { automatic: true, certainty: 'clean' }
+    })
+  );
+}
+
+async function emitEmptyResult(executionId) {
+  await emit(
+    'query_execution',
+    event('started', { execution_id: executionId })
+  );
+  await emit(
+    'query_execution',
+    event('batch', {
+      execution_id: executionId,
+      result_set_id: `${executionId}-result`,
+      sequence: 0,
+      statement_index: 0,
+      columns: [
+        { name: 'id', declared_type: 'INTEGER', nullable: false },
+        { name: 'name', declared_type: 'TEXT', nullable: true }
+      ],
+      rows: [],
+      received_rows: 0,
+      retained_bytes: 0
+    })
+  );
+  await emit(
+    'query_execution',
+    event('result_terminal', {
+      execution_id: executionId,
+      result_set_id: `${executionId}-result`,
+      sequence: 1,
+      statement_index: 0,
+      received_rows: 0,
+      retained_bytes: 0,
+      terminal_state: 'completed',
+      duration_ms: 7
+    })
+  );
+  await emit(
+    'query_execution',
+    event('finished', {
+      execution_id: executionId,
+      statements_completed: 1,
+      received_rows: 0,
+      duration_ms: 7,
+      transaction: { automatic: true, certainty: 'clean' }
+    })
+  );
+}
+
+async function emitFailedResult(executionId) {
+  await emit(
+    'query_execution',
+    event('started', { execution_id: executionId })
+  );
+  await emit(
+    'query_execution',
+    event('failed', {
+      execution_id: executionId,
+      error: 'Synthetic permission denial for rendered state coverage.',
+      error_category: 'authorization',
+      retryable: false,
       transaction: { automatic: true, certainty: 'clean' }
     })
   );
@@ -403,14 +491,25 @@ mockIPC(
           message: 'Loaded one deterministic row.'
         };
       case 'start_execution':
-        setTimeout(() => void emitOneRowResult(), 0);
-        return {
-          status: 'started',
-          execution_id: 'layout-execution',
-          fingerprint: null,
-          safety_flags: [],
-          message: 'Execution started.'
-        };
+        executionCount += 1;
+        {
+          const executionId = `layout-execution-${executionCount}`;
+          const emitter = request.sql.includes('QUERYNOT_ROWLESS_STATE')
+            ? emitRowlessResult
+            : request.sql.includes('QUERYNOT_EMPTY_STATE')
+              ? emitEmptyResult
+              : request.sql.includes('QUERYNOT_FAILED_STATE')
+                ? emitFailedResult
+                : emitOneRowResult;
+          setTimeout(() => void emitter(executionId), 0);
+          return {
+            status: 'started',
+            execution_id: executionId,
+            fingerprint: null,
+            safety_flags: [],
+            message: 'Execution started.'
+          };
+        }
       case 'ack_result_batch':
         return { completed: true, cancelled: false, message: 'Acknowledged.' };
       case 'list_history':

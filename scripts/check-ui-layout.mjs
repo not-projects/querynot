@@ -133,6 +133,31 @@ const resultsStatusScreenshotPath = resolve(
   'artifacts',
   'ui-layout-results-status.png'
 );
+const filteredEmptyResultScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-filter-empty.png'
+);
+const waitingResultScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-waiting.png'
+);
+const rowlessResultScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-rowless.png'
+);
+const failedResultScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-failed.png'
+);
+const emptyResultScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-empty.png'
+);
 const compactWorkbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -2073,6 +2098,22 @@ try {
     `result status hierarchy is duplicated or unclear (${JSON.stringify({ context: populatedWorkbench.result_context_parts, loaded: populatedWorkbench.loaded_label, editor: populatedWorkbench.editor_status_parts, statement: populatedWorkbench.result_footer_summary, status: populatedWorkbench.status_message })})`
   );
   await workbenchPage.screenshot({ path: resultsStatusScreenshotPath });
+  const resultFilter = workbenchPage.getByRole('searchbox', {
+    name: 'Filter loaded rows'
+  });
+  await resultFilter.fill('no matching retained row');
+  const filteredEmptyState = workbenchPage.locator('.grid-empty-state');
+  await filteredEmptyState
+    .getByText('No loaded rows match this filter')
+    .waitFor();
+  assert(
+    (await workbenchPage.locator('.loaded-label').textContent())?.trim() ===
+      '0 of 1 loaded rows',
+    'filter-empty results did not retain their loaded-row context'
+  );
+  await workbenchPage.screenshot({ path: filteredEmptyResultScreenshotPath });
+  await resultFilter.fill('');
+  await workbenchPage.locator('.grid-row').waitFor();
   assert(
     populatedWorkbench.footer_shortcuts ===
       'Ctrl+Enter Run · Ctrl+Shift+Enter Run all · Ctrl+Tab Switch tabs',
@@ -2662,6 +2703,95 @@ try {
   populatedWorkbench.connection_action_menu = connectionActionMenu;
   populatedWorkbench.schema_namespace_layout = schemaNamespaceLayout;
 
+  const workbenchContent = workbenchPage.locator('.cm-content');
+  async function runStateQuery(sql) {
+    await workbenchContent.click();
+    await workbenchContent.press('Control+a');
+    await workbenchContent.press('Backspace');
+    await workbenchContent.pressSequentially(sql, { delay: 2 });
+    await workbenchContent.press('Control+Enter');
+  }
+
+  await runStateQuery("SELECT 'QUERYNOT_ROWLESS_STATE';");
+  const resultState = workbenchPage.locator('.result-state');
+  await resultState.getByText('Waiting for row results').waitFor();
+  const waitingResultState = await workbenchPage.evaluate(() => ({
+    heading: document.querySelector('.result-state h3')?.textContent?.trim(),
+    context: Array.from(
+      document.querySelector('.results-context')?.children ?? []
+    ).map((element) => element.textContent?.trim() ?? ''),
+    editor_disabled:
+      document.querySelector('.cm-editor')?.getAttribute('aria-readonly') ===
+      'true'
+  }));
+  assert(
+    waitingResultState.heading === 'Waiting for row results' &&
+      waitingResultState.context[0] === 'Running',
+    `running execution state is incomplete (${JSON.stringify(waitingResultState)})`
+  );
+  await workbenchPage.screenshot({ path: waitingResultScreenshotPath });
+  await resultState.getByText('No row result set').waitFor();
+  const rowlessResultState = await workbenchPage.evaluate(() => ({
+    heading: document.querySelector('.result-state h3')?.textContent?.trim(),
+    context: Array.from(
+      document.querySelector('.results-context')?.children ?? []
+    ).map((element) => element.textContent?.trim() ?? ''),
+    result_count: document.querySelectorAll('.result-set').length
+  }));
+  assert(
+    rowlessResultState.heading === 'No row result set' &&
+      rowlessResultState.context[0] === 'Succeeded' &&
+      rowlessResultState.context[1] === '0 result sets' &&
+      rowlessResultState.result_count === 0,
+    `rowless success state is incomplete (${JSON.stringify(rowlessResultState)})`
+  );
+  await workbenchPage.screenshot({ path: rowlessResultScreenshotPath });
+
+  await runStateQuery("SELECT 'QUERYNOT_FAILED_STATE';");
+  const failedResult = workbenchPage.getByRole('alert');
+  await failedResult
+    .getByText('Synthetic permission denial for rendered state coverage.')
+    .waitFor();
+  assert(
+    (
+      await workbenchPage
+        .locator('.results-context strong.failed')
+        .textContent()
+    )?.trim() === 'Failed',
+    'failed execution did not own the Results status'
+  );
+  await workbenchPage.screenshot({ path: failedResultScreenshotPath });
+
+  await runStateQuery("SELECT 'QUERYNOT_EMPTY_STATE';");
+  const emptyGridState = workbenchPage.locator('.grid-empty-state');
+  await emptyGridState.getByText('No rows returned').waitFor();
+  const emptyResultState = await workbenchPage.evaluate(() => ({
+    heading: document
+      .querySelector('.grid-empty-state strong')
+      ?.textContent?.trim(),
+    detail: document
+      .querySelector('.grid-empty-state span')
+      ?.textContent?.trim(),
+    loaded: document.querySelector('.loaded-label')?.textContent?.trim(),
+    columns: document.querySelectorAll('.grid-header [role="columnheader"]')
+      .length
+  }));
+  assert(
+    emptyResultState.heading === 'No rows returned' &&
+      emptyResultState.detail?.includes('completed with columns') &&
+      emptyResultState.loaded === '0 loaded rows' &&
+      emptyResultState.columns === 3,
+    `zero-row result state is incomplete (${JSON.stringify(emptyResultState)})`
+  );
+  await workbenchPage.screenshot({ path: emptyResultScreenshotPath });
+  populatedWorkbench.result_states = {
+    filtered_empty: 'No loaded rows match this filter',
+    waiting: waitingResultState,
+    rowless: rowlessResultState,
+    failed: 'Synthetic permission denial for rendered state coverage.',
+    empty: emptyResultState
+  };
+
   const createdTabsBeforeClose = await workbenchPage.evaluate(
     () =>
       window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
@@ -2757,6 +2887,11 @@ try {
       'artifacts/ui-layout-result-export-popover.png',
       'artifacts/ui-layout-result-export-720.png',
       'artifacts/ui-layout-results-status.png',
+      'artifacts/ui-layout-results-filter-empty.png',
+      'artifacts/ui-layout-results-waiting.png',
+      'artifacts/ui-layout-results-rowless.png',
+      'artifacts/ui-layout-results-failed.png',
+      'artifacts/ui-layout-results-empty.png',
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-file-menu.png',

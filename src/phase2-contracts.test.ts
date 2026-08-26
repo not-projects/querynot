@@ -139,6 +139,37 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(document.body.textContent).toContain('Statement 1');
   });
 
+  it('explains a completed result that returned columns without rows', () => {
+    mounted = mount(ResultGrid, {
+      target: document.body,
+      props: {
+        statementIndex: 0,
+        columns: [
+          { name: 'id', declared_type: 'INTEGER', nullable: false },
+          { name: 'name', declared_type: 'TEXT', nullable: true }
+        ],
+        rows: [],
+        capped: false,
+        paused: false,
+        terminalState: 'completed',
+        durationMs: 8,
+        onloadmore: () => undefined,
+        ondiscard: () => undefined,
+        onexport: () => undefined,
+        onstatus: () => undefined
+      }
+    });
+    flushSync();
+
+    expect(document.querySelector('.grid-empty-state')?.textContent).toContain(
+      'No rows returned'
+    );
+    expect(
+      document.querySelector('[role="grid"]')?.getAttribute('aria-rowcount')
+    ).toBe('0');
+    expect(document.body.textContent).toContain('0 loaded rows');
+  });
+
   it('uses CodeMirror with adapter-selected parsing, completion, diagnostics, and platform execution shortcuts', () => {
     const editor = read('src/lib/components/SqlEditor.svelte');
     expect(editor).toContain('basicSetup');

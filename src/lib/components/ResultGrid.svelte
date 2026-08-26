@@ -96,6 +96,25 @@
     }
     return indexes;
   });
+  const emptyGridState = $derived.by(() => {
+    if (viewIndexes.length > 0) return null;
+    if (rows.length > 0) {
+      return {
+        heading: 'No loaded rows match this filter',
+        detail: 'Clear or change the filter to show retained rows.'
+      };
+    }
+    if (!terminalState && !paused) {
+      return {
+        heading: 'Waiting for rows',
+        detail: 'Column metadata arrived; retained rows will appear here.'
+      };
+    }
+    return {
+      heading: 'No rows returned',
+      detail: 'The statement completed with columns but no retained rows.'
+    };
+  });
   const startIndex = $derived(
     Math.max(0, Math.floor(scrollTop / rowHeight) - overscan)
   );
@@ -573,6 +592,12 @@
             </div>
           {/each}
         </div>
+        {#if emptyGridState}
+          <div class="grid-empty-state" role="status" aria-live="polite">
+            <strong>{emptyGridState.heading}</strong>
+            <span>{emptyGridState.detail}</span>
+          </div>
+        {/if}
       </div>
     </div>
 
@@ -903,8 +928,33 @@
   }
 
   .grid-viewport {
+    position: relative;
     min-height: 0;
     overflow: auto;
+  }
+
+  .grid-empty-state {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    padding: 18px;
+    gap: 4px;
+    color: var(--muted);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .grid-empty-state strong {
+    color: var(--text);
+    font-size: 0.72rem;
+  }
+
+  .grid-empty-state span {
+    max-width: 26rem;
+    font-size: 0.64rem;
+    line-height: 1.4;
   }
 
   .grid-canvas {

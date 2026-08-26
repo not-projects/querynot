@@ -300,10 +300,51 @@
   );
   const queryResultsVisible = $derived(
     Boolean(
-      activeTab?.kind === 'query' &&
-      (activeResults.length || activeExecution?.error)
+      activeTab?.kind === 'query' && (activeResults.length || activeExecution)
     )
   );
+  const emptyResultsState = $derived.by(() => {
+    if (!queryResultsVisible || activeVisibleResult || activeExecution?.error)
+      return null;
+    if (!activeExecution) return null;
+    if (activeExecution.state === 'queued') {
+      return {
+        eyebrow: 'Before first result',
+        heading: 'Preparing execution',
+        detail:
+          'Results and statement messages will appear here when the database adapter starts returning them.'
+      };
+    }
+    if (isExecutionActive(activeExecution.state)) {
+      return {
+        eyebrow: 'No rows yet',
+        heading: 'Waiting for row results',
+        detail:
+          'Statement messages and retained rows will appear here as the database adapter returns them.'
+      };
+    }
+    if (activeExecution.state === 'succeeded') {
+      return {
+        eyebrow: 'Statement-only result',
+        heading: 'No row result set',
+        detail:
+          'The statement completed successfully without returning a tabular result.'
+      };
+    }
+    if (activeExecution.state === 'cancelled') {
+      return {
+        eyebrow: 'No retained result',
+        heading: 'No results retained',
+        detail:
+          'The database confirmed cancellation before a row result set was retained.'
+      };
+    }
+    return {
+      eyebrow: 'Result unavailable',
+      heading: 'No row result set',
+      detail: 'No tabular result is available for this execution.'
+    };
+  });
   const fileActionItems = $derived.by((): ActionMenuItem[] => {
     const queryTab = activeTab?.kind === 'query' ? activeTab : null;
     return [
@@ -3756,11 +3797,6 @@
               ? `${activeSession.transaction.automatic ? 'Auto-commit' : 'Manual'} · ${activeSession.transaction.certainty}`
               : 'Transaction unavailable'}
         </span>
-        <span>
-          {activeTab?.kind === 'table_data' && activeTableView === 'structure'
-            ? 'Structure'
-            : (activeExecution?.state ?? 'Idle')}
-        </span>
       </div>
 
       {#if activeTab}
@@ -4007,21 +4043,10 @@
                     : 'Offline draft'}
               </span>
               <span>{activeTab?.profile_label ?? 'Unbound offline file'}</span>
-              {#if activeExecution && !queryResultsVisible}
-                <span class="editor-execution-status" aria-live="polite">
-                  {executionStateLabel(activeExecution.state)} ·
-                  {activeExecution.statementsCompleted}
-                  {activeExecution.statementsCompleted === 1
-                    ? 'statement'
-                    : 'statements'} · {activeExecution.receivedRows}
-                  {activeExecution.receivedRows === 1 ? 'row' : 'rows'} ·
-                  {executionElapsedMs(activeExecution, nowMs)} ms
-                </span>
-              {/if}
             </div>
           </section>
 
-          {#if activeResults.length || activeExecution?.error}
+          {#if queryResultsVisible}
             <div
               class="results-separator"
               role="separator"
@@ -4066,6 +4091,13 @@
               {#if activeExecution?.error}
                 <div class="result-error" role="alert">
                   {activeExecution.error}
+                </div>
+              {/if}
+              {#if emptyResultsState}
+                <div class="result-state" role="status" aria-live="polite">
+                  <p class="eyebrow">{emptyResultsState.eyebrow}</p>
+                  <h3>{emptyResultsState.heading}</h3>
+                  <p>{emptyResultsState.detail}</p>
                 </div>
               {/if}
               {#if activeResults.length > 1}
