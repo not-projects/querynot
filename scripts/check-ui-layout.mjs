@@ -174,6 +174,11 @@ const compactFileMenuScreenshotPath = resolve(
   'artifacts',
   'ui-layout-file-menu-720.png'
 );
+const forcedColorsScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-forced-colors.png'
+);
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
 
@@ -1925,6 +1930,56 @@ try {
     'Escape did not return focus to the File trigger'
   );
   populatedWorkbench.file_menu = fileMenuLayout;
+  await workbenchPage.emulateMedia({ forcedColors: 'active' });
+  await fileTrigger.click();
+  await firstFileItem.waitFor();
+  const forcedColorsSnapshot = await workbenchPage
+    .locator('.app-shell')
+    .ariaSnapshot();
+  const forcedColors = await workbenchPage.evaluate(() => {
+    const focused = document.activeElement;
+    const focusedStyle = focused ? getComputedStyle(focused) : null;
+    const visibleButtons = Array.from(
+      document.querySelectorAll('button:not([hidden])')
+    ).filter((button) => button.getClientRects().length > 0);
+    const accessibleName = (button) =>
+      button.getAttribute('aria-label')?.trim() ||
+      button.textContent?.trim().replace(/\s+/g, ' ') ||
+      button.getAttribute('title')?.trim() ||
+      '';
+    return {
+      active: matchMedia('(forced-colors: active)').matches,
+      focused_name:
+        focused instanceof HTMLButtonElement ? accessibleName(focused) : '',
+      focus_outline_style: focusedStyle?.outlineStyle ?? '',
+      focus_outline_width: focusedStyle?.outlineWidth ?? '',
+      unnamed_visible_buttons: visibleButtons
+        .filter((button) => accessibleName(button).length === 0)
+        .map((button) => button.outerHTML),
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth
+    };
+  });
+  assert(
+    forcedColors.active &&
+      forcedColors.focused_name.includes('New query') &&
+      forcedColors.focus_outline_style !== 'none' &&
+      Number.parseFloat(forcedColors.focus_outline_width) >= 2 &&
+      forcedColors.unnamed_visible_buttons.length === 0 &&
+      forcedColors.document_scroll_width <= forcedColors.viewport_width &&
+      ['Connections', 'File', 'Results', 'Copy result rows'].every((name) =>
+        forcedColorsSnapshot.includes(name)
+      ),
+    `forced-colors accessibility contract failed (${JSON.stringify(forcedColors)})`
+  );
+  await workbenchPage.screenshot({ path: forcedColorsScreenshotPath });
+  await firstFileItem.press('Escape');
+  await fileMenu.waitFor({ state: 'detached' });
+  await workbenchPage.emulateMedia({ forcedColors: 'none' });
+  populatedWorkbench.forced_colors = {
+    ...forcedColors,
+    aria_landmarks: ['Connections', 'File', 'Results', 'Copy result rows']
+  };
   assert(
     populatedWorkbench.toolbar_group_count === 2,
     'query actions are not split into two clear groups'
@@ -2896,6 +2951,7 @@ try {
       'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-file-menu.png',
       'artifacts/ui-layout-file-menu-720.png',
+      'artifacts/ui-layout-forced-colors.png',
       'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png',
       'artifacts/ui-layout-sidebar.png',
