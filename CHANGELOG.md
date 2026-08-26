@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - Reworked CI into fail-closed documentation, frontend, and native scopes; removed repeated cross-platform Clippy and core-test work while retaining Windows core behavior and all four desktop compile targets; and replaced job-name-fragmented Rust caches with stable, dependency-aware, purpose-specific cache families written only from `master`.
+- Reworked saved-connection and schema-object context actions into one compact, keyboard-navigable menu pattern with explicit destructive treatment, reliable dismissal and focus return, and positioning that remains visible outside sidebar scroll regions.
 
 ## [0.1.8] - 2026-08-26
 

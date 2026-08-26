@@ -32,6 +32,9 @@
     WorkspaceTabView,
     WorkspaceView
   } from './lib/generated/contracts';
+  import ActionMenu, {
+    type ActionMenuItem
+  } from './lib/components/ActionMenu.svelte';
   import ConnectionList from './lib/components/ConnectionList.svelte';
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
   import Icon from './lib/components/Icon.svelte';
@@ -387,6 +390,32 @@
 
   function denseMetadataText(value: string, maximum = 160): string {
     return value.length > maximum ? `${value.slice(0, maximum)}…` : value;
+  }
+
+  function schemaObjectActionItems(object: SchemaObjectView): ActionMenuItem[] {
+    return [
+      {
+        id: 'copy',
+        label: 'Copy qualified name',
+        description: `${object.namespace}.${object.name}`,
+        icon: 'copy'
+      },
+      ...(object.kind === 'table' || object.kind === 'view'
+        ? [
+            {
+              id: 'query',
+              label: 'Start new query',
+              description: 'Open a query in this connection.',
+              icon: 'query' as const
+            }
+          ]
+        : [])
+    ];
+  }
+
+  function selectSchemaObjectAction(object: SchemaObjectView, itemId: string) {
+    if (itemId === 'copy') void copyQualifiedName(object);
+    else if (itemId === 'query') void startQueryForObject(object);
   }
 
   function clampResultsPercent(value: number): number {
@@ -3432,6 +3461,7 @@
   <div class="workbench">
     <aside
       aria-labelledby="connections-heading"
+      data-action-menu-boundary
       class:has-schema={Boolean(activeProfile)}
       style:grid-template-rows={activeProfile
         ? `${sidebarConnectionsPercent}fr 7px ${100 - sidebarConnectionsPercent}fr`
@@ -3619,24 +3649,16 @@
                               >{denseMetadataText(object.name)}</span
                             >
                           </button>
-                          <button
-                            type="button"
-                            class="schema-row-action"
-                            aria-label={`Copy qualified name for ${object.name}`}
-                            title={`Copy qualified name for ${object.name}`}
-                            onclick={() => void copyQualifiedName(object)}
-                            ><Icon name="copy" size={13} /></button
-                          >
-                          {#if object.kind === 'table' || object.kind === 'view'}
-                            <button
-                              type="button"
-                              class="schema-row-action"
-                              aria-label={`Start query for ${object.name}`}
-                              title={`Start query for ${object.name}`}
-                              onclick={() => void startQueryForObject(object)}
-                              ><Icon name="query" size={13} /></button
-                            >
-                          {/if}
+                          <ActionMenu
+                            class="schema-object-menu"
+                            label={`More actions for ${object.name}`}
+                            menuLabel={`Actions for ${object.name}`}
+                            heading={object.name}
+                            meta={`${object.kind} · ${object.namespace}`}
+                            items={schemaObjectActionItems(object)}
+                            onselect={(itemId) =>
+                              selectSchemaObjectAction(object, itemId)}
+                          />
                         </li>
                       {/each}
                     </ul>

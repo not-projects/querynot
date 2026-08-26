@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ConnectionInfoView, ProfileView } from '../generated/contracts';
+  import ActionMenu, { type ActionMenuItem } from './ActionMenu.svelte';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -52,6 +53,45 @@
   function connectionStateAccessibleLabel(profileId: string) {
     const state = connectionState(profileId);
     return state === 'Testing' ? 'Testing connection' : state;
+  }
+
+  function profileActionItems(profile: ProfileView): ActionMenuItem[] {
+    return [
+      {
+        id: 'test',
+        label: 'Test connection',
+        description: 'Open and close a temporary test.',
+        icon: 'database',
+        disabled: Boolean(connectionOperations[profile.id])
+      },
+      {
+        id: 'edit',
+        label: 'Edit connection…',
+        description: 'Change the saved profile.',
+        icon: 'edited'
+      },
+      {
+        id: 'duplicate',
+        label: 'Duplicate connection',
+        description: 'Copy without saved credentials.',
+        icon: 'copy'
+      },
+      {
+        id: 'delete',
+        label: 'Delete connection…',
+        description: 'Review profile and local data.',
+        icon: 'trash',
+        danger: true,
+        separatorBefore: true
+      }
+    ];
+  }
+
+  function selectProfileAction(profile: ProfileView, itemId: string) {
+    if (itemId === 'test') ontest(profile);
+    else if (itemId === 'edit') oneditprofile(profile);
+    else if (itemId === 'duplicate') onduplicateprofile(profile);
+    else if (itemId === 'delete') ondeleteprofile(profile);
   }
 </script>
 
@@ -117,24 +157,15 @@
             >
           {/if}
 
-          <details class="connection-overflow">
-            <summary aria-label={`More actions for ${profile.name}`}
-              ><Icon name="more" size={15} /></summary
-            >
-            <div>
-              <button type="button" onclick={() => ontest(profile)}>Test</button
-              >
-              <button type="button" onclick={() => oneditprofile(profile)}
-                >Edit</button
-              >
-              <button type="button" onclick={() => onduplicateprofile(profile)}
-                >Duplicate</button
-              >
-              <button type="button" onclick={() => ondeleteprofile(profile)}
-                >Delete</button
-              >
-            </div>
-          </details>
+          <ActionMenu
+            class="connection-profile-menu"
+            label={`More actions for ${profile.name}`}
+            menuLabel={`Actions for ${profile.name}`}
+            heading={profile.name}
+            meta={`${connectionState(profile.id)} · ${profile.kind === 'sqlite' ? 'SQLite' : 'MySQL'}`}
+            items={profileActionItems(profile)}
+            onselect={(itemId) => selectProfileAction(profile, itemId)}
+          />
         </div>
       </div>
     </div>
@@ -323,57 +354,6 @@
 
   .connection-action[data-intent='connect'] {
     color: var(--accent);
-  }
-
-  details {
-    position: relative;
-  }
-
-  summary {
-    display: grid;
-    width: 1.75rem;
-    min-width: 1.75rem;
-    min-height: 1.75rem;
-    padding: 0;
-    place-items: center;
-    border: 0;
-    border-radius: 5px;
-    color: var(--muted);
-    background: transparent;
-    list-style: none;
-    cursor: pointer;
-  }
-
-  summary:hover,
-  summary:focus-visible,
-  details[open] summary {
-    color: var(--text);
-    background: var(--surface-raised);
-  }
-
-  summary::-webkit-details-marker {
-    display: none;
-  }
-
-  details > div {
-    position: absolute;
-    z-index: 30;
-    top: calc(100% + 2px);
-    right: 0;
-    display: grid;
-    width: 9rem;
-    padding: 0.4rem;
-    gap: 0.2rem;
-    border: 1px solid var(--divider);
-    border-radius: 6px;
-    background: var(--surface-raised);
-    box-shadow: var(--shadow);
-  }
-
-  details button {
-    width: 100%;
-    min-height: 1.8rem;
-    text-align: left;
   }
 
   .offline-row {

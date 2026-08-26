@@ -650,7 +650,7 @@ main.has-query-results .editor-workspace {
 .schema-tree li {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) repeat(2, 26px);
+  grid-template-columns: minmax(0, 1fr) 26px;
   align-items: center;
 }
 
@@ -661,22 +661,29 @@ main.has-query-results .editor-workspace {
   gap: 5px;
 }
 
-.schema-tree .schema-row-action {
+.schema-tree .schema-row-action,
+.schema-tree .schema-object-menu {
   display: grid;
   width: 26px;
+  place-items: center;
+  opacity: 0;
+}
+
+.schema-tree .schema-row-action {
   min-height: 26px;
   padding: 0;
-  place-items: center;
   border-radius: 4px;
   color: var(--muted);
-  opacity: 0;
 }
 
 .schema-tree > div:hover > .namespace-refresh,
 .schema-tree > div:focus-within > .namespace-refresh,
 .schema-tree li:hover > .schema-row-action,
 .schema-tree li:focus-within > .schema-row-action,
-.schema-tree .schema-row-action:focus-visible {
+.schema-tree .schema-row-action:focus-visible,
+.schema-tree li:hover > .schema-object-menu,
+.schema-tree li:focus-within > .schema-object-menu,
+.schema-tree .schema-object-menu.open {
   opacity: 1;
 }
 
@@ -699,7 +706,8 @@ main.has-query-results .editor-workspace {
   box-shadow: inset 2px 0 var(--accent);
 }
 
-.schema-tree li[aria-selected='true'] > .schema-row-action {
+.schema-tree li[aria-selected='true'] > .schema-row-action,
+.schema-tree li[aria-selected='true'] > .schema-object-menu {
   opacity: 1;
 }
 

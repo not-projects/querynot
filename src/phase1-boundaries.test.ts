@@ -110,6 +110,27 @@ describe('Phase 1 native boundaries', () => {
     );
   });
 
+  it('uses one accessible action-menu pattern for sidebar context actions', () => {
+    const actionMenu = read('src/lib/components/ActionMenu.svelte');
+    const connectionList = read('src/lib/components/ConnectionList.svelte');
+    const app = read('src/App.svelte');
+
+    expect(actionMenu).toContain('aria-haspopup="menu"');
+    expect(actionMenu).toContain('role="menu"');
+    expect(actionMenu).toContain('role="menuitem"');
+    expect(actionMenu).toContain("event.key !== 'Escape'");
+    expect(actionMenu).toContain("event.key === 'ArrowDown'");
+    expect(actionMenu).toContain('data-action-menu-boundary');
+    expect(connectionList).toContain('Test connection');
+    expect(connectionList).toContain('Delete connection…');
+    expect(connectionList).not.toContain(
+      '<details class="connection-overflow">'
+    );
+    expect(app).toContain('class="schema-object-menu"');
+    expect(app).toContain('Copy qualified name');
+    expect(app).toContain('Start new query');
+  });
+
   it('keeps scoped tabs compact and aligns offline document actions with the editor', () => {
     const tabs = read('src/lib/components/WorkspaceTabs.svelte');
     const css = read('src/styles/app.css');

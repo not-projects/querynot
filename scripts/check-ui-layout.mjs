@@ -53,6 +53,16 @@ const sidebarScreenshotPath = resolve(
   'artifacts',
   'ui-layout-sidebar.png'
 );
+const connectionMenuScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-connection-menu.png'
+);
+const schemaMenuScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-schema-menu.png'
+);
 const largeScaleWorkbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -847,6 +857,96 @@ try {
   );
   const emissaryRow = workbenchPage.locator('[data-profile-id="emissary"]');
   await emissaryRow.waitFor();
+  const connectionMenuTrigger = workbenchPage.getByRole('button', {
+    name: 'More actions for Emissary',
+    exact: true
+  });
+  await connectionMenuTrigger.click();
+  const connectionMenu = workbenchPage.getByRole('menu', {
+    name: 'Actions for Emissary',
+    exact: true
+  });
+  await connectionMenu.waitFor();
+  const connectionActionMenu = await workbenchPage.evaluate(() => {
+    const aside = document.querySelector('aside');
+    const popover = document.querySelector(
+      '.connection-profile-menu .action-menu-popover'
+    );
+    const menu = document.querySelector(
+      '.connection-profile-menu [role="menu"]'
+    );
+    if (!aside || !popover || !menu) {
+      throw new Error('saved-connection action menu is incomplete');
+    }
+    const bounds = popover.getBoundingClientRect();
+    const asideBounds = aside.getBoundingClientRect();
+    return {
+      labels: Array.from(menu.querySelectorAll('[role="menuitem"]')).map(
+        (item) => item.querySelector('strong')?.textContent?.trim() ?? ''
+      ),
+      focused:
+        document.activeElement?.querySelector('strong')?.textContent?.trim() ??
+        '',
+      bounds: bounds.toJSON(),
+      aside: asideBounds.toJSON(),
+      danger_count: menu.querySelectorAll('[role="menuitem"].danger').length,
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth
+    };
+  });
+  assert(
+    JSON.stringify(connectionActionMenu.labels) ===
+      JSON.stringify([
+        'Test connection',
+        'Edit connection…',
+        'Duplicate connection',
+        'Delete connection…'
+      ]),
+    `saved-connection actions are incomplete (${JSON.stringify(connectionActionMenu.labels)})`
+  );
+  assert(
+    connectionActionMenu.focused === 'Test connection',
+    `saved-connection menu did not focus its first action (${connectionActionMenu.focused})`
+  );
+  assert(
+    connectionActionMenu.danger_count === 1,
+    'saved-connection menu does not distinguish its destructive action'
+  );
+  assert(
+    connectionActionMenu.bounds.left >= connectionActionMenu.aside.left - 1 &&
+      connectionActionMenu.bounds.right <=
+        connectionActionMenu.aside.right + 1 &&
+      connectionActionMenu.bounds.top >= connectionActionMenu.aside.top - 1 &&
+      connectionActionMenu.bounds.bottom <=
+        connectionActionMenu.aside.bottom + 1 &&
+      connectionActionMenu.document_scroll_width <=
+        connectionActionMenu.viewport_width,
+    `saved-connection menu escaped or was clipped by the sidebar (${JSON.stringify(connectionActionMenu)})`
+  );
+  await workbenchPage.keyboard.press('ArrowDown');
+  const secondConnectionAction = await workbenchPage.evaluate(
+    () =>
+      document.activeElement?.querySelector('strong')?.textContent?.trim() ?? ''
+  );
+  assert(
+    secondConnectionAction === 'Edit connection…',
+    `ArrowDown did not move through saved-connection actions (${secondConnectionAction})`
+  );
+  await workbenchPage.screenshot({ path: connectionMenuScreenshotPath });
+  await workbenchPage.keyboard.press('Escape');
+  await connectionMenu.waitFor({ state: 'detached' });
+  assert(
+    await connectionMenuTrigger.evaluate(
+      (element) => element === document.activeElement
+    ),
+    'Escape did not return focus to the saved-connection menu trigger'
+  );
+  await connectionMenuTrigger.click();
+  await connectionMenu.waitFor();
+  await workbenchPage.locator('#query-editor-pane').click({
+    position: { x: 16, y: 16 }
+  });
+  await connectionMenu.waitFor({ state: 'detached' });
   const initialWorkbenchAlignment = await workbenchPage.evaluate(() => {
     const editor = document.querySelector('#query-editor-pane');
     const documentActions = document.querySelector('.toolbar-document');
@@ -991,6 +1091,39 @@ try {
     largeScaleAlignment.footer_bottom <= largeScaleAlignment.viewport_height,
     '150% large workbench footer escaped the viewport'
   );
+  await connectionMenuTrigger.click();
+  await connectionMenu.waitFor();
+  const largeScaleConnectionMenu = await workbenchPage.evaluate(() => {
+    const aside = document.querySelector('aside');
+    const popover = document.querySelector(
+      '.connection-profile-menu .action-menu-popover'
+    );
+    if (!aside || !popover) {
+      throw new Error('150% saved-connection menu is missing');
+    }
+    return {
+      bounds: popover.getBoundingClientRect().toJSON(),
+      aside: aside.getBoundingClientRect().toJSON(),
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth
+    };
+  });
+  assert(
+    largeScaleConnectionMenu.bounds.left >=
+      largeScaleConnectionMenu.aside.left - 1 &&
+      largeScaleConnectionMenu.bounds.right <=
+        largeScaleConnectionMenu.aside.right + 1 &&
+      largeScaleConnectionMenu.bounds.top >=
+        largeScaleConnectionMenu.aside.top - 1 &&
+      largeScaleConnectionMenu.bounds.bottom <=
+        largeScaleConnectionMenu.aside.bottom + 1 &&
+      largeScaleConnectionMenu.document_scroll_width <=
+        largeScaleConnectionMenu.viewport_width,
+    `150% saved-connection menu escaped or was clipped by the sidebar (${JSON.stringify(largeScaleConnectionMenu)})`
+  );
+  await workbenchPage.keyboard.press('Escape');
+  await connectionMenu.waitFor({ state: 'detached' });
+  largeScaleAlignment.connection_action_menu = largeScaleConnectionMenu;
   await workbenchPage.screenshot({
     path: largeScaleWorkbenchScreenshotPath,
     fullPage: true
@@ -1127,6 +1260,29 @@ try {
     exact: true
   });
   await inspectFractions.waitFor();
+  const schemaObjectMenuTrigger = workbenchPage.getByRole('button', {
+    name: 'More actions for fractions',
+    exact: true
+  });
+  await schemaObjectMenuTrigger.click();
+  const schemaObjectMenu = workbenchPage.getByRole('menu', {
+    name: 'Actions for fractions',
+    exact: true
+  });
+  await schemaObjectMenu.waitFor();
+  const schemaActionLabels = await schemaObjectMenu
+    .getByRole('menuitem')
+    .allTextContents();
+  assert(
+    schemaActionLabels
+      .map((label) => label.replace(/\s+/g, ' ').trim())
+      .join('|') ===
+      'Copy qualified name main.fractions|Start new query Open a query in this connection.',
+    `schema-object actions are incomplete (${JSON.stringify(schemaActionLabels)})`
+  );
+  await workbenchPage.screenshot({ path: schemaMenuScreenshotPath });
+  await workbenchPage.keyboard.press('Escape');
+  await schemaObjectMenu.waitFor({ state: 'detached' });
   const sessionsBeforeStructure = await workbenchPage.evaluate(
     () =>
       window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
@@ -1346,6 +1502,18 @@ try {
         opacity: getComputedStyle(element).opacity,
         has_svg: Boolean(element.querySelector('svg'))
       })),
+      schema_object_menus: Array.from(
+        document.querySelectorAll(
+          '.schema-tree .schema-object-menu .action-menu-trigger'
+        )
+      ).map((element) => ({
+        label: element.getAttribute('aria-label') ?? '',
+        text: element.textContent?.trim() ?? '',
+        opacity: getComputedStyle(
+          element.closest('.schema-object-menu') ?? element
+        ).opacity,
+        has_svg: Boolean(element.querySelector('svg'))
+      })),
       visible_tabs: visibleTabs,
       result_column_widths: resultColumnWidths,
       table_font_size: firstGridCellStyle?.fontSize ?? '',
@@ -1427,7 +1595,7 @@ try {
     `sidebar header controls do not share one compact tier (${JSON.stringify(populatedWorkbench.sidebar_header_controls)})`
   );
   assert(
-    populatedWorkbench.schema_row_actions.length >= 4 &&
+    populatedWorkbench.schema_row_actions.length === 2 &&
       populatedWorkbench.schema_row_actions.every(
         (action) =>
           action.label.length > 0 &&
@@ -1435,7 +1603,18 @@ try {
           action.opacity === '0' &&
           action.has_svg
       ),
-    `schema row actions remain visually noisy or unlabeled (${JSON.stringify(populatedWorkbench.schema_row_actions)})`
+    `schema namespace actions remain visually noisy or unlabeled (${JSON.stringify(populatedWorkbench.schema_row_actions)})`
+  );
+  assert(
+    populatedWorkbench.schema_object_menus.length >= 2 &&
+      populatedWorkbench.schema_object_menus.every(
+        (action) =>
+          action.label.length > 0 &&
+          action.text.length === 0 &&
+          action.opacity === '0' &&
+          action.has_svg
+      ),
+    `schema object menus remain visually noisy or unlabeled (${JSON.stringify(populatedWorkbench.schema_object_menus)})`
   );
   assert(
     JSON.stringify(populatedWorkbench.visible_tabs) ===
@@ -1877,27 +2056,27 @@ try {
   await workbenchPage
     .locator('aside')
     .screenshot({ path: sidebarScreenshotPath });
-  const firstSchemaObject = workbenchPage.locator('.schema-tree li').first();
+  const firstSchemaObjectMenu = workbenchPage
+    .locator('.schema-tree .schema-object-menu')
+    .first();
+  const firstSchemaObject = firstSchemaObjectMenu.locator('..');
   await firstSchemaObject.hover();
-  const schemaActionsOnHover = await firstSchemaObject
-    .locator('.schema-row-action')
-    .evaluateAll((elements) =>
-      elements.map((element) => getComputedStyle(element).opacity)
-    );
-  assert(
-    schemaActionsOnHover.length === 2 &&
-      schemaActionsOnHover.every((opacity) => opacity === '1'),
-    `schema row actions do not reveal on hover (${JSON.stringify(schemaActionsOnHover)})`
+  const schemaMenuOnHover = await firstSchemaObjectMenu.evaluate(
+    (element) => getComputedStyle(element).opacity
   );
-  const firstSchemaCopy = firstSchemaObject.getByRole('button', {
-    name: /Copy qualified name/
-  });
-  await firstSchemaCopy.focus();
   assert(
-    (await firstSchemaCopy.evaluate(
+    schemaMenuOnHover === '1',
+    `schema object menu does not reveal on hover (${schemaMenuOnHover})`
+  );
+  const firstSchemaMenuTrigger = firstSchemaObject.getByRole('button', {
+    name: /More actions for/
+  });
+  await firstSchemaMenuTrigger.focus();
+  assert(
+    (await firstSchemaObjectMenu.evaluate(
       (element) => getComputedStyle(element).opacity
     )) === '1',
-    'schema row actions do not remain visible to keyboard focus'
+    'schema object menu does not remain visible to keyboard focus'
   );
   await workbenchPage.locator('.topbar').hover();
 
@@ -2147,6 +2326,7 @@ try {
   populatedWorkbench.scale_150_percent = populatedScale150;
   populatedWorkbench.schema_structure = schemaStructure;
   populatedWorkbench.initial_alignment = initialWorkbenchAlignment;
+  populatedWorkbench.connection_action_menu = connectionActionMenu;
   populatedWorkbench.schema_namespace_layout = schemaNamespaceLayout;
 
   const createdTabsBeforeClose = await workbenchPage.evaluate(
@@ -2245,6 +2425,8 @@ try {
       'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png',
       'artifacts/ui-layout-sidebar.png',
+      'artifacts/ui-layout-connection-menu.png',
+      'artifacts/ui-layout-schema-menu.png',
       'artifacts/ui-layout-history-drawer.png'
     ]
   };
