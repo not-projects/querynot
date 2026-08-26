@@ -7,15 +7,18 @@ const releaseNotes =
   /^docs\/release\/\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?-notes\.md$/;
 
 /** @param {string} path */
-export function documentationOnlyPath(path) {
-  if (
+function safeRepositoryPath(path) {
+  return !(
     !path ||
     path.startsWith('/') ||
     path.includes('\\') ||
     /[\0-\x1f\x7f]/.test(path)
-  ) {
-    return false;
-  }
+  );
+}
+
+/** @param {string} path */
+export function documentationOnlyPath(path) {
+  if (!safeRepositoryPath(path)) return false;
   if (releaseNotes.test(path)) return false;
   return (
     /^[^/]+\.md$/.test(path) ||
@@ -23,15 +26,39 @@ export function documentationOnlyPath(path) {
     path.startsWith('evidence/') ||
     path === 'traceability/requirements.json' ||
     path === '.github/PULL_REQUEST_TEMPLATE.md' ||
+    path === '.github/pull_request_template.md' ||
     path.startsWith('.github/ISSUE_TEMPLATE/')
   );
 }
 
-/** @param {string[]} paths */
-export function requiresFullCi(paths) {
+/** @param {string} path */
+export function frontendOnlyPath(path) {
+  if (!safeRepositoryPath(path)) return false;
   return (
-    paths.length === 0 || paths.some((path) => !documentationOnlyPath(path))
+    path.startsWith('src/') ||
+    path.startsWith('static/') ||
+    path === 'index.html' ||
+    path === 'svelte.config.js' ||
+    path === 'tsconfig.json' ||
+    path === 'vite.config.ts' ||
+    path === 'scripts/check-ui-layout.mjs' ||
+    path === 'scripts/run-vitest.mjs'
   );
+}
+
+/**
+ * @param {string[]} paths
+ * @returns {'documentation' | 'frontend' | 'native'}
+ */
+export function classifyCiScope(paths) {
+  if (paths.length === 0) return 'native';
+  if (paths.every(documentationOnlyPath)) return 'documentation';
+  if (
+    paths.every((path) => documentationOnlyPath(path) || frontendOnlyPath(path))
+  ) {
+    return 'frontend';
+  }
+  return 'native';
 }
 
 function main() {
@@ -55,7 +82,7 @@ function main() {
   }
 
   if (/^0{40}$/.test(values.base)) {
-    process.stdout.write('full=true\nreason=new-history\n');
+    process.stdout.write('scope=native\nreason=new-history\n');
     return;
   }
   const baseExists = spawnSync(
@@ -64,7 +91,7 @@ function main() {
     { cwd: root }
   );
   if (baseExists.status !== 0) {
-    process.stdout.write('full=true\nreason=unavailable-base\n');
+    process.stdout.write('scope=native\nreason=unavailable-base\n');
     return;
   }
   const diff = spawnSync(
@@ -76,12 +103,16 @@ function main() {
     throw new Error('could not classify the commit change scope');
   }
   const paths = diff.stdout.toString('utf8').split('\0').filter(Boolean);
-  const full = requiresFullCi(paths);
-  process.stdout.write(
-    `full=${String(full)}\nreason=${full ? 'application-or-release-input' : 'documentation-only'}\n`
-  );
+  const scope = classifyCiScope(paths);
+  const reason =
+    scope === 'documentation'
+      ? 'documentation-only'
+      : scope === 'frontend'
+        ? 'frontend-only'
+        : 'native-or-release-input';
+  process.stdout.write(`scope=${scope}\nreason=${reason}\n`);
   process.stderr.write(
-    `classified ${paths.length} changed path${paths.length === 1 ? '' : 's'} as ${full ? 'full CI' : 'documentation-only CI'}\n`
+    `classified ${paths.length} changed path${paths.length === 1 ? '' : 's'} as ${scope} CI\n`
   );
 }
 

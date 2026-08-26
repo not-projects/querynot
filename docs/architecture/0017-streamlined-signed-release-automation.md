@@ -5,6 +5,8 @@
 - Decision owner: QueryNot product owner
 - Supersedes: Routine full draft downloads and candidate orchestration in ADR 0016
 
+> [ADR 0018](0018-tiered-ci-and-cache-ownership.md) supersedes only the ordinary-CI scope, native-matrix, and cache-ownership details below. The exact-commit candidate reuse and no-rebuild publication boundary remain authoritative.
+
 ## Context
 
 The cross-platform release boundary already validates the exact source, package inventory, checksums, updater manifest, and all seven updater signatures before creating a draft. The publication workflow then uploaded those 18 reviewed assets and downloaded every asset again to compare the same bytes. Candidate dispatch also reran ordinary frontend, browser, Rust, and desktop CI even though the exact release commit had already passed that matrix on `master`.

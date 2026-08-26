@@ -35,6 +35,8 @@ npm run check
 
 Push that single clean release-preparation commit to `master`. Its automatic `CI` run is the authoritative full frontend, browser, dependency, Rust, and desktop validation. Do not manually repeat that matrix.
 
+CI uses the tiered contract in [ADR 0018](../architecture/0018-tiered-ci-and-cache-ownership.md). Documentation-only follow-ups stay on the light path, frontend-only changes add browser and production-build coverage without desktop compilation, and every Rust, Tauri, dependency, workflow, packaging, versioned release-note, unknown, or unsafe input fails closed to native CI. Rust caches are stable per platform and purpose; a cache hit may reduce runtime but is never release evidence and never replaces a gate.
+
 ### 2. Build the signed candidate once
 
 After push CI succeeds, dispatch `Build signed release candidate` on `master`. No run ID or extra confirmation is required. The workflow automatically finds the successful push-triggered `CI` run for its exact commit, then runs only the checksum-pinned five-server gate and four signed packaging jobs.

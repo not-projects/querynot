@@ -52,7 +52,7 @@ describe('Phase 5 history and current release boundary', () => {
     const candidate = workflow.split('  release-candidate-packages:')[1];
 
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('Reuse successful full CI');
+    expect(workflow).toContain('Reuse successful exact-commit CI');
     expect(workflow).toContain('-f head_sha="$GITHUB_SHA"');
     expect(candidate).toContain('runner: windows-2022');
     expect(candidate).toContain('runner: ubuntu-22.04');
@@ -115,13 +115,57 @@ describe('Phase 5 history and current release boundary', () => {
     );
   });
 
-  it('keeps matrix build caches OS-runner specific', () => {
+  it('keeps stable purpose-specific Rust cache families', () => {
     const ci = read('.github/workflows/ci.yml');
     const candidate = read('.github/workflows/release-candidate.yml');
 
+    expect(ci).toContain('shared-key: ci-${{ matrix.cache_id }}-platform');
+    expect(ci).toContain('shared-key: ci-ubuntu-24-rust-quality');
+    expect(ci).toContain('shared-key: ci-ubuntu-24-dependency-review');
+    expect(candidate).toContain(
+      'shared-key: release-${{ matrix.cache_id }}-package'
+    );
+    expect(candidate).toContain(
+      'shared-key: release-feasibility-ubuntu-24-x64'
+    );
+    expect(`${ci}\n${candidate}`).toContain(
+      'node scripts/rust-dependency-cache-key.mjs'
+    );
+    expect(`${ci}\n${candidate}`).toContain(
+      'key: dependencies-${{ steps.rust-cache-key.outputs.key }}'
+    );
+    expect(`${ci}\n${candidate}`).toContain(
+      'add-rust-environment-hash-key: false'
+    );
+    expect(`${ci}\n${candidate}`).not.toContain('key: ${{ matrix.runner }}');
+    expect(ci.match(/uses: swatinem\/rust-cache@v2/g)).toHaveLength(3);
+    expect(ci.match(/save-if:/g)).toHaveLength(3);
+  });
+
+  it('runs tiered CI without duplicating Rust quality across every platform', () => {
+    const workflow = read('.github/workflows/ci.yml');
+
+    expect(workflow).toContain(
+      "if: needs.change-scope.outputs.scope != 'documentation'"
+    );
+    expect(workflow).toContain(
+      "if: needs.change-scope.outputs.scope != 'documentation' && needs.change-scope.outputs.scope != 'frontend'"
+    );
+    expect(workflow).toContain('rust-quality:');
+    expect(workflow).toContain('platform-compile:');
+    expect(workflow).toContain('Summarize CI scope');
+    expect(workflow).not.toContain('native-core:');
+    expect(workflow).not.toContain('desktop-linux:');
+    expect(workflow).not.toContain('desktop-windows-macos:');
+    expect(workflow.match(/cargo clippy --locked/g)).toHaveLength(1);
     expect(
-      `${ci}\n${candidate}`.match(/key: \$\{\{ matrix\.runner \}\}/g)
-    ).toHaveLength(4);
+      workflow.match(/cargo test --locked -p querynot-core/g)
+    ).toHaveLength(2);
+    expect(workflow.match(/cargo check --locked --workspace/g)).toHaveLength(1);
+    expect(workflow).toContain("if: runner.os == 'Windows'");
+    expect(workflow).toContain(
+      "save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}"
+    );
   });
 
   it('invokes the pinned Tauri CLI without a platform shell shim', () => {
