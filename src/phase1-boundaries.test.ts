@@ -131,6 +131,23 @@ describe('Phase 1 native boundaries', () => {
     expect(app).toContain('Start new query');
   });
 
+  it('separates workspace-tab commands from the focused rename flow', () => {
+    const tabs = read('src/lib/components/WorkspaceTabs.svelte');
+    const app = read('src/App.svelte');
+
+    expect(tabs).toContain('import ActionMenu');
+    expect(tabs).toContain("label: 'Rename tab…'");
+    expect(tabs).toContain("label: 'Duplicate query'");
+    expect(tabs).toContain("label: 'Move left'");
+    expect(tabs).toContain('disabled: tabIndex === 0');
+    expect(tabs).toContain('disabled: tabIndex === tabs.length - 1');
+    expect(tabs).not.toContain('<details class="tab-overflow">');
+    expect(app).toContain("| 'rename-tab'");
+    expect(app).toContain('async function submitRenameTab');
+    expect(app).toContain('Its SQL,');
+    expect(app).toContain('session, and results stay unchanged.');
+  });
+
   it('keeps scoped tabs compact and aligns offline document actions with the editor', () => {
     const tabs = read('src/lib/components/WorkspaceTabs.svelte');
     const css = read('src/styles/app.css');

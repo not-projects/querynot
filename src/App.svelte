@@ -76,6 +76,7 @@
     | 'settings'
     | 'diagnostics'
     | 'file-review'
+    | 'rename-tab'
     | 'close-tab'
     | 'destructive'
     | null;
@@ -190,6 +191,9 @@
   let deleteProfileId = $state<string | null>(null);
   let deleteHistory = $state(false);
   let deleteDrafts = $state(false);
+  let renameTabId = $state<string | null>(null);
+  let renameTabDraft = $state('');
+  let renameTabError = $state<string | null>(null);
   let closeTabId = $state<string | null>(null);
   let diagnostics = $state<DiagnosticsPreviewView | null>(null);
   let resetConfirmation = $state(false);
@@ -965,6 +969,11 @@
   async function dismissModal() {
     if (modal === 'destructive') pendingExecution = null;
     if (modal === 'file-review') fileReview = null;
+    if (modal === 'rename-tab') {
+      renameTabId = null;
+      renameTabDraft = '';
+      renameTabError = null;
+    }
     modal = null;
     profileForm.password = '';
     profileForm.client_key_passphrase = '';
@@ -1611,14 +1620,44 @@
     });
   }
 
-  function renameTab(tab: WorkspaceTabView, title: string) {
+  function renameTab(tab: WorkspaceTabView, title: string): boolean {
     const normalized = title.trim();
     if (!normalized || normalized.length > 256) {
-      statusMessage = 'Tab names must contain 1–256 characters.';
-      return;
+      return false;
     }
     tab.title = normalized;
     queueWorkspaceSave();
+    return true;
+  }
+
+  async function requestRenameTab(tab: WorkspaceTabView) {
+    renameTabId = tab.id;
+    renameTabDraft = tab.title;
+    renameTabError = null;
+    await tick();
+    await openModal('rename-tab');
+    const input =
+      dialogElement?.querySelector<HTMLInputElement>('#tab-rename-input');
+    input?.focus();
+    input?.select();
+  }
+
+  async function submitRenameTab(event: SubmitEvent) {
+    event.preventDefault();
+    const tab = renameTabId
+      ? workspace.tabs.find((candidate) => candidate.id === renameTabId)
+      : null;
+    if (!tab) {
+      renameTabError = 'This tab is no longer available.';
+      return;
+    }
+    if (!renameTab(tab, renameTabDraft)) {
+      renameTabError = 'Enter a tab name using 1–256 visible characters.';
+      return;
+    }
+    renameTabError = null;
+    statusMessage = `Renamed the tab to ${tab.title}.`;
+    await closeCompletedModal();
   }
 
   function moveTab(tabId: string, direction: -1 | 1) {
@@ -3749,7 +3788,7 @@
           onnewquery={() => void createOfflineTab(activeTab.profile_id)}
           onactivatetab={(tab) => void activateTab(tab.id)}
           onclosetab={requestCloseTab}
-          onrenametab={renameTab}
+          onrequestrename={(tab) => void requestRenameTab(tab)}
           onduplicatetab={(tab) => void duplicateQueryTab(tab)}
           onpintab={togglePinTab}
           onmovetab={(tab, direction) => moveTab(tab.id, direction)}
@@ -4162,6 +4201,7 @@
     <div
       class="modal-card"
       class:modal-wide={modal === 'settings' || modal === 'file-review'}
+      class:modal-compact={modal === 'rename-tab'}
       class:profile-dialog={modal === 'profile'}
       class:profile-file-dialog={modal === 'profile' &&
         profileForm.kind === 'sqlite'}
@@ -4654,6 +4694,49 @@
                 {editingProfileId ? 'Save changes' : 'Save connection'}
               </button>
             </div>
+          </div>
+        </form>
+      {:else if modal === 'rename-tab'}
+        {@const renamingTab = renameTabId
+          ? workspace.tabs.find((tab) => tab.id === renameTabId)
+          : null}
+        <form class="tab-rename-form" onsubmit={submitRenameTab}>
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Workspace tab</p>
+              <h2 id="modal-title">Rename tab</h2>
+            </div>
+            {@render modalCloseButton('Cancel tab rename')}
+          </div>
+          <p class="modal-copy">
+            Change the local workspace label for
+            <strong>{renamingTab?.title ?? 'this tab'}</strong>. Its SQL,
+            connection, session, and results stay unchanged.
+          </p>
+          <label class="field tab-rename-field" for="tab-rename-input">
+            <span>Tab name</span>
+            <input
+              id="tab-rename-input"
+              bind:value={renameTabDraft}
+              maxlength="256"
+              required
+              aria-invalid={Boolean(renameTabError)}
+              aria-describedby="tab-rename-help"
+            />
+            <small id="tab-rename-help"
+              >Use a concise, recognizable label.</small
+            >
+          </label>
+          {#if renameTabError}
+            <p class="inline-warning tab-rename-error" role="alert">
+              {renameTabError}
+            </p>
+          {/if}
+          <div class="modal-actions">
+            <button type="button" class="quiet" onclick={closeModal}
+              >Cancel</button
+            >
+            <button type="submit" class="primary">Rename tab</button>
           </div>
         </form>
       {:else if modal === 'delete-profile'}

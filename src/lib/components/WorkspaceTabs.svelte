@@ -3,6 +3,7 @@
   import type { Attachment } from 'svelte/attachments';
 
   import type { WorkspaceTabView } from '../generated/contracts';
+  import ActionMenu, { type ActionMenuItem } from './ActionMenu.svelte';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -14,7 +15,7 @@
     onnewquery: () => void;
     onactivatetab: (tab: WorkspaceTabView) => void;
     onclosetab: (tab: WorkspaceTabView) => void;
-    onrenametab: (tab: WorkspaceTabView, title: string) => void;
+    onrequestrename: (tab: WorkspaceTabView) => void;
     onduplicatetab: (tab: WorkspaceTabView) => void;
     onpintab: (tab: WorkspaceTabView) => void;
     onmovetab: (tab: WorkspaceTabView, direction: -1 | 1) => void;
@@ -29,7 +30,7 @@
     onnewquery,
     onactivatetab,
     onclosetab,
-    onrenametab,
+    onrequestrename,
     onduplicatetab,
     onpintab,
     onmovetab
@@ -43,6 +44,61 @@
       if (tabList === element) tabList = undefined;
     };
   };
+
+  function tabActionItems(
+    tab: WorkspaceTabView,
+    tabIndex: number
+  ): ActionMenuItem[] {
+    return [
+      {
+        id: 'rename',
+        label: 'Rename tab…',
+        description: 'Change the workspace label.',
+        icon: 'edited'
+      },
+      {
+        id: 'pin',
+        label: tab.pinned ? 'Unpin tab' : 'Pin tab',
+        description: tab.pinned
+          ? 'Return it to the movable tab group.'
+          : 'Keep it at the start of this group.',
+        icon: 'pin'
+      },
+      ...(tab.kind === 'query'
+        ? [
+            {
+              id: 'duplicate',
+              label: 'Duplicate query',
+              description: 'Copy this draft without its session.',
+              icon: 'copy' as const
+            }
+          ]
+        : []),
+      {
+        id: 'move-left',
+        label: 'Move left',
+        description: 'Move earlier in this group.',
+        icon: 'arrow-left',
+        disabled: tabIndex === 0,
+        separatorBefore: true
+      },
+      {
+        id: 'move-right',
+        label: 'Move right',
+        description: 'Move later in this group.',
+        icon: 'arrow-right',
+        disabled: tabIndex === tabs.length - 1
+      }
+    ];
+  }
+
+  function selectTabAction(tab: WorkspaceTabView, itemId: string) {
+    if (itemId === 'rename') onrequestrename(tab);
+    else if (itemId === 'pin') onpintab(tab);
+    else if (itemId === 'duplicate') onduplicatetab(tab);
+    else if (itemId === 'move-left') onmovetab(tab, -1);
+    else if (itemId === 'move-right') onmovetab(tab, 1);
+  }
 
   function handleTabKeydown(event: KeyboardEvent, tab: WorkspaceTabView) {
     const current = tabs.findIndex((candidate) => candidate.id === tab.id);
@@ -65,7 +121,7 @@
 
 <div class="workspace-tab-strip" {@attach captureTabList}>
   <div class="workspace-tabs" role="tablist" aria-label={`${groupLabel} tabs`}>
-    {#each tabs as tab (tab.id)}
+    {#each tabs as tab, tabIndex (tab.id)}
       <div class:active={activeTabId === tab.id} class="workspace-tab-item">
         <button
           type="button"
@@ -113,40 +169,16 @@
           {/if}
         </button>
 
-        <details class="tab-overflow">
-          <summary aria-label={`More actions for ${tab.title}`}
-            ><Icon name="more" /></summary
-          >
-          <div>
-            <label>
-              <span>Rename</span>
-              <input
-                value={tab.title}
-                maxlength="256"
-                aria-label={`Rename ${tab.title}`}
-                onchange={(event) =>
-                  onrenametab(
-                    tab,
-                    (event.currentTarget as HTMLInputElement).value
-                  )}
-              />
-            </label>
-            <button type="button" onclick={() => onpintab(tab)}
-              >{tab.pinned ? 'Unpin' : 'Pin'}</button
-            >
-            {#if tab.kind === 'query'}
-              <button type="button" onclick={() => onduplicatetab(tab)}
-                >Duplicate</button
-              >
-            {/if}
-            <button type="button" onclick={() => onmovetab(tab, -1)}
-              >Move left</button
-            >
-            <button type="button" onclick={() => onmovetab(tab, 1)}
-              >Move right</button
-            >
-          </div>
-        </details>
+        <ActionMenu
+          class="tab-action-menu"
+          label={`More actions for ${tab.title}`}
+          menuLabel={`Actions for ${tab.title}`}
+          align="start"
+          heading={tab.title}
+          meta={`${tab.kind === 'query' ? 'Query' : 'Object'} · ${tab.pinned ? 'Pinned' : groupLabel}`}
+          items={tabActionItems(tab, tabIndex)}
+          onselect={(itemId) => selectTabAction(tab, itemId)}
+        />
 
         <button
           type="button"
@@ -257,16 +289,11 @@
     color: var(--danger);
   }
 
-  details {
-    position: relative;
-  }
-
-  .workspace-tab-item > .tab-overflow {
+  .workspace-tab-item > :global(.tab-action-menu) {
     position: absolute;
     right: 1.35rem;
   }
 
-  summary,
   .tab-close,
   .new-tab {
     display: grid;
@@ -278,40 +305,9 @@
     background: transparent;
   }
 
-  summary {
+  .workspace-tab-item :global(.tab-action-menu .action-menu-trigger) {
     width: 1.55rem;
-    list-style: none;
-    cursor: pointer;
-  }
-
-  summary::-webkit-details-marker {
-    display: none;
-  }
-
-  details > div {
-    position: fixed;
-    z-index: 35;
-    display: grid;
-    width: 10rem;
-    margin-block-start: 0.15rem;
-    padding: 0.4rem;
-    gap: 0.25rem;
-    border: 1px solid var(--divider);
-    border-radius: 6px;
-    background: var(--surface-raised);
-    box-shadow: var(--shadow);
-  }
-
-  details label {
-    display: grid;
-    gap: 0.2rem;
-    color: var(--muted);
-    font-size: 0.62rem;
-  }
-
-  details input,
-  details button {
-    width: 100%;
+    min-width: 1.55rem;
   }
 
   .tab-close {
@@ -320,13 +316,14 @@
     width: 1.35rem;
   }
 
-  .tab-overflow summary,
+  .workspace-tab-item > :global(.tab-action-menu),
   .tab-close {
     opacity: 0;
   }
 
-  .workspace-tab-item:hover .tab-overflow summary,
-  .workspace-tab-item:focus-within .tab-overflow summary,
+  .workspace-tab-item:hover > :global(.tab-action-menu),
+  .workspace-tab-item:focus-within > :global(.tab-action-menu),
+  .workspace-tab-item > :global(.tab-action-menu.open),
   .workspace-tab-item:hover .tab-close,
   .workspace-tab-item:focus-within .tab-close,
   .workspace-tab-item.active .tab-close {

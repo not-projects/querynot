@@ -21,6 +21,7 @@
     onselect: (itemId: string) => void;
     heading?: string;
     meta?: string;
+    align?: 'start' | 'end';
     class?: string;
   }
 
@@ -31,6 +32,7 @@
     onselect,
     heading,
     meta,
+    align = 'end',
     class: className = ''
   }: Props = $props();
 
@@ -101,11 +103,12 @@
     const spaceAbove = triggerBounds.top - boundaryBounds.top - gutter;
     const openAbove =
       spaceBelow < physicalMenuHeight && spaceAbove > spaceBelow;
+    const preferredLeft =
+      align === 'start'
+        ? triggerBounds.left
+        : triggerBounds.right - physicalMenuWidth;
     const physicalLeft = Math.min(
-      Math.max(
-        triggerBounds.right - physicalMenuWidth,
-        boundaryBounds.left + gutter
-      ),
+      Math.max(preferredLeft, boundaryBounds.left + gutter),
       boundaryBounds.right - physicalMenuWidth - gutter
     );
     const preferredTop = openAbove

@@ -63,6 +63,21 @@ const schemaMenuScreenshotPath = resolve(
   'artifacts',
   'ui-layout-schema-menu.png'
 );
+const tabMenuScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-tab-menu.png'
+);
+const tabRenameScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-tab-rename.png'
+);
+const tabMenuScaleScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-tab-menu-150.png'
+);
 const largeScaleWorkbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -947,6 +962,79 @@ try {
     position: { x: 16, y: 16 }
   });
   await connectionMenu.waitFor({ state: 'detached' });
+  const tabMenuTrigger = workbenchPage.getByRole('button', {
+    name: 'More actions for fractions query',
+    exact: true
+  });
+  await tabMenuTrigger.focus();
+  await tabMenuTrigger.press('ArrowDown');
+  const tabMenu = workbenchPage.getByRole('menu', {
+    name: 'Actions for fractions query',
+    exact: true
+  });
+  await tabMenu.waitFor();
+  const tabActionMenu = await tabMenu.evaluate((menu) => ({
+    labels: Array.from(menu.querySelectorAll('[role="menuitem"]')).map(
+      (item) => item.querySelector('strong')?.textContent?.trim() ?? ''
+    ),
+    disabled: Array.from(menu.querySelectorAll('[role="menuitem"]'))
+      .filter((item) => item.hasAttribute('disabled'))
+      .map((item) => item.querySelector('strong')?.textContent?.trim() ?? ''),
+    focused:
+      document.activeElement?.querySelector('strong')?.textContent?.trim() ?? ''
+  }));
+  assert(
+    JSON.stringify(tabActionMenu.labels) ===
+      JSON.stringify([
+        'Rename tab…',
+        'Pin tab',
+        'Duplicate query',
+        'Move left',
+        'Move right'
+      ]),
+    `workspace-tab actions are incomplete (${JSON.stringify(tabActionMenu.labels)})`
+  );
+  assert(
+    JSON.stringify(tabActionMenu.disabled) === JSON.stringify(['Move left']),
+    `workspace-tab move bounds are incorrect (${JSON.stringify(tabActionMenu.disabled)})`
+  );
+  assert(
+    tabActionMenu.focused === 'Rename tab…',
+    `workspace-tab menu did not focus its first action (${tabActionMenu.focused})`
+  );
+  await workbenchPage.screenshot({ path: tabMenuScreenshotPath });
+  await tabMenu
+    .getByRole('menuitem')
+    .filter({ hasText: 'Rename tab…' })
+    .click();
+  await tabMenu.waitFor({ state: 'detached' });
+  const renameDialog = workbenchPage.getByRole('dialog');
+  await renameDialog.getByRole('heading', { name: 'Rename tab' }).waitFor();
+  const renameInput = renameDialog.getByRole('textbox', { name: 'Tab name' });
+  assert(
+    (await renameInput.inputValue()) === 'fractions query' &&
+      (await renameInput.evaluate(
+        (element) => element === document.activeElement
+      )),
+    'tab rename dialog did not preserve and focus the current title'
+  );
+  await renameInput.fill('   ');
+  await renameDialog
+    .getByRole('button', { name: 'Rename tab', exact: true })
+    .click();
+  await renameDialog.getByRole('alert').waitFor();
+  await workbenchPage.screenshot({ path: tabRenameScreenshotPath });
+  await renameInput.fill('  fractions query  ');
+  await renameDialog
+    .getByRole('button', { name: 'Rename tab', exact: true })
+    .click();
+  await renameDialog.waitFor({ state: 'detached' });
+  assert(
+    await tabMenuTrigger.evaluate(
+      (element) => element === document.activeElement
+    ),
+    'tab rename dialog did not return focus to its action trigger'
+  );
   const initialWorkbenchAlignment = await workbenchPage.evaluate(() => {
     const editor = document.querySelector('#query-editor-pane');
     const documentActions = document.querySelector('.toolbar-document');
@@ -1124,6 +1212,38 @@ try {
   await workbenchPage.keyboard.press('Escape');
   await connectionMenu.waitFor({ state: 'detached' });
   largeScaleAlignment.connection_action_menu = largeScaleConnectionMenu;
+  await tabMenuTrigger.focus();
+  await tabMenuTrigger.press('ArrowDown');
+  await tabMenu.waitFor();
+  const largeScaleTabMenu = await workbenchPage.evaluate(() => {
+    const popover = document.querySelector(
+      '.tab-action-menu .action-menu-popover'
+    );
+    if (!popover) throw new Error('150% workspace-tab menu is missing');
+    return {
+      bounds: popover.getBoundingClientRect().toJSON(),
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight,
+      document_scroll_width: document.documentElement.scrollWidth,
+      document_scroll_height: document.documentElement.scrollHeight
+    };
+  });
+  assert(
+    largeScaleTabMenu.bounds.left >= -1 &&
+      largeScaleTabMenu.bounds.right <= largeScaleTabMenu.viewport_width + 1 &&
+      largeScaleTabMenu.bounds.top >= -1 &&
+      largeScaleTabMenu.bounds.bottom <=
+        largeScaleTabMenu.viewport_height + 1 &&
+      largeScaleTabMenu.document_scroll_width <=
+        largeScaleTabMenu.viewport_width &&
+      largeScaleTabMenu.document_scroll_height <=
+        largeScaleTabMenu.viewport_height,
+    `150% workspace-tab menu escaped the viewport (${JSON.stringify(largeScaleTabMenu)})`
+  );
+  await workbenchPage.screenshot({ path: tabMenuScaleScreenshotPath });
+  await workbenchPage.keyboard.press('Escape');
+  await tabMenu.waitFor({ state: 'detached' });
+  largeScaleAlignment.tab_action_menu = largeScaleTabMenu;
   await workbenchPage.screenshot({
     path: largeScaleWorkbenchScreenshotPath,
     fullPage: true
@@ -2427,6 +2547,9 @@ try {
       'artifacts/ui-layout-sidebar.png',
       'artifacts/ui-layout-connection-menu.png',
       'artifacts/ui-layout-schema-menu.png',
+      'artifacts/ui-layout-tab-menu.png',
+      'artifacts/ui-layout-tab-rename.png',
+      'artifacts/ui-layout-tab-menu-150.png',
       'artifacts/ui-layout-history-drawer.png'
     ]
   };

@@ -1,6 +1,7 @@
 <script lang="ts">
   export type IconName =
     | 'arrow-down'
+    | 'arrow-left'
     | 'arrow-right'
     | 'arrow-up'
     | 'chevron-down'
@@ -42,6 +43,8 @@
 >
   {#if name === 'plus'}
     <path d="M12 5v14M5 12h14" />
+  {:else if name === 'arrow-left'}
+    <path d="M19 12H5m5-5-5 5 5 5" />
   {:else if name === 'arrow-right'}
     <path d="M5 12h14m-5-5 5 5-5 5" />
   {:else if name === 'close'}

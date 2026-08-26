@@ -948,6 +948,10 @@ footer {
   width: min(960px, 100%);
 }
 
+.modal-card.modal-compact {
+  width: min(440px, 100%);
+}
+
 .modal-card.profile-dialog,
 .modal-card.settings-dialog {
   height: min(820px, 100%);
@@ -979,6 +983,15 @@ footer {
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.55;
+}
+
+.tab-rename-field {
+  margin-top: 16px;
+}
+
+.tab-rename-error {
+  justify-content: flex-start;
+  margin-top: 10px;
 }
 
 .profile-form,
