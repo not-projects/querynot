@@ -79,7 +79,7 @@ The deep audit requires `QUERYNOT_UPDATER_PUBLIC_KEY` because it rechecks every 
 
 The public candidate and publication contract is fail closed. A missing server digest, extra asset, duplicate name, hash or byte-count mismatch, wrong tag/source, invalid signature, or stale confirmation stops publication.
 
-The current completed signed release is `v0.1.7`: candidate CI run `32846689294`, publication run `32850309155`, and source commit `3b2b05899737c875d20b2e48cdb0693bef0599e9`. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
+The current completed signed release is `v0.1.8`: candidate run [`32957518397`](https://github.com/not-projects/querynot/actions/runs/32957518397), publication run [`32959627927`](https://github.com/not-projects/querynot/actions/runs/32959627927), source commit `99512612a493c78619d1b5c6f291ca6ae181b00e`, and release [`v0.1.8`](https://github.com/not-projects/querynot/releases/tag/v0.1.8). The first publication attempt, run `32958798901`, stopped before publication because GitHub's tag endpoint does not expose draft releases; fix commit `4a74660ce03b8134a4c1e5c6d366695a825eb0a8` resolved drafts by numeric release ID and passed full CI run `32959078742` before the documented candidate-ID recovery override resumed publication. The first signed-channel evidence remains under `evidence/release-updates/0.1.1`.
 
 ## Rotation and recovery
 
