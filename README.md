@@ -72,9 +72,9 @@ npm run tauri -- build --no-bundle
 npm run release:validate-updater-signing
 npm run release:verify-updater-signature -- <payload> <payload.sig>
 npm run release:create-updater-manifest -- --directory <bundle-dir> --output artifacts/release-candidate/latest.json --report artifacts/release-candidate/updater-manifest-report.json
-npm run release:validate-update-candidate -- --directory <candidate-dir> --tag v0.1.8 --report artifacts/candidate-validation.json
-npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.8 --confirm publish-v0.1.8 --report artifacts/publication-plan.json
-npm run release:verify-asset-metadata -- --release <release.json> --plan <publication-plan.json> --version 0.1.8 --tag v0.1.8 --source <commit> --draft true --report <report.json>
+npm run release:validate-update-candidate -- --directory <candidate-dir> --tag v0.1.9 --report artifacts/candidate-validation.json
+npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.9 --confirm publish-v0.1.9 --report artifacts/publication-plan.json
+npm run release:verify-asset-metadata -- --release <release.json> --plan <publication-plan.json> --version 0.1.9 --tag v0.1.9 --source <commit> --draft true --report <report.json>
 ```
 
 `npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for post-release native Windows vault and accessibility observation.
