@@ -173,6 +173,15 @@ describe('Phase 6 publication boundary', () => {
     expect(workflow).toContain(
       'gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish'
     );
+    expect(workflow).toContain(
+      'gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId'
+    );
+    expect(workflow).toContain(
+      'releases/${release_id}" > artifacts/release-draft.json'
+    );
+    expect(workflow).not.toContain(
+      'releases/tags/${RELEASE_TAG}" > artifacts/release-draft.json'
+    );
     expect(workflow).not.toContain('gh release download "$RELEASE_TAG"');
     expect(workflow).toContain('release:verify-asset-metadata');
     expect(workflow).toContain('--plan artifacts/publication-plan.json');

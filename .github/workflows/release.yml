@@ -102,7 +102,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
-        run: gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > artifacts/release-draft.json
+        run: |
+          release_id="$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)"
+          test "$release_id" -gt 0
+          gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" > artifacts/release-draft.json
       - name: Verify the exact draft inventory without downloading packages
         run: >-
           npm run release:verify-asset-metadata --
