@@ -222,6 +222,22 @@
     onexport(format, currentView, nullToken, viewIndexes);
   }
 
+  function resultOutcomeLabel(): string | null {
+    const outcome = terminalState ?? (paused ? 'paused' : 'streaming');
+    const labels: Record<string, string | null> = {
+      completed: null,
+      streaming: 'Streaming',
+      paused: 'Cursor paused',
+      disposed: 'Remainder discarded',
+      cancelled: 'Cancelled',
+      expired: 'Cursor expired',
+      failed: 'Failed'
+    };
+    return Object.hasOwn(labels, outcome)
+      ? (labels[outcome] ?? null)
+      : outcome.replaceAll('_', ' ');
+  }
+
   function resizeColumn(event: PointerEvent, index: number) {
     event.preventDefault();
     const initialX = event.clientX;
@@ -577,9 +593,11 @@
 
   <div class="result-footer">
     <span>
-      Statement {statementIndex + 1} · {rows.length} rows retained ·
-      {durationMs === null ? 'timing unavailable' : `${durationMs} ms`} ·
-      {terminalState ?? (paused ? 'paused' : 'streaming')}
+      Statement {statementIndex + 1} ·
+      {durationMs === null ? 'timing unavailable' : `${durationMs} ms`}
+      {#if resultOutcomeLabel()}
+        · {resultOutcomeLabel()}
+      {/if}
       {capped ? ' · hard cap reached; full-result export unavailable' : ''}
     </span>
     <span

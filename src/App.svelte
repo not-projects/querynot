@@ -50,6 +50,7 @@
   import { updater } from './lib/updater.svelte';
   import {
     executionElapsedMs,
+    executionStateLabel,
     isExecutionActive,
     resultFromFirstBatch,
     setExecutionState,
@@ -2565,7 +2566,9 @@
       if (event.transaction && sessions[event.tab_id]) {
         sessions[event.tab_id].transaction = event.transaction;
       }
-      statusMessage = `Execution succeeded: ${execution.statementsCompleted} statement(s), ${execution.receivedRows} received row(s).`;
+      statusMessage = execution.receivedRows
+        ? 'Results are ready for review.'
+        : 'Execution completed without row results.';
     } else if (event.event_type === 'failed') {
       setExecutionState(execution, 'failed');
       execution.error = event.error;
@@ -4042,11 +4045,17 @@
                     : 'Offline draft'}
               </span>
               <span>{activeTab?.profile_label ?? 'Unbound offline file'}</span>
-              <span>
-                {activeExecution
-                  ? `${activeExecution.state} · ${activeExecution.statementsCompleted} statements · ${activeExecution.receivedRows} rows · ${executionElapsedMs(activeExecution, nowMs)} ms`
-                  : `Idle · ${shortcutModifier}+Enter run · ${shortcutModifier}+Shift+Enter run all`}
-              </span>
+              {#if activeExecution && !queryResultsVisible}
+                <span class="editor-execution-status" aria-live="polite">
+                  {executionStateLabel(activeExecution.state)} ·
+                  {activeExecution.statementsCompleted}
+                  {activeExecution.statementsCompleted === 1
+                    ? 'statement'
+                    : 'statements'} · {activeExecution.receivedRows}
+                  {activeExecution.receivedRows === 1 ? 'row' : 'rows'} ·
+                  {executionElapsedMs(activeExecution, nowMs)} ms
+                </span>
+              {/if}
             </div>
           </section>
 
@@ -4073,10 +4082,23 @@
                 <div>
                   <h2 id="results-heading">Results</h2>
                 </div>
-                <span class="results-context">
-                  {activeResults.length} result {activeResults.length === 1
-                    ? 'set'
-                    : 'sets'} · {activeExecution?.state ?? 'ready'}
+                <span class="results-context" aria-live="polite">
+                  {#if activeExecution}
+                    <strong
+                      class:successful={activeExecution.state === 'succeeded'}
+                      class:failed={activeExecution.state === 'failed'}
+                      class:pending={isExecutionActive(activeExecution.state)}
+                      >{executionStateLabel(activeExecution.state)}</strong
+                    >
+                  {/if}
+                  <span>
+                    {activeResults.length} result {activeResults.length === 1
+                      ? 'set'
+                      : 'sets'}
+                  </span>
+                  {#if activeExecution}
+                    <span>{executionElapsedMs(activeExecution, nowMs)} ms</span>
+                  {/if}
                 </span>
               </div>
               {#if activeExecution?.error}

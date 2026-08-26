@@ -128,6 +128,11 @@ const compactResultExportScreenshotPath = resolve(
   'artifacts',
   'ui-layout-result-export-720.png'
 );
+const resultsStatusScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-status.png'
+);
 const compactWorkbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -1676,8 +1681,23 @@ try {
       ),
       result_context:
         document.querySelector('.results-context')?.textContent?.trim() ?? '',
+      result_context_parts: Array.from(
+        document.querySelector('.results-context')?.children ?? []
+      ).map((element) => element.textContent?.trim() ?? ''),
       loaded_label:
         document.querySelector('.loaded-label')?.textContent?.trim() ?? '',
+      editor_status_parts: Array.from(
+        document.querySelector('.editor-status')?.children ?? []
+      ).map(
+        (element) => element.textContent?.trim().replace(/\s+/g, ' ') ?? ''
+      ),
+      result_footer_summary:
+        document
+          .querySelector('.result-footer > span:first-child')
+          ?.textContent?.trim()
+          .replace(/\s+/g, ' ') ?? '',
+      status_message:
+        document.querySelector('.status-message')?.textContent?.trim() ?? '',
       footer_shortcuts:
         document
           .querySelector('footer > span:last-child')
@@ -1982,10 +2002,18 @@ try {
   populatedWorkbench.result_copy_menu = copyRowsLayout;
   populatedWorkbench.result_export_popover = exportLayout;
   assert(
-    populatedWorkbench.result_context === '1 result set · succeeded' &&
-      populatedWorkbench.loaded_label === '1 loaded row',
-    `result status is duplicated or unclear (${populatedWorkbench.result_context}; ${populatedWorkbench.loaded_label})`
+    populatedWorkbench.result_context_parts[0] === 'Succeeded' &&
+      populatedWorkbench.result_context_parts[1] === '1 result set' &&
+      /^\d+ ms$/.test(populatedWorkbench.result_context_parts[2]) &&
+      populatedWorkbench.loaded_label === '1 loaded row' &&
+      JSON.stringify(populatedWorkbench.editor_status_parts) ===
+        JSON.stringify(['Edited query', 'Emissary']) &&
+      populatedWorkbench.result_footer_summary ===
+        'Statement 1 · timing unavailable' &&
+      populatedWorkbench.status_message === 'Results are ready for review.',
+    `result status hierarchy is duplicated or unclear (${JSON.stringify({ context: populatedWorkbench.result_context_parts, loaded: populatedWorkbench.loaded_label, editor: populatedWorkbench.editor_status_parts, statement: populatedWorkbench.result_footer_summary, status: populatedWorkbench.status_message })})`
   );
+  await workbenchPage.screenshot({ path: resultsStatusScreenshotPath });
   assert(
     populatedWorkbench.footer_shortcuts ===
       'Ctrl+Enter Run · Ctrl+Shift+Enter Run all · Ctrl+Tab Switch tabs',
@@ -2650,6 +2678,7 @@ try {
       'artifacts/ui-layout-result-copy-menu.png',
       'artifacts/ui-layout-result-export-popover.png',
       'artifacts/ui-layout-result-export-720.png',
+      'artifacts/ui-layout-results-status.png',
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-schema-150.png',

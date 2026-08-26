@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Reworked saved-connection and schema-object context actions into one compact, keyboard-navigable menu pattern with explicit destructive treatment, reliable dismissal and focus return, and positioning that remains visible outside sidebar scroll regions.
 - Reworked workspace-tab actions around the same keyboard menu pattern, with bounded move commands and a focused rename dialog that preserves the tab's SQL, connection, session, and results.
 - Split result Copy and Export disclosures by intent: Copy rows now uses the shared command menu, while Export uses a focused form popover that keeps CSV safety, NULL-token configuration, and server-order/current-view choices explicit.
+- Clarified execution and result status ownership: the Results heading carries the overall outcome and elapsed time, loaded-row counts stay with filtering, per-statement details stay in the grid footer, and the editor strip handles executions only when no Results panel exists.
 
 ## [0.1.8] - 2026-08-26
 

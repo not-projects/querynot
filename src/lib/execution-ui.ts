@@ -90,3 +90,17 @@ export function executionElapsedMs(
 ): number {
   return Math.max(0, (execution.completedAt ?? now) - execution.startedAt);
 }
+
+export function executionStateLabel(state: string): string {
+  const labels: Record<string, string> = {
+    queued: 'Queued',
+    started: 'Starting',
+    running: 'Running',
+    paused: 'Paused',
+    cancelling: 'Cancelling',
+    cancelled: 'Cancelled',
+    succeeded: 'Succeeded',
+    failed: 'Failed'
+  };
+  return labels[state] ?? state.replaceAll('_', ' ');
+}

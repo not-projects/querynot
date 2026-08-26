@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   executionElapsedMs,
+  executionStateLabel,
   isExecutionActive,
   resultFromFirstBatch,
   setExecutionState,
@@ -40,6 +41,12 @@ describe('execution UI lifecycle', () => {
     setExecutionState(execution, 'cancelled', 1_500);
     expect(isExecutionActive(execution.state)).toBe(false);
     expect(execution.completedAt).toBe(1_500);
+  });
+
+  it('presents execution states as concise user-facing labels', () => {
+    expect(executionStateLabel('queued')).toBe('Queued');
+    expect(executionStateLabel('succeeded')).toBe('Succeeded');
+    expect(executionStateLabel('retry_pending')).toBe('retry pending');
   });
 
   it('materializes the first native batch before the start response can initialize UI state', () => {

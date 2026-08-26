@@ -1761,6 +1761,36 @@ main.has-query-results .editor-workspace {
   font-weight: 550;
 }
 
+.results-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.results-context > * + *::before {
+  margin-inline: 7px;
+  color: var(--divider);
+  content: '·';
+}
+
+.results-context strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.results-context strong.successful,
+.results-context strong.pending {
+  color: var(--accent);
+}
+
+.results-context strong.failed {
+  color: var(--danger);
+}
+
+.editor-execution-status {
+  margin-left: auto;
+}
+
 .code-editor-frame {
   border-radius: 4px 4px 0 0;
 }
