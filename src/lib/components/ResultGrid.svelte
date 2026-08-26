@@ -8,6 +8,8 @@
     MIN_RESULT_COLUMN_WIDTH,
     autoResultColumnWidth
   } from '../result-grid-sizing';
+  import ActionMenu, { type ActionMenuItem } from './ActionMenu.svelte';
+  import FormPopover from './FormPopover.svelte';
   import Icon from './Icon.svelte';
   import ResultValueViewer from './ResultValueViewer.svelte';
 
@@ -189,6 +191,37 @@
     openCell(rowIndex, columnIndex);
   }
 
+  function copyActionItems(): ActionMenuItem[] {
+    return [
+      {
+        id: 'visible',
+        label: 'Copy visible rows',
+        description: `${viewIndexes.length} rows in the current filter and order.`,
+        icon: 'copy'
+      },
+      {
+        id: 'headers',
+        label: 'Copy with headers',
+        description: 'Add column names as the first row.',
+        icon: 'table'
+      }
+    ];
+  }
+
+  function selectCopyAction(itemId: string) {
+    if (itemId === 'visible') void copyRows(false, false);
+    else if (itemId === 'headers') void copyRows(true, false);
+  }
+
+  function exportResult(
+    close: (restoreFocus?: boolean) => void,
+    format: 'csv' | 'json',
+    currentView: boolean
+  ) {
+    close();
+    onexport(format, currentView, nullToken, viewIndexes);
+  }
+
   function resizeColumn(event: PointerEvent, index: number) {
     event.preventDefault();
     const initialX = event.clientX;
@@ -307,21 +340,17 @@
       </span>
     </div>
     <div class="result-actions" role="group" aria-label="Result actions">
-      <details class="action-options copy-options" name="result-action-menu">
-        <summary>
-          <Icon name="copy" size={13} />
-          Copy rows
-          <Icon name="chevron-down" size={12} />
-        </summary>
-        <div class="action-popover">
-          <button type="button" onclick={() => void copyRows(false, false)}
-            >Loaded rows</button
-          >
-          <button type="button" onclick={() => void copyRows(true, false)}
-            >Loaded rows with headers</button
-          >
-        </div>
-      </details>
+      <ActionMenu
+        class="result-copy-menu"
+        label="Copy result rows"
+        menuLabel="Actions for copying result rows"
+        triggerText="Copy rows"
+        triggerIcon="copy"
+        heading="Copy rows"
+        meta={`${viewIndexes.length} of ${rows.length} loaded rows visible`}
+        items={copyActionItems()}
+        onselect={selectCopyAction}
+      />
       <button
         type="button"
         class="open-value"
@@ -334,48 +363,75 @@
         <Icon name="view" size={13} />
         Open value
       </button>
-      <details class="action-options export-options" name="result-action-menu">
-        <summary>
-          <Icon name="export" size={13} />
-          Export
-          <Icon name="chevron-down" size={12} />
-        </summary>
-        <div class="action-popover">
-          <label class="null-token">
-            <span>CSV NULL token</span>
-            <input
-              bind:value={nullToken}
-              maxlength="64"
-              aria-label="CSV null token"
-            />
-          </label>
-          <p class="export-safety-note">
-            CSV keeps raw spreadsheet-formula prefixes. NULL uses the configured
-            token; binary values use hexadecimal in CSV and tagged base64 in
-            JSON.
-          </p>
-          <button
-            type="button"
-            onclick={() => onexport('csv', false, nullToken, viewIndexes)}
-            >Server-order CSV</button
-          >
-          <button
-            type="button"
-            onclick={() => onexport('csv', true, nullToken, viewIndexes)}
-            >Current-view CSV</button
-          >
-          <button
-            type="button"
-            onclick={() => onexport('json', false, nullToken, viewIndexes)}
-            >Server-order JSON</button
-          >
-          <button
-            type="button"
-            onclick={() => onexport('json', true, nullToken, viewIndexes)}
-            >Current-view JSON</button
-          >
-        </div>
-      </details>
+      <FormPopover
+        class="result-export-popover"
+        label="Export result rows"
+        triggerText="Export"
+        triggerIcon="export"
+        heading="Export retained rows"
+        meta={`Statement ${statementIndex + 1} · ${rows.length} loaded rows`}
+      >
+        {#snippet children(close)}
+          <section class="export-group" aria-labelledby="csv-export-heading">
+            <div class="export-group-heading">
+              <strong id="csv-export-heading">CSV</strong>
+              <span>Spreadsheet-compatible text</span>
+            </div>
+            <label class="null-token">
+              <span>NULL token</span>
+              <input
+                bind:value={nullToken}
+                maxlength="64"
+                aria-label="CSV null token"
+              />
+            </label>
+            <p class="export-safety-note">
+              Formula prefixes remain raw. Binary values use hexadecimal.
+            </p>
+            <div class="export-choices">
+              <button
+                type="button"
+                onclick={() => exportResult(close, 'csv', false)}
+              >
+                <strong>Server order</strong>
+                <small>All retained rows in received order.</small>
+              </button>
+              <button
+                type="button"
+                onclick={() => exportResult(close, 'csv', true)}
+              >
+                <strong>Current view</strong>
+                <small>Visible rows in the current filter and order.</small>
+              </button>
+            </div>
+          </section>
+          <section class="export-group" aria-labelledby="json-export-heading">
+            <div class="export-group-heading">
+              <strong id="json-export-heading">JSON</strong>
+              <span>Lossless tagged values</span>
+            </div>
+            <p class="export-safety-note">
+              Binary values use tagged base64; the CSV NULL token is ignored.
+            </p>
+            <div class="export-choices">
+              <button
+                type="button"
+                onclick={() => exportResult(close, 'json', false)}
+              >
+                <strong>Server order</strong>
+                <small>All retained rows in received order.</small>
+              </button>
+              <button
+                type="button"
+                onclick={() => exportResult(close, 'json', true)}
+              >
+                <strong>Current view</strong>
+                <small>Visible rows in the current filter and order.</small>
+              </button>
+            </div>
+          </section>
+        {/snippet}
+      </FormPopover>
     </div>
     {#if selectedRows.length > 0}
       <div class="selection-tools" aria-label="Selected row actions">
@@ -639,11 +695,6 @@
     width: 4.5rem;
   }
 
-  .action-options {
-    position: relative;
-  }
-
-  .action-options summary,
   .open-value {
     display: inline-flex;
     min-height: 28px;
@@ -657,44 +708,30 @@
     font-size: 0.7rem;
   }
 
-  .action-options summary {
-    list-style: none;
-    cursor: pointer;
-  }
-
-  .action-options summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .action-options[open] summary,
-  .action-options summary:hover {
-    border-color: var(--accent);
-  }
-
-  .action-popover {
-    position: absolute;
-    z-index: 5;
-    top: calc(100% + 4px);
-    right: 0;
+  .export-group {
     display: grid;
-    width: 15rem;
-    padding: 0.55rem;
-    gap: 0.35rem;
-    border: 1px solid var(--divider);
-    border-radius: 6px;
-    background: var(--surface-raised);
-    box-shadow: var(--shadow);
+    gap: 7px;
   }
 
-  .copy-options .action-popover {
-    width: 12.5rem;
+  .export-group + .export-group {
+    padding-top: 9px;
+    border-top: 1px solid var(--divider);
   }
 
-  .action-popover > button {
-    min-height: 28px;
-    padding: 4px 7px;
-    text-align: left;
-    font-size: 0.68rem;
+  .export-group-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .export-group-heading strong {
+    font-size: 0.7rem;
+  }
+
+  .export-group-heading span {
+    color: var(--muted);
+    font-size: 0.6rem;
   }
 
   .export-safety-note {
@@ -702,6 +739,32 @@
     color: var(--muted);
     font-size: 0.68rem;
     line-height: 1.35;
+  }
+
+  .export-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .export-choices button {
+    display: grid;
+    min-width: 0;
+    min-height: 3rem;
+    align-content: center;
+    padding: 5px 7px;
+    gap: 2px;
+    text-align: left;
+  }
+
+  .export-choices button strong {
+    font-size: 0.66rem;
+  }
+
+  .export-choices button small {
+    color: var(--muted);
+    font-size: 0.58rem;
+    line-height: 1.25;
   }
 
   .loaded-label,

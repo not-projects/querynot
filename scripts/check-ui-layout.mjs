@@ -113,6 +113,21 @@ const rowSelectionScreenshotPath = resolve(
   'artifacts',
   'ui-layout-row-selection.png'
 );
+const resultCopyMenuScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-result-copy-menu.png'
+);
+const resultExportPopoverScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-result-export-popover.png'
+);
+const compactResultExportScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-result-export-720.png'
+);
 const compactWorkbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -1657,7 +1672,7 @@ try {
       execution_group: rect('.toolbar-execution'),
       document_group: rect('.toolbar-document'),
       result_actions: controlMetrics(
-        '.result-actions > button, .result-actions > details > summary'
+        '.result-actions > button, .result-actions > * > button:first-child'
       ),
       result_context:
         document.querySelector('.results-context')?.textContent?.trim() ?? '',
@@ -1851,6 +1866,121 @@ try {
         1,
     `result actions do not form one consistent control tier (${JSON.stringify(populatedWorkbench.result_actions)})`
   );
+  const copyRowsTrigger = workbenchPage.getByRole('button', {
+    name: 'Copy result rows',
+    exact: true
+  });
+  await copyRowsTrigger.click();
+  const copyRowsMenu = workbenchPage.getByRole('menu', {
+    name: 'Actions for copying result rows'
+  });
+  const copyVisibleRows = copyRowsMenu.getByRole('menuitem', {
+    name: /Copy visible rows/
+  });
+  await copyVisibleRows.waitFor();
+  assert(
+    await copyVisibleRows.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'Copy rows did not focus its first available command'
+  );
+  const copyRowsLayout = await workbenchPage.evaluate(() => {
+    const trigger = document
+      .querySelector('.result-copy-menu > button')
+      ?.getBoundingClientRect();
+    const menu = document
+      .querySelector('.result-copy-menu .action-menu-popover')
+      ?.getBoundingClientRect();
+    if (!trigger || !menu) throw new Error('Copy rows menu is incomplete');
+    return {
+      trigger: trigger.toJSON(),
+      menu: menu.toJSON(),
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight
+    };
+  });
+  assert(
+    copyRowsLayout.menu.left >= 0 &&
+      copyRowsLayout.menu.right <= copyRowsLayout.viewport_width &&
+      copyRowsLayout.menu.top >= 0 &&
+      copyRowsLayout.menu.bottom <= copyRowsLayout.viewport_height,
+    `Copy rows menu escaped the viewport (${JSON.stringify(copyRowsLayout)})`
+  );
+  await workbenchPage.screenshot({ path: resultCopyMenuScreenshotPath });
+  await copyVisibleRows.press('Escape');
+  await copyRowsMenu.waitFor({ state: 'detached' });
+  assert(
+    await copyRowsTrigger.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'Escape did not return focus to the Copy rows trigger'
+  );
+
+  const exportTrigger = workbenchPage.getByRole('button', {
+    name: 'Export result rows',
+    exact: true
+  });
+  await exportTrigger.click();
+  const exportDialog = workbenchPage.getByRole('dialog', {
+    name: 'Export result rows'
+  });
+  const csvNullToken = exportDialog.getByRole('textbox', {
+    name: 'CSV null token'
+  });
+  await csvNullToken.waitFor();
+  assert(
+    (await csvNullToken.inputValue()) === '\\N' &&
+      (await csvNullToken.evaluate(
+        (element) => document.activeElement === element
+      )),
+    'Export did not focus its persisted CSV NULL token'
+  );
+  const exportLayout = await workbenchPage.evaluate(() => {
+    const trigger = document
+      .querySelector('.result-export-popover > button')
+      ?.getBoundingClientRect();
+    const dialog = document
+      .querySelector('.result-export-popover [role="dialog"]')
+      ?.getBoundingClientRect();
+    const choices = Array.from(
+      document.querySelectorAll(
+        '.result-export-popover .export-choices button strong'
+      )
+    ).map((element) => element.textContent?.trim() ?? '');
+    if (!trigger || !dialog) throw new Error('Export popover is incomplete');
+    return {
+      trigger: trigger.toJSON(),
+      dialog: dialog.toJSON(),
+      choices,
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight
+    };
+  });
+  assert(
+    exportLayout.dialog.left >= 0 &&
+      exportLayout.dialog.right <= exportLayout.viewport_width &&
+      exportLayout.dialog.top >= 0 &&
+      exportLayout.dialog.bottom <= exportLayout.viewport_height &&
+      JSON.stringify(exportLayout.choices) ===
+        JSON.stringify([
+          'Server order',
+          'Current view',
+          'Server order',
+          'Current view'
+        ]),
+    `Export popover lost a bounded choice (${JSON.stringify(exportLayout)})`
+  );
+  await workbenchPage.screenshot({ path: resultExportPopoverScreenshotPath });
+  await csvNullToken.press('Escape');
+  await exportDialog.waitFor({ state: 'detached' });
+  assert(
+    await exportTrigger.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'Escape did not return focus to the Export trigger'
+  );
+  populatedWorkbench.result_copy_menu = copyRowsLayout;
+  populatedWorkbench.result_export_popover = exportLayout;
   assert(
     populatedWorkbench.result_context === '1 result set · succeeded' &&
       populatedWorkbench.loaded_label === '1 loaded row',
@@ -1899,46 +2029,6 @@ try {
       /Mono|monospace/i.test(populatedWorkbench.table_font_family),
     `saved table typography did not reach the result grid (${populatedWorkbench.table_font_family} ${populatedWorkbench.table_font_size})`
   );
-
-  const copyMenu = workbenchPage.locator('.copy-options');
-  const exportMenu = workbenchPage.locator('.export-options');
-  await copyMenu.locator('summary').click();
-  await copyMenu
-    .getByRole('button', { name: 'Loaded rows', exact: true })
-    .waitFor();
-  await exportMenu.locator('summary').click();
-  await exportMenu
-    .getByText('CSV keeps raw spreadsheet-formula prefixes')
-    .waitFor();
-  const resultMenuState = await workbenchPage.evaluate(() => {
-    const copy = document.querySelector('.copy-options');
-    const exportOptions = document.querySelector('.export-options');
-    const popover = exportOptions
-      ?.querySelector('.action-popover')
-      ?.getBoundingClientRect();
-    const results = document
-      .querySelector('#query-results')
-      ?.getBoundingClientRect();
-    if (!(copy instanceof HTMLDetailsElement))
-      throw new Error('copy menu is missing');
-    if (!(exportOptions instanceof HTMLDetailsElement) || !popover || !results)
-      throw new Error('export menu geometry is incomplete');
-    return {
-      copy_open: copy.open,
-      export_open: exportOptions.open,
-      popover: popover.toJSON(),
-      results: results.toJSON()
-    };
-  });
-  assert(
-    !resultMenuState.copy_open &&
-      resultMenuState.export_open &&
-      resultMenuState.popover.left >= resultMenuState.results.left &&
-      resultMenuState.popover.right <= resultMenuState.results.right,
-    `result action menus overlap or escape the pane (${JSON.stringify(resultMenuState)})`
-  );
-  await exportMenu.locator('summary').click();
-  populatedWorkbench.result_action_menus = resultMenuState;
 
   const horizontalScrollers = await workbenchPage.evaluate(() =>
     ['.grid-shell', '.grid-header-viewport', '.grid-viewport']
@@ -2399,6 +2489,23 @@ try {
     );
     if (width === 720) {
       await workbenchPage.screenshot({ path: compactWorkbenchScreenshotPath });
+      await exportTrigger.click();
+      await exportDialog.waitFor();
+      const compactExport = await exportDialog.boundingBox();
+      assert(
+        compactExport &&
+          compactExport.x >= 0 &&
+          compactExport.x + compactExport.width <= width &&
+          compactExport.y >= 0 &&
+          compactExport.y + compactExport.height <= 800,
+        `720px Export popover escaped its viewport (${JSON.stringify(compactExport)})`
+      );
+      await workbenchPage.screenshot({
+        path: compactResultExportScreenshotPath
+      });
+      await workbenchPage.keyboard.press('Escape');
+      await exportDialog.waitFor({ state: 'detached' });
+      layout.export_popover = compactExport;
     }
     populatedResponsiveLayouts.push(layout);
   }
@@ -2540,6 +2647,9 @@ try {
       'artifacts/ui-layout-workbench-150.png',
       'artifacts/ui-layout-value-viewer.png',
       'artifacts/ui-layout-row-selection.png',
+      'artifacts/ui-layout-result-copy-menu.png',
+      'artifacts/ui-layout-result-export-popover.png',
+      'artifacts/ui-layout-result-export-720.png',
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-schema-150.png',

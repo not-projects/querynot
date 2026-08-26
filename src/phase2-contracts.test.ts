@@ -266,20 +266,24 @@ describe('Phase 2 SQLite boundaries', () => {
     });
     flushSync();
 
-    const exportOptions = document.querySelector<HTMLDetailsElement>(
-      'details.export-options'
+    const exportTrigger = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Export result rows"]'
     );
-    const exportSafety = exportOptions?.querySelector('.export-safety-note');
     expect(document.querySelector('.export-warning')).toBeNull();
     expect(
       document.querySelector('.result-set > .export-safety-note')
     ).toBeNull();
-    expect(exportOptions?.open).toBe(false);
-    expect(exportSafety?.textContent).toContain(
-      'CSV keeps raw spreadsheet-formula prefixes'
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    exportTrigger?.click();
+    flushSync();
+    const exportDialog = document.querySelector<HTMLElement>(
+      '[role="dialog"][aria-label="Export result rows"]'
     );
-    if (exportOptions) exportOptions.open = true;
-    expect(exportOptions?.open).toBe(true);
+    expect(exportDialog).not.toBeNull();
+    expect(exportDialog?.textContent).toContain('Formula prefixes remain raw');
+    expect(exportDialog?.textContent).toContain(
+      'Binary values use tagged base64'
+    );
 
     const filter = document.querySelector<HTMLInputElement>(
       'input[aria-label="Filter loaded rows"]'
@@ -290,9 +294,14 @@ describe('Phase 2 SQLite boundaries', () => {
       flushSync();
     }
     const currentViewCsv = Array.from(
-      exportOptions?.querySelectorAll<HTMLButtonElement>('button') ?? []
-    ).find((button) => button.textContent?.trim() === 'Current-view CSV');
+      exportDialog?.querySelectorAll<HTMLButtonElement>(
+        '[aria-labelledby="csv-export-heading"] button'
+      ) ?? []
+    ).find(
+      (button) => button.querySelector('strong')?.textContent === 'Current view'
+    );
     currentViewCsv?.click();
+    flushSync();
     expect(exportRequest).toEqual({
       format: 'csv',
       currentView: true,
@@ -357,6 +366,9 @@ describe('Phase 2 SQLite boundaries', () => {
 
     const gridSource = read('src/lib/components/ResultGrid.svelte');
     const viewerSource = read('src/lib/components/ResultValueViewer.svelte');
+    expect(gridSource).not.toContain('<details class="action-options');
+    expect(gridSource).toContain('menuLabel="Actions for copying result rows"');
+    expect(gridSource).toContain('label="Export result rows"');
     expect(gridSource).toContain('oncontextmenu=');
     expect(viewerSource).toContain('white-space: pre-wrap');
     expect(viewerSource).toContain('overflow-wrap: anywhere');

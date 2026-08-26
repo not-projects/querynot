@@ -2,6 +2,10 @@
   import { tick } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
 
+  import {
+    floatingPanelPosition,
+    type FloatingPanelAlign
+  } from '../floating-panel';
   import Icon, { type IconName } from './Icon.svelte';
 
   export interface ActionMenuItem {
@@ -21,7 +25,9 @@
     onselect: (itemId: string) => void;
     heading?: string;
     meta?: string;
-    align?: 'start' | 'end';
+    align?: FloatingPanelAlign;
+    triggerText?: string;
+    triggerIcon?: IconName;
     class?: string;
   }
 
@@ -33,6 +39,8 @@
     heading,
     meta,
     align = 'end',
+    triggerText,
+    triggerIcon = 'more',
     class: className = ''
   }: Props = $props();
 
@@ -78,48 +86,9 @@
 
   function placeMenu() {
     if (!root || !trigger || !menu) return;
-    const shell = root.closest<HTMLElement>('.app-shell');
-    const boundary = root.closest<HTMLElement>('[data-action-menu-boundary]');
-    const shellBounds = shell?.getBoundingClientRect() ?? {
-      left: 0,
-      top: 0
-    };
-    const boundaryBounds = boundary?.getBoundingClientRect() ?? {
-      left: 0,
-      right: window.innerWidth,
-      top: 0,
-      bottom: window.innerHeight
-    };
-    const triggerBounds = trigger.getBoundingClientRect();
-    const menuWidth = menu.offsetWidth;
-    const menuHeight = menu.offsetHeight;
-    const scale = shell
-      ? Math.max(shell.getBoundingClientRect().width / shell.offsetWidth, 0.01)
-      : 1;
-    const gutter = 6 * scale;
-    const physicalMenuWidth = menuWidth * scale;
-    const physicalMenuHeight = menuHeight * scale;
-    const spaceBelow = boundaryBounds.bottom - triggerBounds.bottom - gutter;
-    const spaceAbove = triggerBounds.top - boundaryBounds.top - gutter;
-    const openAbove =
-      spaceBelow < physicalMenuHeight && spaceAbove > spaceBelow;
-    const preferredLeft =
-      align === 'start'
-        ? triggerBounds.left
-        : triggerBounds.right - physicalMenuWidth;
-    const physicalLeft = Math.min(
-      Math.max(preferredLeft, boundaryBounds.left + gutter),
-      boundaryBounds.right - physicalMenuWidth - gutter
-    );
-    const preferredTop = openAbove
-      ? triggerBounds.top - physicalMenuHeight - gutter
-      : triggerBounds.bottom + gutter;
-    const physicalTop = Math.min(
-      Math.max(preferredTop, boundaryBounds.top + gutter),
-      boundaryBounds.bottom - physicalMenuHeight - gutter
-    );
-    menuLeft = (physicalLeft - shellBounds.left) / scale;
-    menuTop = (physicalTop - shellBounds.top) / scale;
+    const position = floatingPanelPosition(root, trigger, menu, align);
+    menuLeft = position.left;
+    menuTop = position.top;
   }
 
   async function openMenu(focus: 'first' | 'last' = 'first') {
@@ -229,6 +198,7 @@
     id={`${uid}-trigger`}
     type="button"
     class="action-menu-trigger"
+    class:labeled={Boolean(triggerText)}
     aria-label={label}
     title={label}
     aria-haspopup="menu"
@@ -238,7 +208,11 @@
     onclick={toggleMenu}
     onkeydown={handleTriggerKeydown}
   >
-    <Icon name="more" size={15} />
+    <Icon name={triggerIcon} size={triggerText ? 13 : 15} />
+    {#if triggerText}
+      <span>{triggerText}</span>
+      <Icon name="chevron-down" size={12} />
+    {/if}
   </button>
 
   {#if open}
@@ -319,6 +293,26 @@
     border-color: transparent;
     color: var(--text);
     background: var(--surface-raised);
+  }
+
+  .action-menu-trigger.labeled {
+    display: inline-flex;
+    width: auto;
+    min-width: 0;
+    min-height: 28px;
+    align-items: center;
+    padding: 4px 8px;
+    gap: 0.3rem;
+    border-color: var(--divider);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 0.7rem;
+  }
+
+  .action-menu-trigger.labeled:hover,
+  .action-menu-trigger.labeled:focus-visible,
+  .action-menu.open .action-menu-trigger.labeled {
+    border-color: var(--accent);
   }
 
   .action-menu-popover {
