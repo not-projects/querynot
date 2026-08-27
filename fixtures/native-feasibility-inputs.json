@@ -43,7 +43,7 @@
       "kind": "database_archive",
       "format": "tar.gz",
       "file": "mariadb-10.11.18-linux-systemd-x86_64.tar.gz",
-      "url": "https://linux.mathematik.tu-darmstadt.de/pub/linux/mirrors/misc/MariaDB/mariadb-10.11.18/bintar-linux-systemd-x86_64/mariadb-10.11.18-linux-systemd-x86_64.tar.gz",
+      "url": "https://archive.mariadb.org/mariadb-10.11.18/bintar-linux-systemd-x86_64/mariadb-10.11.18-linux-systemd-x86_64.tar.gz",
       "sha256": "6766e45500266d8fba2253fcf99da5aad0338cba4bf1f13a0ee03da5407b3d71",
       "vendor_digest": {
         "algorithm": "sha256",
@@ -55,7 +55,7 @@
       "kind": "database_archive",
       "format": "tar.gz",
       "file": "mariadb-11.4.12-linux-systemd-x86_64.tar.gz",
-      "url": "https://distrohub.kyiv.ua/mariadb/mariadb-11.4.12/bintar-linux-systemd-x86_64/mariadb-11.4.12-linux-systemd-x86_64.tar.gz",
+      "url": "https://archive.mariadb.org/mariadb-11.4.12/bintar-linux-systemd-x86_64/mariadb-11.4.12-linux-systemd-x86_64.tar.gz",
       "sha256": "afb81282f977c599ecbb0390588b0005b304b4e87d64615a2649ecd2bd1dc16f",
       "vendor_digest": {
         "algorithm": "sha256",
