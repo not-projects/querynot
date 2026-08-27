@@ -1833,6 +1833,69 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn cancellation_closes_a_paused_result_cursor() {
+        let (_directory, path) = fixture().await;
+        let session = SqliteSession::open(&path, false).await.unwrap();
+        let execution_id = ExecutionId::new();
+        let plan = plan_execution(
+            "WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM n WHERE value < 250) SELECT value FROM n",
+            None,
+            0,
+            true,
+            "profile",
+            "session",
+            "main",
+        )
+        .unwrap();
+        let (control_tx, control_rx) = mpsc::channel(8);
+        let (event_tx, mut event_rx) = mpsc::channel(8);
+        let running = session.clone();
+        let task = tokio::spawn(async move {
+            running
+                .execute(execution_id, plan, 100, control_rx, event_tx)
+                .await
+        });
+        let mut terminal_state = None;
+        let mut cancelled = false;
+        while let Some(event) = event_rx.recv().await {
+            match event {
+                SqliteExecutionEvent::Batch(batch) => {
+                    control_tx
+                        .send(ExecutionControl::Acknowledge {
+                            result_set_id: batch.result_set_id,
+                            sequence: batch.sequence,
+                        })
+                        .await
+                        .unwrap();
+                }
+                SqliteExecutionEvent::Paused { .. } => {
+                    assert!(session.request_cancel());
+                    control_tx.send(ExecutionControl::Cancel).await.unwrap();
+                }
+                SqliteExecutionEvent::ResultTerminal(terminal) => {
+                    terminal_state = Some(terminal.state);
+                }
+                SqliteExecutionEvent::Cancelled {
+                    confirmed: true, ..
+                } => {
+                    cancelled = true;
+                    break;
+                }
+                _ => {}
+            }
+        }
+        task.await.unwrap();
+        assert_eq!(terminal_state, Some(ResultTerminalState::Cancelled));
+        assert!(cancelled);
+        let mut connection = session.connection.lock().await;
+        let healthy: i64 = sqlx::query_scalar("SELECT 1")
+            .fetch_one(&mut *connection)
+            .await
+            .unwrap();
+        assert_eq!(healthy, 1);
+    }
+
+    #[tokio::test]
     async fn empty_result_keeps_column_metadata_and_terminal_order() {
         let (_directory, path) = fixture().await;
         let session = SqliteSession::open(&path, false).await.unwrap();

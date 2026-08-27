@@ -107,16 +107,16 @@ describe('updater release trust boundary', () => {
 
   it('creates the complete PostNot-aligned desktop feed from signed payloads', () => {
     const names = {
-      'windows-nsis-x64': 'QueryNot_0.1.10_x64-setup.exe',
-      'windows-msi-x64': 'QueryNot_0.1.10_x64_en-US.msi',
-      'linux-appimage-x64': 'QueryNot_0.1.10_amd64.AppImage',
-      'linux-deb-x64': 'QueryNot_0.1.10_amd64.deb',
-      'linux-rpm-x64': 'QueryNot-0.1.10-1.x86_64.rpm',
+      'windows-nsis-x64': 'QueryNot_0.1.11_x64-setup.exe',
+      'windows-msi-x64': 'QueryNot_0.1.11_x64_en-US.msi',
+      'linux-appimage-x64': 'QueryNot_0.1.11_amd64.AppImage',
+      'linux-deb-x64': 'QueryNot_0.1.11_amd64.deb',
+      'linux-rpm-x64': 'QueryNot-0.1.11-1.x86_64.rpm',
       'macos-updater-x64': 'QueryNot_x64.app.tar.gz',
       'macos-updater-aarch64': 'QueryNot_aarch64.app.tar.gz'
     } as const;
     const manifest = buildUpdaterManifest({
-      version: '0.1.10',
+      version: '0.1.11',
       releaseNotes: 'Release\r\nnotes\r\n',
       publishedAt: '2026-08-14T00:00:00Z',
       payloads: Object.fromEntries(
@@ -134,7 +134,7 @@ describe('updater release trust boundary', () => {
       expectedPlatformKeys
     );
     expect(manifest.platforms['windows-x86_64'].url).toContain(
-      '/not-projects/querynot/releases/download/v0.1.10/'
+      '/not-projects/querynot/releases/download/v0.1.11/'
     );
     expect(manifest.platforms['darwin-aarch64'].signature).toBe('A'.repeat(80));
     expect(manifest.notes).toBe('Release\nnotes');

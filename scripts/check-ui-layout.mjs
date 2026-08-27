@@ -870,13 +870,37 @@ try {
     if (!selected) throw new Error('completion has no selected option');
     const popupStyle = getComputedStyle(element);
     const selectedStyle = getComputedStyle(selected);
+    const bounds = element.getBoundingClientRect();
     return {
+      outside_editor: element.closest('.cm-editor') === null,
+      inherited_theme_tokens: Boolean(
+        getComputedStyle(element.parentElement).getPropertyValue(
+          '--surface-raised'
+        )
+      ),
+      visible:
+        bounds.left >= 0 &&
+        bounds.top >= 0 &&
+        bounds.right <= document.documentElement.clientWidth &&
+        bounds.bottom <= document.documentElement.clientHeight,
       popup_background: popupStyle.backgroundColor,
       popup_color: popupStyle.color,
       selected_background: selectedStyle.backgroundColor,
       selected_color: selectedStyle.color
     };
   });
+  assert(
+    completionTheme.outside_editor,
+    'completion popup is still mounted inside the clipping SQL editor'
+  );
+  assert(
+    completionTheme.inherited_theme_tokens,
+    'completion popup escaped the application theme context'
+  );
+  assert(
+    completionTheme.visible,
+    'completion popup is not fully visible in the application viewport'
+  );
   assert(
     completionTheme.popup_background !== completionTheme.popup_color,
     'dark completion popup foreground and background are indistinguishable'
@@ -949,10 +973,41 @@ try {
     `Tab did not accept the selected SQL completion (${JSON.stringify(tabBehavior.text)})`
   );
   assert(tabBehavior.focused, 'Tab moved focus out of the SQL editor');
+  await editorPage.evaluate(() => {
+    document
+      .querySelector('.app-shell')
+      ?.style.setProperty('--ui-scale', '1.5');
+  });
+  await content.press('Control+a');
+  await content.press('Backspace');
+  await content.press('s');
+  await completion.waitFor();
+  await editorPage.waitForTimeout(100);
+  const scaledCompletionPlacement = await completion.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      outside_editor: element.closest('.cm-editor') === null,
+      bounds: bounds.toJSON(),
+      viewport_width: document.documentElement.clientWidth,
+      viewport_height: document.documentElement.clientHeight
+    };
+  });
+  assert(
+    scaledCompletionPlacement.outside_editor &&
+      scaledCompletionPlacement.bounds.left >= 0 &&
+      scaledCompletionPlacement.bounds.top >= 0 &&
+      scaledCompletionPlacement.bounds.right <=
+        scaledCompletionPlacement.viewport_width &&
+      scaledCompletionPlacement.bounds.bottom <=
+        scaledCompletionPlacement.viewport_height,
+    `150% SQL completion escaped or was clipped (${JSON.stringify(scaledCompletionPlacement)})`
+  );
+  await content.press('Escape');
   editorFocus.completion_theme = completionTheme;
   editorFocus.arrow_completion_behavior = arrowBehavior;
   editorFocus.enter_completion_behavior = enterBehavior;
   editorFocus.tab_completion_behavior = tabBehavior;
+  editorFocus.scaled_completion_placement = scaledCompletionPlacement;
   await editorPage.close();
 
   const workbenchPage = await browser.newPage({
@@ -1496,6 +1551,61 @@ try {
   await workbenchPage.screenshot({ path: schemaMenuScreenshotPath });
   await workbenchPage.keyboard.press('Escape');
   await schemaObjectMenu.waitFor({ state: 'detached' });
+  const queryEditor = workbenchPage.locator('.cm-content');
+  await queryEditor.click();
+  await queryEditor.press('Control+a');
+  await queryEditor.pressSequentially('SELECT * FROM main.fractions WHERE na', {
+    delay: 20
+  });
+  const columnCompletion = workbenchPage.locator('.cm-tooltip-autocomplete');
+  await columnCompletion.waitFor();
+  const whereColumnLabels = await columnCompletion
+    .locator('.cm-completionLabel')
+    .allTextContents();
+  assert(
+    whereColumnLabels.includes('name'),
+    `WHERE completion did not lazily load referenced-table columns (${JSON.stringify(whereColumnLabels)})`
+  );
+  await queryEditor.press('Escape');
+  await queryEditor.press('Control+a');
+  await queryEditor.pressSequentially('SELECT na FROM main.fractions', {
+    delay: 20
+  });
+  await queryEditor.press('Escape');
+  await queryEditor.press('Home');
+  for (let index = 0; index < 9; index += 1) {
+    await queryEditor.press('ArrowRight');
+  }
+  await queryEditor.press('Backspace');
+  await queryEditor.press('a');
+  await columnCompletion.waitFor();
+  const selectColumnLabels = await columnCompletion
+    .locator('.cm-completionLabel')
+    .allTextContents();
+  const completionMetadataLoads = await workbenchPage.evaluate(
+    () =>
+      window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+        (entry) =>
+          entry.command === 'load_schema_object_detail' &&
+          entry.request.namespace === 'main' &&
+          entry.request.object_name === 'fractions'
+      ).length
+  );
+  assert(
+    selectColumnLabels.includes('name'),
+    `SELECT completion did not use the FROM table after the caret (${JSON.stringify(selectColumnLabels)})`
+  );
+  assert(
+    completionMetadataLoads === 1,
+    `completion did not deduplicate referenced-table metadata loads (${completionMetadataLoads})`
+  );
+  await queryEditor.press('Escape');
+  await queryEditor.press('Control+a');
+  await queryEditor.pressSequentially(
+    'SELECT * FROM "main"."fractions" LIMIT 100;',
+    { delay: 10 }
+  );
+  await queryEditor.press('Escape');
   const sessionsBeforeStructure = await workbenchPage.evaluate(
     () =>
       window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
@@ -2872,12 +2982,49 @@ try {
     `zero-row result state is incomplete (${JSON.stringify(emptyResultState)})`
   );
   await workbenchPage.screenshot({ path: emptyResultScreenshotPath });
+  await runStateQuery("SELECT 'QUERYNOT_PAUSED_STATE';");
+  await workbenchPage
+    .locator('.results-context strong.pending')
+    .getByText('Paused', { exact: true })
+    .waitFor();
+  await workbenchPage
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click();
+  await workbenchPage
+    .locator('.results-context strong')
+    .getByText('Cancelled', { exact: true })
+    .waitFor();
+  const cancelledCursorState = await workbenchPage.evaluate(() => ({
+    context: Array.from(
+      document.querySelector('.results-context')?.children ?? []
+    ).map((element) => element.textContent?.trim() ?? ''),
+    editor_readonly: document
+      .querySelector('.cm-editor')
+      ?.getAttribute('aria-readonly'),
+    cancel_disabled: document
+      .querySelector('.cancel-action')
+      ?.hasAttribute('disabled'),
+    status: document.querySelector('footer')?.textContent?.trim() ?? ''
+  }));
+  await workbenchPage.waitForTimeout(400);
+  const frozenCancellationElapsed = await workbenchPage
+    .locator('.results-context > span:last-child')
+    .textContent();
+  assert(
+    cancelledCursorState.context[0] === 'Cancelled' &&
+      cancelledCursorState.context.at(-1) === frozenCancellationElapsed &&
+      cancelledCursorState.editor_readonly !== 'true' &&
+      cancelledCursorState.cancel_disabled &&
+      cancelledCursorState.status.includes('closed the result cursor'),
+    `terminal paused-cursor cancellation did not stop timing and unlock the editor (${JSON.stringify({ cancelledCursorState, frozenCancellationElapsed })})`
+  );
   populatedWorkbench.result_states = {
     filtered_empty: 'No loaded rows match this filter',
     waiting: waitingResultState,
     rowless: rowlessResultState,
     failed: 'Synthetic permission denial for rendered state coverage.',
-    empty: emptyResultState
+    empty: emptyResultState,
+    cancelled_cursor: cancelledCursorState
   };
 
   const createdTabsBeforeClose = await workbenchPage.evaluate(

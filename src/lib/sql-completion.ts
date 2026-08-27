@@ -16,12 +16,20 @@ export interface SqlCompletionTableIdentity {
   name: string;
 }
 
+export interface SqlCompletionTableRequest {
+  namespace: string | null;
+  name: string;
+}
+
 export interface SqlContextCompletionConfig {
   dialect: string;
   engine: string;
   exactVersion: string;
   tables: readonly SqlCompletionTable[];
   selectedTable: SqlCompletionTableIdentity | null;
+  loadTableColumns?: (
+    tables: readonly SqlCompletionTableRequest[]
+  ) => Promise<readonly SqlCompletionTable[]>;
 }
 
 type CompletionArea = 'expression' | 'column-list' | 'relation' | 'other';
@@ -840,6 +848,54 @@ function columnCompletions(
   return [...options.values()];
 }
 
+function requestedColumnTables(
+  analysis: CompletionAnalysis,
+  config: SqlContextCompletionConfig
+): SqlCompletionTableRequest[] {
+  const requested = analysis.references.flatMap((reference) => {
+    const table = resolveTable(reference, config.tables);
+    if (table?.columns.length) return [];
+    return [
+      table
+        ? { namespace: table.namespace, name: table.name }
+        : { namespace: reference.namespace, name: reference.name }
+    ];
+  });
+  if (!analysis.references.length && !analysis.qualifier) {
+    const selected = selectedCompletionTable(config);
+    if (selected && !selected.columns.length) {
+      requested.push({ namespace: selected.namespace, name: selected.name });
+    } else if (!selected && config.selectedTable) {
+      requested.push(config.selectedTable);
+    }
+  }
+  const unique = new Map<string, SqlCompletionTableRequest>();
+  for (const table of requested) {
+    unique.set(
+      `${table.namespace?.toLocaleLowerCase() ?? ''}\u0000${table.name.toLocaleLowerCase()}`,
+      table
+    );
+  }
+  return [...unique.values()];
+}
+
+function withLoadedTables(
+  config: SqlContextCompletionConfig,
+  loaded: readonly SqlCompletionTable[]
+): SqlContextCompletionConfig {
+  const tables = [...config.tables];
+  for (const table of loaded) {
+    const index = tables.findIndex(
+      (candidate) =>
+        sameIdentifier(candidate.namespace, table.namespace) &&
+        sameIdentifier(candidate.name, table.name)
+    );
+    if (index >= 0) tables[index] = table;
+    else tables.push(table);
+  }
+  return { ...config, tables };
+}
+
 function functionNames(config: SqlContextCompletionConfig) {
   const mariaDb = config.engine.toLocaleLowerCase().includes('mariadb');
   if (config.dialect !== 'mysql') {
@@ -884,7 +940,9 @@ export function sqlContextCompletionSource(
   config: SqlContextCompletionConfig
 ): CompletionSource {
   const functions = functionCompletions(config);
-  return (context): CompletionResult | null => {
+  return (
+    context
+  ): CompletionResult | Promise<CompletionResult | null> | null => {
     const analysis = analyzeCompletion(context);
     if (
       !analysis ||
@@ -892,27 +950,37 @@ export function sqlContextCompletionSource(
     ) {
       return null;
     }
-    const columns = columnCompletions(analysis, config);
-    const aliases = analysis.qualifier
-      ? []
-      : analysis.references.flatMap((reference) =>
-          reference.alias
-            ? [
-                {
-                  label: reference.alias,
-                  type: 'variable',
-                  detail: 'current-statement alias',
-                  boost: 20
-                } satisfies Completion
-              ]
-            : []
-        );
-    const availableFunctions =
-      analysis.area === 'expression' && !analysis.qualifier ? functions : [];
-    const options = [...columns, ...aliases, ...availableFunctions];
-    return options.length
-      ? { from: analysis.from, options, validFor: /^[\w$]*$/u }
-      : null;
+    const resultFor = (
+      completionConfig: SqlContextCompletionConfig
+    ): CompletionResult | null => {
+      const columns = columnCompletions(analysis, completionConfig);
+      const aliases = analysis.qualifier
+        ? []
+        : analysis.references.flatMap((reference) =>
+            reference.alias
+              ? [
+                  {
+                    label: reference.alias,
+                    type: 'variable',
+                    detail: 'current-statement alias',
+                    boost: 20
+                  } satisfies Completion
+                ]
+              : []
+          );
+      const availableFunctions =
+        analysis.area === 'expression' && !analysis.qualifier ? functions : [];
+      const options = [...columns, ...aliases, ...availableFunctions];
+      return options.length
+        ? { from: analysis.from, options, validFor: /^[\w$]*$/u }
+        : null;
+    };
+    const requested = requestedColumnTables(analysis, config);
+    if (!requested.length || !config.loadTableColumns) return resultFor(config);
+    return config
+      .loadTableColumns(requested)
+      .then((loaded) => resultFor(withLoadedTables(config, loaded)))
+      .catch(() => resultFor(config));
   };
 }
 

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   relationCompletionSource,
   sqlContextCompletionSource,
+  type SqlCompletionTable,
   type SqlContextCompletionConfig
 } from './sql-completion';
 
@@ -122,6 +123,32 @@ describe('SQL context completion', () => {
     expect(labels(result)).toContain('event_name');
     expect(labels(result)).toContain('u');
     expect(labels(result)).toContain('a');
+  });
+
+  it('offers referenced-table columns in a WHERE expression', () => {
+    const result = complete('SELECT * FROM main.users WHERE em|');
+
+    expect(labels(result)).toContain('email');
+    expect(labels(result)).not.toContain('event_name');
+  });
+
+  it('loads missing referenced-table columns before returning suggestions', async () => {
+    const requested: string[] = [];
+    const result = await complete(
+      'SELECT em| FROM main.users WHERE id > 0',
+      config({
+        tables: tables.map((table) => ({ ...table, columns: [] })),
+        loadTableColumns: async (requests) => {
+          requested.push(
+            ...requests.map((table) => `${table.namespace}.${table.name}`)
+          );
+          return [tables[0]] satisfies readonly SqlCompletionTable[];
+        }
+      })
+    );
+
+    expect(requested).toEqual(['main.users']);
+    expect(labels(result)).toContain('email');
   });
 
   it('includes comma-joined statement tables', () => {

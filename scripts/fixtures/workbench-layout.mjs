@@ -75,6 +75,7 @@ tabs[1].dirty = true;
 const commandLog = [];
 let createdTabCount = 0;
 let executionCount = 0;
+let pausedExecutionId = null;
 window.__QUERYNOT_FIXTURE_COMMANDS__ = commandLog;
 
 function queryTab(id, title, profileId, profileLabel, position) {
@@ -227,6 +228,59 @@ async function emitOneRowResult(executionId) {
       statements_completed: 1,
       received_rows: 1,
       duration_ms: 16,
+      transaction: { automatic: true, certainty: 'clean' }
+    })
+  );
+}
+
+async function emitPausedResult(executionId) {
+  await emit(
+    'query_execution',
+    event('started', { execution_id: executionId })
+  );
+  await emit(
+    'query_execution',
+    event('batch', {
+      execution_id: executionId,
+      result_set_id: 'paused-layout-result',
+      sequence: 0,
+      statement_index: 0,
+      columns: [{ name: 'id', declared_type: 'INTEGER', nullable: false }],
+      rows: [{ values: [taggedValue('integer', '1')] }],
+      received_rows: 1,
+      retained_bytes: 1
+    })
+  );
+  await emit(
+    'query_execution',
+    event('paused', {
+      execution_id: executionId,
+      result_set_id: 'paused-layout-result',
+      sequence: 1,
+      received_rows: 1,
+      retained_bytes: 1
+    })
+  );
+}
+
+async function emitUnconfirmedTerminalCancellation(executionId) {
+  await emit(
+    'query_execution',
+    event('result_terminal', {
+      execution_id: executionId,
+      result_set_id: 'paused-layout-result',
+      sequence: 1,
+      received_rows: 1,
+      retained_bytes: 1,
+      terminal_state: 'cancelled'
+    })
+  );
+  await emit(
+    'query_execution',
+    event('cancelled', {
+      execution_id: executionId,
+      received_rows: 1,
+      cancel_confirmed: false,
       transaction: { automatic: true, certainty: 'clean' }
     })
   );
@@ -500,7 +554,10 @@ mockIPC(
               ? emitEmptyResult
               : request.sql.includes('QUERYNOT_FAILED_STATE')
                 ? emitFailedResult
-                : emitOneRowResult;
+                : request.sql.includes('QUERYNOT_PAUSED_STATE')
+                  ? emitPausedResult
+                  : emitOneRowResult;
+          if (emitter === emitPausedResult) pausedExecutionId = executionId;
           setTimeout(() => void emitter(executionId), 0);
           return {
             status: 'started',
@@ -512,6 +569,20 @@ mockIPC(
         }
       case 'ack_result_batch':
         return { completed: true, cancelled: false, message: 'Acknowledged.' };
+      case 'cancel_execution':
+        if (request.execution_id === pausedExecutionId) {
+          const executionId = pausedExecutionId;
+          pausedExecutionId = null;
+          setTimeout(
+            () => void emitUnconfirmedTerminalCancellation(executionId),
+            0
+          );
+        }
+        return {
+          completed: true,
+          cancelled: false,
+          message: 'Cancellation requested.'
+        };
       case 'list_history':
         return {
           entries: [

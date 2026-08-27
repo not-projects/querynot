@@ -84,6 +84,13 @@ export function setExecutionState(
     : (execution.completedAt ?? changedAt);
 }
 
+export function finishExecutionCancellation(
+  execution: ExecutionUi,
+  changedAt = Date.now()
+): void {
+  setExecutionState(execution, 'cancelled', changedAt);
+}
+
 export function executionElapsedMs(
   execution: Pick<ExecutionUi, 'startedAt' | 'completedAt'>,
   now = Date.now()

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   executionElapsedMs,
   executionStateLabel,
+  finishExecutionCancellation,
   isExecutionActive,
   resultFromFirstBatch,
   setExecutionState,
@@ -40,6 +41,17 @@ describe('execution UI lifecycle', () => {
 
     setExecutionState(execution, 'cancelled', 1_500);
     expect(isExecutionActive(execution.state)).toBe(false);
+    expect(execution.completedAt).toBe(1_500);
+  });
+
+  it('finishes cancellation when the adapter emits its terminal event even without separate server confirmation', () => {
+    const execution = runningExecution();
+    setExecutionState(execution, 'cancelling', 1_250);
+
+    finishExecutionCancellation(execution, 1_500);
+
+    expect(isExecutionActive(execution.state)).toBe(false);
+    expect(execution.state).toBe('cancelled');
     expect(execution.completedAt).toBe(1_500);
   });
 

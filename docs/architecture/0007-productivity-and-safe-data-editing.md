@@ -11,7 +11,7 @@ The initial release remains one local application window. Startup and second-ins
 
 ## Editor, schema, history, and files
 
-CodeMirror receives the adapter dialect and available schema metadata for keywords, built-ins, qualified objects, columns, and current-statement aliases. Its parse diagnostics remain advisory. Native formatting changes only the selected range or document, preserves comments through the checked formatter facade, and never executes or saves SQL.
+CodeMirror receives the adapter dialect and available schema metadata for keywords, built-ins, qualified objects, columns, and current-statement aliases. When a referenced table's columns are not loaded yet, completion requests only that object's structure through the existing native metadata session, resolves unqualified names against the query tab context, and reuses the result without opening an execution session. Tooltips are hosted at the themed application shell so the bounded editor frame cannot clip them or separate them from theme tokens. Its parse diagnostics remain advisory. Native formatting changes only the selected range or document, preserves comments through the checked formatter facade, and never executes or saves SQL.
 
 The schema explorer progressively exposes databases or schemas, tables, views, columns, primary and foreign keys, indexes, routines, defaults, generated state, and engine definitions. Dense labels are bounded; full supported detail is opt-in and always rendered as untrusted text.
 

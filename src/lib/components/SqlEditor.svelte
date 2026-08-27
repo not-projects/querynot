@@ -19,7 +19,7 @@
   } from '@codemirror/lang-sql';
   import { linter, type Diagnostic } from '@codemirror/lint';
   import { Compartment, EditorState, Prec } from '@codemirror/state';
-  import { EditorView, keymap } from '@codemirror/view';
+  import { EditorView, keymap, tooltips } from '@codemirror/view';
   import { openSearchPanel } from '@codemirror/search';
   import { untrack } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
@@ -28,7 +28,8 @@
     relationCompletionSource,
     sqlContextCompletionSource,
     type SqlCompletionTable,
-    type SqlCompletionTableIdentity
+    type SqlCompletionTableIdentity,
+    type SqlCompletionTableRequest
   } from '../sql-completion';
 
   export interface EditorRunRequest {
@@ -50,6 +51,9 @@
     completionSchema: Record<string, readonly string[]>;
     completionTables: readonly SqlCompletionTable[];
     selectedCompletionTable: SqlCompletionTableIdentity | null;
+    loadCompletionTables: (
+      tables: readonly SqlCompletionTableRequest[]
+    ) => Promise<readonly SqlCompletionTable[]>;
     dialect: string;
     engine: string;
     exactVersion: string;
@@ -67,6 +71,7 @@
     completionSchema,
     completionTables,
     selectedCompletionTable,
+    loadCompletionTables,
     dialect,
     engine,
     exactVersion,
@@ -100,7 +105,8 @@
       engine,
       exactVersion,
       tables: completionTables,
-      selectedTable: selectedCompletionTable
+      selectedTable: selectedCompletionTable,
+      loadTableColumns: loadCompletionTables
     });
     return [
       sql(config),
@@ -148,10 +154,14 @@
 
   const mountEditor: Attachment<HTMLElement> = (element) =>
     untrack(() => {
+      const tooltipParent =
+        element.closest<HTMLElement>('.app-shell') ??
+        element.ownerDocument.body;
       const state = EditorState.create({
         doc: value,
         extensions: [
           basicSetup,
+          tooltips({ parent: tooltipParent }),
           languageCompartment.of(languageExtensions()),
           wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
           editableCompartment.of(EditorView.editable.of(!disabled)),

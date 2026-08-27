@@ -51,6 +51,7 @@
   import {
     executionElapsedMs,
     executionStateLabel,
+    finishExecutionCancellation,
     isExecutionActive,
     resultFromFirstBatch,
     setExecutionState,
@@ -72,7 +73,8 @@
   } from './lib/table-staging';
   import type {
     SqlCompletionTable,
-    SqlCompletionTableIdentity
+    SqlCompletionTableIdentity,
+    SqlCompletionTableRequest
   } from './lib/sql-completion';
 
   type ModalName =
@@ -228,6 +230,15 @@
     Record<string, SqlCompletionTableIdentity>
   >({});
   let schemaObjectDetails = $state<Record<string, SchemaObjectDetailView>>({});
+  let completionObjectDetails = $state<Record<string, SchemaObjectDetailView>>(
+    {}
+  );
+  const completionObjectLoadPromises = new SvelteMap<
+    string,
+    Promise<SchemaObjectDetailView | null>
+  >();
+  const completionObjectCacheOrder = new Map<string, true>();
+  const failedCompletionObjectLoads = new Map<string, number>();
   let schemaObjectErrors = $state<Record<string, string>>({});
   let schemaObjectLoading = $state<Record<string, boolean>>({});
   let expandedNamespaces = $state<Record<string, boolean>>({});
@@ -472,6 +483,14 @@
     const profileId = activeProfile?.id;
     if (!profileId) return [];
     const columnsByObject = new Map<string, readonly string[]>();
+    const completionPrefix = `${profileId}\u0000`;
+    for (const [key, detail] of Object.entries(completionObjectDetails)) {
+      if (!key.startsWith(completionPrefix)) continue;
+      columnsByObject.set(
+        `${detail.object.namespace}\u0000${detail.object.name}`,
+        detail.columns.map((column) => column.name)
+      );
+    }
     for (const [tabId, detail] of Object.entries(schemaObjectDetails)) {
       const tab = workspace.tabs.find((candidate) => candidate.id === tabId);
       if (tab?.profile_id !== profileId) continue;
@@ -490,6 +509,22 @@
       const tab = workspace.tabs.find((candidate) => candidate.id === tabId);
       if (
         tab?.profile_id === profileId &&
+        !tables.some(
+          (table) =>
+            table.namespace === detail.object.namespace &&
+            table.name === detail.object.name
+        )
+      ) {
+        tables.push({
+          namespace: detail.object.namespace,
+          name: detail.object.name,
+          columns: detail.columns.map((column) => column.name)
+        });
+      }
+    }
+    for (const [key, detail] of Object.entries(completionObjectDetails)) {
+      if (
+        key.startsWith(completionPrefix) &&
         !tables.some(
           (table) =>
             table.namespace === detail.object.namespace &&
@@ -522,6 +557,122 @@
     }
     return schema;
   });
+
+  function completionObjectKey(
+    profileId: string,
+    namespace: string,
+    name: string
+  ) {
+    return `${profileId}\u0000${namespace}\u0000${name}`;
+  }
+
+  function cacheCompletionObjectDetail(
+    profileId: string,
+    detail: SchemaObjectDetailView
+  ) {
+    const key = completionObjectKey(
+      profileId,
+      detail.object.namespace,
+      detail.object.name
+    );
+    completionObjectCacheOrder.delete(key);
+    completionObjectCacheOrder.set(key, true);
+    if (completionObjectCacheOrder.size > 256) {
+      const oldest = completionObjectCacheOrder.keys().next().value;
+      if (oldest) {
+        completionObjectCacheOrder.delete(oldest);
+        delete completionObjectDetails[oldest];
+      }
+    }
+    completionObjectDetails[key] = detail;
+    failedCompletionObjectLoads.delete(key);
+  }
+
+  async function loadCompletionTables(
+    requests: readonly SqlCompletionTableRequest[]
+  ): Promise<readonly SqlCompletionTable[]> {
+    const profileId = activeProfile?.id;
+    const tab = activeTab;
+    if (
+      !profileId ||
+      tab?.profile_id !== profileId ||
+      !connections[profileId] ||
+      !hasNativeRuntime() ||
+      stagedTableTabForProfile(profileId)
+    ) {
+      return [];
+    }
+    const context = sessions[tab.id]?.context ?? tab.context_label;
+    const loads = new Map<string, Promise<SchemaObjectDetailView | null>>();
+    let invalidatedPreviews = false;
+    for (const request of requests.slice(0, 32)) {
+      const knownMatches = (schemaObjects[profileId] ?? []).filter(
+        (object) =>
+          object.name.localeCompare(request.name, undefined, {
+            sensitivity: 'accent'
+          }) === 0
+      );
+      const namespace =
+        request.namespace ??
+        knownMatches.find(
+          (object) =>
+            context &&
+            object.namespace.localeCompare(context, undefined, {
+              sensitivity: 'accent'
+            }) === 0
+        )?.namespace ??
+        context ??
+        (knownMatches.length === 1 ? knownMatches[0].namespace : null);
+      if (!namespace) continue;
+      const key = completionObjectKey(profileId, namespace, request.name);
+      const failedAt = failedCompletionObjectLoads.get(key);
+      if (
+        loads.has(key) ||
+        (failedAt !== undefined && Date.now() - failedAt < 5_000)
+      )
+        continue;
+      const cached = completionObjectDetails[key];
+      if (cached) {
+        loads.set(key, Promise.resolve(cached));
+        continue;
+      }
+      let load = completionObjectLoadPromises.get(key);
+      if (!load) {
+        if (!invalidatedPreviews) {
+          invalidateProfileTablePreviews(profileId);
+          invalidatedPreviews = true;
+        }
+        load = invokeCommand('load_schema_object_detail', {
+          profile_id: profileId,
+          namespace,
+          object_name: request.name
+        })
+          .then((detail) => {
+            cacheCompletionObjectDetail(profileId, detail);
+            return detail;
+          })
+          .catch(() => {
+            failedCompletionObjectLoads.set(key, Date.now());
+            if (failedCompletionObjectLoads.size > 128) {
+              const oldest = failedCompletionObjectLoads.keys().next().value;
+              if (oldest) failedCompletionObjectLoads.delete(oldest);
+            }
+            return null;
+          })
+          .finally(() => completionObjectLoadPromises.delete(key));
+        completionObjectLoadPromises.set(key, load);
+      }
+      loads.set(key, load);
+    }
+    const details = (await Promise.all(loads.values())).filter(
+      (detail): detail is SchemaObjectDetailView => Boolean(detail)
+    );
+    return details.map((detail) => ({
+      namespace: detail.object.namespace,
+      name: detail.object.name,
+      columns: detail.columns.map((column) => column.name)
+    }));
+  }
   const visibleSchemaObjects = $derived.by(() => {
     const profileId = activeProfile?.id;
     const query = schemaFilter.toLocaleLowerCase();
@@ -2414,6 +2565,7 @@
       });
       if (!workspace.tabs.some((candidate) => candidate.id === tab.id)) return;
       schemaObjectDetails[tab.id] = detail;
+      cacheCompletionObjectDetail(tab.profile_id, detail);
       if (workspace.active_tab_id === tab.id) {
         statusMessage = `${detail.stale ? 'Showing stale cached metadata' : 'Loaded structure'} for ${detail.object.namespace}.${detail.object.name}; database-provided text is rendered as plain text.`;
       }
@@ -2719,16 +2871,13 @@
           : '';
       statusMessage = `${event.error ?? 'Database execution failed safely.'}${range}${event.retryable ? ' Retry is available after resolving the cause.' : ''}`;
     } else if (event.event_type === 'cancelled') {
-      setExecutionState(
-        execution,
-        event.cancel_confirmed ? 'cancelled' : 'cancelling'
-      );
+      finishExecutionCancellation(execution);
       if (event.transaction && sessions[event.tab_id]) {
         sessions[event.tab_id].transaction = event.transaction;
       }
       statusMessage = event.cancel_confirmed
         ? 'The database confirmed cancellation; the dedicated session remains available.'
-        : 'Cancellation was requested but server confirmation is still pending.';
+        : 'The adapter reached a terminal cancellation state and closed the result cursor; separate server confirmation was unavailable.';
     } else if (event.event_type === 'started') {
       setExecutionState(execution, 'running');
     }
@@ -4087,6 +4236,7 @@
                   {completionSchema}
                   {completionTables}
                   {selectedCompletionTable}
+                  {loadCompletionTables}
                   disabled={Boolean(
                     activeExecution &&
                     ['queued', 'running', 'cancelling'].includes(

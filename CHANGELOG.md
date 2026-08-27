@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-08-27
+
+### Fixed
+
+- Mounted SQL completion popups at the themed application shell instead of inside the clipping editor frame, so suggestions remain visible past the SQL input edge.
+- Loaded missing column metadata on demand through the existing native metadata session for tables referenced anywhere in the current statement, including `WHERE` expressions and `SELECT` lists whose `FROM` clause follows the caret.
+- Treated every adapter-emitted cancellation event as terminal even when a separate MySQL-family server confirmation is unavailable, stopping the timer, closing the paused result state, and unlocking the SQL editor after cancelling a retained 10,000-row cursor.
+
 ## [0.1.10] - 2026-08-27
 
 ### Added

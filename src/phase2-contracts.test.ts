@@ -189,6 +189,8 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(editor).toContain("key: 'ArrowUp'");
     expect(editor).toContain('run: moveCompletionSelection(false)');
     expect(editor).toContain('interactionDelay: 0');
+    expect(editor).toContain("element.closest<HTMLElement>('.app-shell')");
+    expect(editor).toContain('tooltips({ parent: tooltipParent })');
     expect(editor).toContain("key: 'Enter'");
     expect(editor).toContain('return insertNewlineAndIndent(editor)');
     expect(editor).toContain(
@@ -208,6 +210,7 @@ describe('Phase 2 SQLite boundaries', () => {
 
     expect(app).toContain('executionElapsedMs(activeExecution, nowMs)');
     expect(app).toContain("setExecutionState(execution, 'succeeded')");
+    expect(app).toContain('finishExecutionCancellation(execution)');
     expect(app).toContain('resultFromFirstBatch(event)');
     expect(app).not.toContain('(results[event.tab_id] ??= [])');
     expect(lifecycle).toContain('execution.completedAt ?? now');
