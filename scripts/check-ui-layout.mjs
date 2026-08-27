@@ -861,7 +861,7 @@ try {
   await content.click();
   await content.press('Control+a');
   await content.press('Backspace');
-  await content.pressSequentially('sel', { delay: 45 });
+  await content.pressSequentially('s', { delay: 45 });
   const completion = editorPage.locator('.cm-tooltip-autocomplete');
   await completion.waitFor();
   await editorPage.waitForTimeout(100);
@@ -887,6 +887,38 @@ try {
   );
   await editorPage.screenshot({ path: autocompleteScreenshotPath });
 
+  const initialCompletionSelection = await completion
+    .locator('[aria-selected="true"]')
+    .textContent();
+  await content.press('ArrowDown');
+  const nextCompletionSelection = await completion
+    .locator('[aria-selected="true"]')
+    .textContent();
+  assert(
+    nextCompletionSelection !== initialCompletionSelection,
+    'ArrowDown did not move the SQL completion selection'
+  );
+  await content.press('ArrowUp');
+  const restoredCompletionSelection = await completion
+    .locator('[aria-selected="true"]')
+    .textContent();
+  const arrowBehavior = await editorPage.evaluate(() => ({
+    text: document.querySelector('.cm-content')?.textContent ?? '',
+    focused: document.querySelector('.cm-content') === document.activeElement
+  }));
+  assert(
+    restoredCompletionSelection === initialCompletionSelection,
+    'ArrowUp did not restore the prior SQL completion selection'
+  );
+  assert(
+    arrowBehavior.text === 's',
+    `completion arrows changed the SQL text (${JSON.stringify(arrowBehavior.text)})`
+  );
+  assert(
+    arrowBehavior.focused,
+    'completion arrows moved focus out of the SQL editor'
+  );
+
   await content.press('Enter');
   await completion.waitFor({ state: 'detached' });
   const enterBehavior = await editorPage.evaluate(() => ({
@@ -896,7 +928,7 @@ try {
     focused: document.querySelector('.cm-content') === document.activeElement
   }));
   assert(
-    enterBehavior.lines.length === 2 && enterBehavior.lines[0] === 'sel',
+    enterBehavior.lines.length === 2 && enterBehavior.lines[0] === 's',
     `Enter accepted a completion instead of inserting a line (${JSON.stringify(enterBehavior.lines)})`
   );
   assert(enterBehavior.focused, 'Enter moved focus out of the SQL editor');
@@ -918,6 +950,7 @@ try {
   );
   assert(tabBehavior.focused, 'Tab moved focus out of the SQL editor');
   editorFocus.completion_theme = completionTheme;
+  editorFocus.arrow_completion_behavior = arrowBehavior;
   editorFocus.enter_completion_behavior = enterBehavior;
   editorFocus.tab_completion_behavior = tabBehavior;
   await editorPage.close();

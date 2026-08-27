@@ -173,13 +173,22 @@ describe('Phase 2 SQLite boundaries', () => {
   it('uses CodeMirror with adapter-selected parsing, completion, diagnostics, and platform execution shortcuts', () => {
     const editor = read('src/lib/components/SqlEditor.svelte');
     expect(editor).toContain('basicSetup');
+    expect(editor).toContain('MariaSQL,');
     expect(editor).toContain('MySQL,');
     expect(editor).toContain('SQLite,');
     expect(editor).toContain('schemaCompletionSource');
-    expect(editor).toContain("dialect === 'mysql' ? MySQL : SQLite");
+    expect(editor).toContain('sqlContextCompletionSource');
+    expect(editor).toContain('relationCompletionSource');
+    expect(editor).toContain("dialect === 'mysql'");
+    expect(editor).toContain("includes('mariadb')");
     expect(editor).toContain('syntaxTree(editor.state)');
     expect(editor).toContain('defaultKeymap: false');
     expect(editor).toContain("{ key: 'Tab', run: acceptCompletion }");
+    expect(editor).toContain("key: 'ArrowDown'");
+    expect(editor).toContain('run: moveCompletionSelection(true)');
+    expect(editor).toContain("key: 'ArrowUp'");
+    expect(editor).toContain('run: moveCompletionSelection(false)');
+    expect(editor).toContain('interactionDelay: 0');
     expect(editor).toContain("key: 'Enter'");
     expect(editor).toContain('return insertNewlineAndIndent(editor)');
     expect(editor).toContain(

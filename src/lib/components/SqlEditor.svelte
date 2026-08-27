@@ -4,12 +4,13 @@
     acceptCompletion,
     autocompletion,
     closeCompletion,
-    type CompletionContext,
-    type CompletionResult
+    moveCompletionSelection,
+    startCompletion
   } from '@codemirror/autocomplete';
   import { indentWithTab, insertNewlineAndIndent } from '@codemirror/commands';
   import { syntaxTree } from '@codemirror/language';
   import {
+    MariaSQL,
     MySQL,
     SQLite,
     keywordCompletionSource,
@@ -23,6 +24,12 @@
   import { untrack } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
   import { isMacPlatform, primaryAriaModifier } from '../platform';
+  import {
+    relationCompletionSource,
+    sqlContextCompletionSource,
+    type SqlCompletionTable,
+    type SqlCompletionTableIdentity
+  } from '../sql-completion';
 
   export interface EditorRunRequest {
     selectionStart: number | null;
@@ -41,7 +48,11 @@
     value: string;
     wordWrap: boolean;
     completionSchema: Record<string, readonly string[]>;
+    completionTables: readonly SqlCompletionTable[];
+    selectedCompletionTable: SqlCompletionTableIdentity | null;
     dialect: string;
+    engine: string;
+    exactVersion: string;
     disabled?: boolean;
     onchange: (value: string) => void;
     onrun: (request: EditorRunRequest) => void;
@@ -54,7 +65,11 @@
     value,
     wordWrap,
     completionSchema,
+    completionTables,
+    selectedCompletionTable,
     dialect,
+    engine,
+    exactVersion,
     disabled = false,
     onchange,
     onrun,
@@ -72,48 +87,29 @@
   const editorPrimaryModifier = macPrimaryShortcuts ? 'Cmd' : 'Ctrl';
   const ariaPrimaryModifier = primaryAriaModifier(macPrimaryShortcuts);
 
-  function aliasCompletion(
-    context: CompletionContext
-  ): CompletionResult | null {
-    const statementStart = Math.max(
-      context.state.doc.toString().lastIndexOf(';', context.pos - 1) + 1,
-      0
-    );
-    const statement = context.state.sliceDoc(statementStart, context.pos);
-    const aliases: string[] = [];
-    const pattern =
-      /\b(?:FROM|JOIN)\s+(?:[`"\w]+\.)?[`"\w]+\s+(?:AS\s+)?([A-Za-z_][\w$]*)/giu;
-    for (const match of statement.matchAll(pattern)) {
-      if (!aliases.includes(match[1])) aliases.push(match[1]);
-    }
-    const word = context.matchBefore(/[\w$]*/);
-    if (
-      !word ||
-      (word.from === word.to && !context.explicit) ||
-      aliases.length === 0
-    ) {
-      return null;
-    }
-    return {
-      from: word.from,
-      options: aliases.map((label) => ({
-        label,
-        type: 'variable',
-        detail: 'current-statement alias'
-      }))
-    };
-  }
-
   function languageExtensions() {
-    const sqlDialect = dialect === 'mysql' ? MySQL : SQLite;
+    const sqlDialect =
+      dialect === 'mysql'
+        ? engine.toLocaleLowerCase().includes('mariadb')
+          ? MariaSQL
+          : MySQL
+        : SQLite;
     const config = { dialect: sqlDialect, schema: completionSchema };
+    const contextualCompletion = sqlContextCompletionSource({
+      dialect,
+      engine,
+      exactVersion,
+      tables: completionTables,
+      selectedTable: selectedCompletionTable
+    });
     return [
       sql(config),
       autocompletion({
         defaultKeymap: false,
+        interactionDelay: 0,
         override: [
-          aliasCompletion,
-          schemaCompletionSource(config),
+          contextualCompletion,
+          relationCompletionSource(schemaCompletionSource(config)),
           keywordCompletionSource(sqlDialect)
         ]
       })
@@ -190,6 +186,24 @@
                   closeCompletion(editor);
                   return insertNewlineAndIndent(editor);
                 }
+              },
+              { key: 'Ctrl-Space', run: startCompletion },
+              { key: 'Escape', run: closeCompletion },
+              {
+                key: 'ArrowDown',
+                run: moveCompletionSelection(true)
+              },
+              {
+                key: 'ArrowUp',
+                run: moveCompletionSelection(false)
+              },
+              {
+                key: 'PageDown',
+                run: moveCompletionSelection(true, 'page')
+              },
+              {
+                key: 'PageUp',
+                run: moveCompletionSelection(false, 'page')
               },
               { key: 'Tab', run: acceptCompletion },
               indentWithTab
@@ -318,7 +332,7 @@
 <div
   class="sql-editor-host"
   aria-label={`${dialect === 'mysql' ? 'MySQL-family' : 'SQLite'} SQL editor`}
-  aria-keyshortcuts={`Tab ${ariaPrimaryModifier}+Enter ${ariaPrimaryModifier}+Shift+Enter ${ariaPrimaryModifier}+Period`}
+  aria-keyshortcuts={`Tab ArrowDown ArrowUp PageDown PageUp Control+Space ${ariaPrimaryModifier}+Enter ${ariaPrimaryModifier}+Shift+Enter ${ariaPrimaryModifier}+Period`}
   {@attach mountEditor}
 ></div>
 

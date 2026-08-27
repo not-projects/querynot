@@ -3275,7 +3275,7 @@ dependencies = [
 
 [[package]]
 name = "querynot"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "base64 0.22.1",
  "querynot-core",
@@ -3295,7 +3295,7 @@ dependencies = [
 
 [[package]]
 name = "querynot-core"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "base64 0.22.1",
  "futures-util",
@@ -3317,7 +3317,7 @@ dependencies = [
 
 [[package]]
 name = "querynot-fixture-harness"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "futures-util",
  "querynot-core",

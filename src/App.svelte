@@ -70,6 +70,10 @@
     type StagedMutationCell,
     type StagedTableMutation
   } from './lib/table-staging';
+  import type {
+    SqlCompletionTable,
+    SqlCompletionTableIdentity
+  } from './lib/sql-completion';
 
   type ModalName =
     | 'profile'
@@ -220,7 +224,9 @@
   let schemaNamespaces = $state<Record<string, SchemaNamespaceView[]>>({});
   let schemaObjects = $state<Record<string, SchemaObjectView[]>>({});
   let schemaStates = $state<Record<string, SchemaLoadState>>({});
-  let selectedSchemaObject = $state<SchemaObjectDetailView | null>(null);
+  let selectedSchemaObjectIds = $state<
+    Record<string, SqlCompletionTableIdentity>
+  >({});
   let schemaObjectDetails = $state<Record<string, SchemaObjectDetailView>>({});
   let schemaObjectErrors = $state<Record<string, string>>({});
   let schemaObjectLoading = $state<Record<string, boolean>>({});
@@ -462,20 +468,56 @@
           (activeConnection ? 'loading' : 'disconnected'))
       : 'disconnected'
   );
-  const completionSchema = $derived.by(() => {
+  const completionTables = $derived.by<SqlCompletionTable[]>(() => {
     const profileId = activeProfile?.id;
-    if (!profileId) return {} as Record<string, readonly string[]>;
+    if (!profileId) return [];
+    const columnsByObject = new Map<string, readonly string[]>();
+    for (const [tabId, detail] of Object.entries(schemaObjectDetails)) {
+      const tab = workspace.tabs.find((candidate) => candidate.id === tabId);
+      if (tab?.profile_id !== profileId) continue;
+      columnsByObject.set(
+        `${detail.object.namespace}\u0000${detail.object.name}`,
+        detail.columns.map((column) => column.name)
+      );
+    }
+    const tables = (schemaObjects[profileId] ?? []).map((object) => ({
+      namespace: object.namespace,
+      name: object.name,
+      columns:
+        columnsByObject.get(`${object.namespace}\u0000${object.name}`) ?? []
+    }));
+    for (const [tabId, detail] of Object.entries(schemaObjectDetails)) {
+      const tab = workspace.tabs.find((candidate) => candidate.id === tabId);
+      if (
+        tab?.profile_id === profileId &&
+        !tables.some(
+          (table) =>
+            table.namespace === detail.object.namespace &&
+            table.name === detail.object.name
+        )
+      ) {
+        tables.push({
+          namespace: detail.object.namespace,
+          name: detail.object.name,
+          columns: detail.columns.map((column) => column.name)
+        });
+      }
+    }
+    return tables;
+  });
+  const selectedCompletionTable =
+    $derived.by<SqlCompletionTableIdentity | null>(() => {
+      return activeProfile
+        ? (selectedSchemaObjectIds[activeProfile.id] ?? null)
+        : null;
+    });
+  const completionSchema = $derived.by(() => {
     const schema: Record<string, string[]> = {};
-    for (const object of schemaObjects[profileId] ?? []) {
-      const columns =
-        selectedSchemaObject?.object.name === object.name &&
-        selectedSchemaObject.object.namespace === object.namespace
-          ? selectedSchemaObject.columns.map((column) => column.name)
-          : [];
-      schema[object.name] = columns;
-      schema[`${object.namespace}.${object.name}`] = columns;
-      schema[object.namespace] = [
-        ...new Set([...(schema[object.namespace] ?? []), object.name])
+    for (const table of completionTables) {
+      schema[table.name] = [...table.columns];
+      schema[`${table.namespace}.${table.name}`] = [...table.columns];
+      schema[table.namespace] = [
+        ...new Set([...(schema[table.namespace] ?? []), table.name])
       ];
     }
     return schema;
@@ -851,6 +893,12 @@
     queueWorkspaceSave();
     if (tab.kind === 'table_data') {
       tableTabViews[tab.id] ??= 'structure';
+      if (tab.profile_id && tab.table_namespace && tab.table_name) {
+        selectedSchemaObjectIds[tab.profile_id] = {
+          namespace: tab.table_namespace,
+          name: tab.table_name
+        };
+      }
       if (
         tab.profile_id &&
         connections[tab.profile_id] &&
@@ -1283,7 +1331,7 @@
           delete tabSessionErrors[tab.id];
         }
       }
-      selectedSchemaObject = null;
+      delete selectedSchemaObjectIds[profile.id];
       statusMessage = result.message;
     });
   }
@@ -1539,7 +1587,7 @@
           const fallbackTab = workspace.tabs[0];
           if (fallbackTab) await activateTab(fallbackTab.id, false);
         }
-        selectedSchemaObject = null;
+        delete selectedSchemaObjectIds[profileId];
         await closeCompletedModal();
       }
     });
@@ -2224,6 +2272,10 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
+      selectedSchemaObjectIds[profileId] = {
+        namespace: object.namespace,
+        name: object.name
+      };
       rememberActiveTab(tab);
       const session = connections[profileId]
         ? await ensureTabSession(tab)
@@ -2362,7 +2414,6 @@
       });
       if (!workspace.tabs.some((candidate) => candidate.id === tab.id)) return;
       schemaObjectDetails[tab.id] = detail;
-      selectedSchemaObject = detail;
       if (workspace.active_tab_id === tab.id) {
         statusMessage = `${detail.stale ? 'Showing stale cached metadata' : 'Loaded structure'} for ${detail.object.namespace}.${detail.object.name}; database-provided text is rendered as plain text.`;
       }
@@ -2406,6 +2457,10 @@
       tab.position = workspace.tabs.length;
       workspace.tabs.push(tab);
       workspace.active_tab_id = tab.id;
+      selectedSchemaObjectIds[profile.id] = {
+        namespace: object.namespace,
+        name: object.name
+      };
       rememberActiveTab(tab);
       tableTabs[tab.id] = newTableUi();
       tableTabViews[tab.id] = 'structure';
@@ -2903,6 +2958,18 @@
       delete schemaObjectLoading[tabId];
       delete tabSessionErrors[tabId];
       delete tabSessionOperations[tabId];
+      const selectedObject = closingTab.profile_id
+        ? selectedSchemaObjectIds[closingTab.profile_id]
+        : null;
+      if (
+        closingTab.profile_id &&
+        closingTab.table_namespace &&
+        closingTab.table_name &&
+        selectedObject?.namespace === closingTab.table_namespace &&
+        selectedObject.name === closingTab.table_name
+      ) {
+        delete selectedSchemaObjectIds[closingTab.profile_id];
+      }
       await saveWorkspaceNow();
       statusMessage = replacementTab
         ? `Closed ${closingTab.title} and opened an empty query in the same ${closingTab.profile_label ?? 'Offline'} group.`
@@ -4015,7 +4082,11 @@
                   value={activeTab?.sql ?? ''}
                   wordWrap={displayedSettings.editor_word_wrap}
                   dialect={activeConnection?.dialect ?? 'sqlite'}
+                  engine={activeConnection?.engine ?? 'SQLite'}
+                  exactVersion={activeConnection?.exact_version ?? ''}
                   {completionSchema}
+                  {completionTables}
+                  {selectedCompletionTable}
                   disabled={Boolean(
                     activeExecution &&
                     ['queued', 'running', 'cancelling'].includes(

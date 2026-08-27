@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-08-27
+
+### Added
+
+- Extended SQL completion with expression-aware SQLite, MySQL, and MariaDB built-in functions plus loaded columns from the tables and aliases referenced by the current statement, falling back to the explicitly selected table's structure when no relation is present yet.
+
+### Fixed
+
+- Restored Arrow Up/Down and Page Up/Down navigation inside the SQL completion popup while keeping Enter as a newline and Tab as completion acceptance.
+
 ## [0.1.9] - 2026-08-26
 
 ### Changed
