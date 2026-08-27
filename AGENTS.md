@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.9 is the current live release on the signed-updater channel for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.10 is the current live release on the signed-updater channel for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon.
 
 > Query your data, not your patience.
 
@@ -50,11 +50,11 @@ Version 0.1.8 reworks Connections, Schema, and local History around one compact 
 
 Version 0.1.9 completes the next workbench redesign iteration. Saved-connection, schema-object, and workspace-tab context actions share one compact keyboard menu with bounded positioning, reliable dismissal, focus return, and explicit destructive treatment. Tab movement and rename preserve the owning connection, native session, SQL, and results. Copy and Export are separated by intent, File owns SQL document commands, and Results distinguish running, statement-only, zero-row, filter-empty, cancelled, failed, and populated outcomes without changing native execution behavior or safety boundaries.
 
-Current `master` extends SQL completion with context-scoped relation, column, alias, and engine-aware SQLite/MySQL/MariaDB function suggestions, including MySQL-version gates. Loaded statement-table metadata takes precedence, the last explicitly selected table supplies pre-`FROM` columns, Arrow/Page keys move through the popup, Tab accepts, and Enter remains a newline.
+Version 0.1.10 extends SQL completion with context-scoped relation, column, alias, and engine-aware SQLite/MySQL/MariaDB function suggestions, including MySQL-version gates. Loaded statement-table metadata takes precedence, the last explicitly selected table supplies pre-`FROM` columns, Arrow/Page keys move through the popup, Tab accepts, and Enter remains a newline.
 
 CI uses fail-closed documentation, frontend, and native scopes. Frontend-only changes retain dependency, audit, Svelte, Chromium, unit, formatting, and production-build coverage without compiling unchanged desktop code. Native and unknown changes add one Linux Rust-quality lane, Windows core tests, dependency review, and Linux x86-64, Windows x86-64, macOS Intel, and macOS Apple-silicon compile checks. Stable purpose-specific Rust caches use dependency-aware keys that ignore only workspace version bumps, are saved only by `master`, and remain separate from the signed candidate's per-target release caches and exact-commit/no-rebuild trust boundary.
 
-The current live `0.1.9` support and publication envelope is Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads under ADR 0016. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
+The current live `0.1.10` support and publication envelope is Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads under ADR 0016. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
 
 ## Verified Commands
 
