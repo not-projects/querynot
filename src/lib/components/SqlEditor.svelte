@@ -348,12 +348,12 @@
 
 <style>
   .sql-editor-host {
-    min-height: 15rem;
+    min-height: var(--sql-editor-compact-height, 5.04rem);
     height: 100%;
     overflow: hidden;
   }
 
   .sql-editor-host :global(.cm-editor) {
-    min-height: 15rem;
+    min-height: var(--sql-editor-compact-height, 5.04rem);
   }
 </style>

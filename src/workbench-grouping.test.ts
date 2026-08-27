@@ -178,6 +178,50 @@ function setupNativeWorkspace() {
             namespaces: [{ name: 'main', state: 'loaded' }],
             stale: false
           };
+        case 'load_schema_objects':
+          return {
+            profile_id: String(request.profile_id),
+            namespace: String(request.namespace),
+            objects: [
+              {
+                namespace: String(request.namespace),
+                name: 'accounts',
+                kind: 'table'
+              }
+            ],
+            stale: false
+          };
+        case 'load_schema_object_detail':
+          return {
+            object: {
+              namespace: String(request.namespace),
+              name: String(request.object_name),
+              kind: 'table'
+            },
+            columns: [
+              {
+                name: 'id',
+                declared_type: 'INTEGER',
+                nullable: false,
+                primary_key_position: 1,
+                default_expression: null,
+                generated: false
+              },
+              {
+                name: 'email',
+                declared_type: 'TEXT',
+                nullable: false,
+                primary_key_position: 0,
+                default_expression: null,
+                generated: false
+              }
+            ],
+            foreign_keys: [],
+            indexes: [],
+            definition: null,
+            routines_supported: false,
+            stale: false
+          };
         case 'open_tab_session': {
           const profileId = String(request.profile_id);
           const tabId = String(request.tab_id);
@@ -356,6 +400,12 @@ describe('Connection-scoped workbench tabs', () => {
       () => document.querySelector('.context-state.online') !== null
     );
     expect(document.querySelector('.tab-session')).toBeNull();
+    expect(commandCount(commands, 'load_schema_objects')).toBe(1);
+    expect(commandCount(commands, 'load_schema_object_detail')).toBe(1);
+    expect(
+      commands.find((entry) => entry.command === 'load_schema_object_detail')
+        ?.request
+    ).toMatchObject({ namespace: 'main', object_name: 'accounts' });
     expect(commandCount(commands, 'open_tab_session', 'query-2')).toBe(0);
     expect(commandCount(commands, 'open_tab_session', 'query-3')).toBe(0);
   });

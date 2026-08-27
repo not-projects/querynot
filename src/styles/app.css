@@ -82,6 +82,11 @@ button:disabled {
 }
 
 .app-shell {
+  /* 3.5 editor rows at 0.9rem × 1.6, including scrollbar space. */
+  --sql-editor-compact-height: 5.04rem;
+  --query-editor-pane-min-height: calc(
+    var(--sql-editor-compact-height) + 7.0625rem
+  );
   --table-font-family:
     'IBM Plex Mono', 'Cascadia Code', ui-monospace, monospace;
   --table-font-size: 13px;
@@ -407,7 +412,9 @@ main.has-query-results {
 
 main.has-query-results .editor-workspace {
   padding: 8px 10px;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows:
+    auto auto minmax(calc(var(--sql-editor-compact-height, 5.04rem) + 2px), 1fr)
+    auto;
 }
 
 .editor-heading-row {
@@ -422,7 +429,7 @@ main.has-query-results .editor-workspace {
 
 .code-editor-frame {
   width: 100%;
-  min-height: 0;
+  min-height: calc(var(--sql-editor-compact-height, 5.04rem) + 2px);
   overflow: hidden;
   border: 1px solid var(--divider);
   border-radius: 6px 6px 0 0;
@@ -1842,6 +1849,12 @@ main.has-query-results .editor-workspace {
 }
 
 @media (max-width: 900px) {
+  .app-shell {
+    --query-editor-pane-min-height: calc(
+      var(--sql-editor-compact-height) + 9.3125rem
+    );
+  }
+
   .toolbar-document {
     width: 100%;
     margin-left: 0;

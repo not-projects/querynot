@@ -1405,6 +1405,29 @@ try {
   await workbenchPage
     .getByRole('button', { name: 'Disconnect', exact: true })
     .waitFor();
+  const completionMetadataPreload = await workbenchPage.evaluate(() => ({
+    object_lists: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+      (entry) =>
+        entry.command === 'load_schema_objects' &&
+        entry.request.namespace === 'main'
+    ).length,
+    object_details: window.__QUERYNOT_FIXTURE_COMMANDS__
+      .filter(
+        (entry) =>
+          entry.command === 'load_schema_object_detail' &&
+          entry.request.namespace === 'main'
+      )
+      .map((entry) => entry.request.object_name)
+      .sort()
+  }));
+  assert(
+    completionMetadataPreload.object_lists === 1 &&
+      completionMetadataPreload.object_details.join('|') ===
+        'fraction_totals|fractions',
+    `connection did not preload current-context completion metadata (${JSON.stringify(completionMetadataPreload)})`
+  );
+  initialWorkbenchAlignment.completion_metadata_preload =
+    completionMetadataPreload;
   const sidebarSeparator = workbenchPage.locator('.sidebar-separator');
   await sidebarSeparator.waitFor();
   const measureSidebarSplit = () =>
@@ -1528,6 +1551,18 @@ try {
     exact: true
   });
   await inspectFractions.waitFor();
+  const schemaObjectListLoads = await workbenchPage.evaluate(
+    () =>
+      window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+        (entry) =>
+          entry.command === 'load_schema_objects' &&
+          entry.request.namespace === 'main'
+      ).length
+  );
+  assert(
+    schemaObjectListLoads === 1,
+    `expanding a preloaded namespace reloaded its relation list (${schemaObjectListLoads})`
+  );
   const schemaObjectMenuTrigger = workbenchPage.getByRole('button', {
     name: 'More actions for fractions',
     exact: true
@@ -1564,7 +1599,7 @@ try {
     .allTextContents();
   assert(
     whereColumnLabels.includes('name'),
-    `WHERE completion did not lazily load referenced-table columns (${JSON.stringify(whereColumnLabels)})`
+    `WHERE completion did not use preloaded referenced-table columns (${JSON.stringify(whereColumnLabels)})`
   );
   await queryEditor.press('Escape');
   await queryEditor.press('Control+a');
@@ -1597,7 +1632,7 @@ try {
   );
   assert(
     completionMetadataLoads === 1,
-    `completion did not deduplicate referenced-table metadata loads (${completionMetadataLoads})`
+    `completion did not reuse preloaded referenced-table metadata (${completionMetadataLoads})`
   );
   await queryEditor.press('Escape');
   await queryEditor.press('Control+a');
@@ -2565,6 +2600,96 @@ try {
   const split70 = await measureSplit();
   await separator.dblclick();
   const split35 = await measureSplit();
+  const separatorBounds = await separator.boundingBox();
+  const editorTop = await workbenchPage
+    .locator('#query-editor-pane')
+    .evaluate((element) => element.getBoundingClientRect().top);
+  if (!separatorBounds)
+    throw new Error('result separator pointer geometry is missing');
+  await workbenchPage.mouse.move(
+    separatorBounds.x + separatorBounds.width / 2,
+    separatorBounds.y + separatorBounds.height / 2
+  );
+  await workbenchPage.mouse.down();
+  await workbenchPage.mouse.move(
+    separatorBounds.x + separatorBounds.width / 2,
+    editorTop,
+    { steps: 4 }
+  );
+  await workbenchPage.mouse.up();
+  const pointerSplit70 = await measureSplit();
+  assert(
+    (await separator.getAttribute('aria-valuenow')) === '70' &&
+      Math.abs(pointerSplit70.editor_height - split70.editor_height) < 1 &&
+      Math.abs(pointerSplit70.results_height - split70.results_height) < 1,
+    `pointer resizing did not stop at the same 70% editor floor (${JSON.stringify(pointerSplit70)})`
+  );
+  const compactEditorSql = [
+    `SELECT '${'wide editor content '.repeat(18)}';`,
+    'SELECT 2;',
+    'SELECT 3;',
+    'SELECT 4;',
+    'SELECT 5;',
+    'SELECT 6;',
+    'SELECT 7;',
+    'SELECT 8;',
+    'SELECT 9;',
+    'SELECT 10;'
+  ].join('\n');
+  await queryEditor.click();
+  await queryEditor.press('Control+a');
+  await workbenchPage.keyboard.insertText(compactEditorSql);
+  const compactEditor = await workbenchPage.evaluate(async () => {
+    const frame = document
+      .querySelector('.code-editor-frame')
+      ?.getBoundingClientRect();
+    const editor = document
+      .querySelector('.cm-editor')
+      ?.getBoundingClientRect();
+    const scroller = document.querySelector('.cm-scroller');
+    const line = document.querySelector('.cm-line');
+    if (!frame || !editor || !(scroller instanceof HTMLElement) || !line)
+      throw new Error('compact SQL editor geometry is incomplete');
+    scroller.scrollTop = scroller.scrollHeight;
+    scroller.scrollLeft = scroller.scrollWidth;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    return {
+      frame: frame.toJSON(),
+      editor: editor.toJSON(),
+      line_height: Number.parseFloat(getComputedStyle(line).lineHeight),
+      scroller_client_height: scroller.clientHeight,
+      scroller_scroll_height: scroller.scrollHeight,
+      scroller_client_width: scroller.clientWidth,
+      scroller_scroll_width: scroller.scrollWidth,
+      scroll_top: scroller.scrollTop,
+      scroll_left: scroller.scrollLeft
+    };
+  });
+  const expectedCompactFrameHeight = compactEditor.line_height * 3.5 + 2;
+  assert(
+    Math.abs(compactEditor.frame.height - expectedCompactFrameHeight) <= 2.5,
+    `SQL editor did not stop at its three-and-a-half-row floor (${JSON.stringify(compactEditor)})`
+  );
+  assert(
+    compactEditor.editor.top >= compactEditor.frame.top + 0.5 &&
+      compactEditor.editor.bottom <= compactEditor.frame.bottom - 0.5,
+    `CodeMirror escaped its compact draggable frame (${JSON.stringify(compactEditor)})`
+  );
+  assert(
+    compactEditor.scroller_scroll_height >
+      compactEditor.scroller_client_height &&
+      compactEditor.scroller_scroll_width >
+        compactEditor.scroller_client_width &&
+      compactEditor.scroll_top > 0 &&
+      compactEditor.scroll_left > 0,
+    `compact SQL content is not scrollable in both directions (${JSON.stringify(compactEditor)})`
+  );
+  await queryEditor.press('Control+a');
+  await workbenchPage.keyboard.insertText(
+    'SELECT * FROM "main"."fractions" LIMIT 100;'
+  );
+  await separator.focus();
+  await separator.dblclick();
   assert(
     split20.results_height < split35.results_height &&
       split35.results_height < split70.results_height,
@@ -2586,7 +2711,9 @@ try {
   populatedWorkbench.split_geometry = {
     results_20_percent: split20,
     results_35_percent: split35,
-    results_70_percent: split70
+    results_70_percent: split70,
+    pointer_results_70_percent: pointerSplit70,
+    compact_sql_editor: compactEditor
   };
   await workbenchPage.screenshot({ path: workbenchScreenshotPath });
   await workbenchPage
@@ -2754,6 +2881,34 @@ try {
   const populatedResponsiveLayouts = [];
   for (const width of widths) {
     await workbenchPage.setViewportSize({ width, height: 800 });
+    await separator.focus();
+    await separator.press('End');
+    const compactEditorFloor = await workbenchPage.evaluate(() => {
+      const frame = document
+        .querySelector('.code-editor-frame')
+        ?.getBoundingClientRect();
+      const editor = document
+        .querySelector('.cm-editor')
+        ?.getBoundingClientRect();
+      const line = document.querySelector('.cm-line');
+      if (!frame || !editor || !line)
+        throw new Error('responsive SQL editor geometry is incomplete');
+      return {
+        frame: frame.toJSON(),
+        editor: editor.toJSON(),
+        line_height: Number.parseFloat(getComputedStyle(line).lineHeight)
+      };
+    });
+    assert(
+      compactEditorFloor.frame.height >=
+        compactEditorFloor.line_height * 3.5 + 1.5 &&
+        compactEditorFloor.editor.top >= compactEditorFloor.frame.top + 0.5 &&
+        compactEditorFloor.editor.bottom <=
+          compactEditorFloor.frame.bottom - 0.5,
+      `${width}px result resizing clipped the SQL editor floor (${JSON.stringify(compactEditorFloor)})`
+    );
+    await separator.focus();
+    await separator.dblclick();
     const layout = await workbenchPage.evaluate(() => {
       const main = document.querySelector('main')?.getBoundingClientRect();
       const results = document
@@ -2789,6 +2944,7 @@ try {
         ).map((element) => element.textContent?.trim() ?? '')
       };
     });
+    layout.compact_editor_floor = compactEditorFloor;
     assert(
       layout.document_scroll_width <= layout.viewport_width,
       `${width}px populated workbench has page-level horizontal overflow`

@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-08-27
+
+### Added
+
+- Preloaded the active database/schema's table and view names plus a bounded set of their columns for SQL completion when a connection or tab context becomes active, while retaining on-demand lookup for larger or temporarily unavailable catalogs.
+
+### Fixed
+
+- Kept the SQL editor scrollable at the upper result-split bound by aligning CodeMirror and the draggable workspace grid on a three-and-a-half-row minimum viewport, including horizontal-scrollbar space.
+
 ## [0.1.11] - 2026-08-27
 
 ### Fixed

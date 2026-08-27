@@ -281,7 +281,7 @@ The default journey is:
 
 **EDT-3 — Formatting.** Users can format the full document or selection. Formatting must preserve comments and must not execute or save the query automatically.
 
-**EDT-4 — Schema-aware completion.** Completion includes dialect keywords, functions, databases/schemas, tables/views, columns, aliases in the current statement, and qualified names from available metadata. Stale or unavailable metadata must not block ordinary keyword completion.
+**EDT-4 — Schema-aware completion.** Completion includes dialect keywords, functions, databases/schemas, tables/views, columns, aliases in the current statement, and qualified names from available metadata. The active database/schema's relation names and a bounded set of table/view columns preload through the isolated metadata session when a connection or query-tab context becomes active; larger or temporarily unavailable catalogs fall back to on-demand referenced-object lookup. Stale or unavailable metadata must not block ordinary keyword completion.
 
 **EDT-5 — Diagnostics.** The editor shows parse-level diagnostics and clear unsupported-dialect limitations. Diagnostics are advisory and must not block execution unless the text cannot be separated safely into the requested execution unit.
 

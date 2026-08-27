@@ -93,6 +93,9 @@
     offset: number;
   };
 
+  const COMPLETION_OBJECT_CACHE_LIMIT = 256;
+  const COMPLETION_PRELOAD_CONCURRENCY = 4;
+
   type TableUi = {
     page: TablePageView | null;
     filters: TableFilterView[];
@@ -237,8 +240,13 @@
     string,
     Promise<SchemaObjectDetailView | null>
   >();
+  const completionMetadataPreloadPromises = new SvelteMap<
+    string,
+    Promise<number>
+  >();
   const completionObjectCacheOrder = new Map<string, true>();
   const failedCompletionObjectLoads = new Map<string, number>();
+  const loadedSchemaObjectNamespaces = new Set<string>();
   let schemaObjectErrors = $state<Record<string, string>>({});
   let schemaObjectLoading = $state<Record<string, boolean>>({});
   let expandedNamespaces = $state<Record<string, boolean>>({});
@@ -439,7 +447,7 @@
     if (!activeTab) return undefined;
     const leadingRows = tabSessionErrorVisible ? 'auto auto auto' : 'auto auto';
     return queryResultsVisible
-      ? `${leadingRows} minmax(10rem, ${100 - resultsPercent}fr) 7px minmax(8rem, ${resultsPercent}fr)`
+      ? `${leadingRows} minmax(var(--query-editor-pane-min-height, 12.1025rem), ${100 - resultsPercent}fr) 7px minmax(8rem, ${resultsPercent}fr)`
       : `${leadingRows} minmax(18rem, 1fr)`;
   });
   const activeTableUi = $derived(
@@ -566,6 +574,35 @@
     return `${profileId}\u0000${namespace}\u0000${name}`;
   }
 
+  function schemaObjectNamespaceKey(profileId: string, namespace: string) {
+    return `${profileId}\u0000${namespace}`;
+  }
+
+  function clearCompletionMetadata(profileId: string, namespace?: string) {
+    const detailPrefix = namespace
+      ? completionObjectKey(profileId, namespace, '')
+      : `${profileId}\u0000`;
+    for (const key of Object.keys(completionObjectDetails)) {
+      if (key.startsWith(detailPrefix)) delete completionObjectDetails[key];
+    }
+    for (const key of [...completionObjectCacheOrder.keys()]) {
+      if (key.startsWith(detailPrefix)) completionObjectCacheOrder.delete(key);
+    }
+    for (const key of [...failedCompletionObjectLoads.keys()]) {
+      if (key.startsWith(detailPrefix)) failedCompletionObjectLoads.delete(key);
+    }
+    const namespacePrefix = namespace
+      ? schemaObjectNamespaceKey(profileId, namespace)
+      : `${profileId}\u0000`;
+    for (const key of [...loadedSchemaObjectNamespaces]) {
+      if (
+        namespace ? key === namespacePrefix : key.startsWith(namespacePrefix)
+      ) {
+        loadedSchemaObjectNamespaces.delete(key);
+      }
+    }
+  }
+
   function cacheCompletionObjectDetail(
     profileId: string,
     detail: SchemaObjectDetailView
@@ -577,7 +614,7 @@
     );
     completionObjectCacheOrder.delete(key);
     completionObjectCacheOrder.set(key, true);
-    if (completionObjectCacheOrder.size > 256) {
+    if (completionObjectCacheOrder.size > COMPLETION_OBJECT_CACHE_LIMIT) {
       const oldest = completionObjectCacheOrder.keys().next().value;
       if (oldest) {
         completionObjectCacheOrder.delete(oldest);
@@ -586,6 +623,43 @@
     }
     completionObjectDetails[key] = detail;
     failedCompletionObjectLoads.delete(key);
+  }
+
+  function loadCompletionObjectDetail(
+    profileId: string,
+    namespace: string,
+    name: string
+  ): Promise<SchemaObjectDetailView | null> {
+    const key = completionObjectKey(profileId, namespace, name);
+    const cached = completionObjectDetails[key];
+    if (cached) return Promise.resolve(cached);
+    const failedAt = failedCompletionObjectLoads.get(key);
+    if (failedAt !== undefined && Date.now() - failedAt < 5_000) {
+      return Promise.resolve(null);
+    }
+    let load = completionObjectLoadPromises.get(key);
+    if (!load) {
+      load = invokeCommand('load_schema_object_detail', {
+        profile_id: profileId,
+        namespace,
+        object_name: name
+      })
+        .then((detail) => {
+          cacheCompletionObjectDetail(profileId, detail);
+          return detail;
+        })
+        .catch(() => {
+          failedCompletionObjectLoads.set(key, Date.now());
+          if (failedCompletionObjectLoads.size > 128) {
+            const oldest = failedCompletionObjectLoads.keys().next().value;
+            if (oldest) failedCompletionObjectLoads.delete(oldest);
+          }
+          return null;
+        })
+        .finally(() => completionObjectLoadPromises.delete(key));
+      completionObjectLoadPromises.set(key, load);
+    }
+    return load;
   }
 
   async function loadCompletionTables(
@@ -625,12 +699,7 @@
         (knownMatches.length === 1 ? knownMatches[0].namespace : null);
       if (!namespace) continue;
       const key = completionObjectKey(profileId, namespace, request.name);
-      const failedAt = failedCompletionObjectLoads.get(key);
-      if (
-        loads.has(key) ||
-        (failedAt !== undefined && Date.now() - failedAt < 5_000)
-      )
-        continue;
+      if (loads.has(key)) continue;
       const cached = completionObjectDetails[key];
       if (cached) {
         loads.set(key, Promise.resolve(cached));
@@ -642,25 +711,7 @@
           invalidateProfileTablePreviews(profileId);
           invalidatedPreviews = true;
         }
-        load = invokeCommand('load_schema_object_detail', {
-          profile_id: profileId,
-          namespace,
-          object_name: request.name
-        })
-          .then((detail) => {
-            cacheCompletionObjectDetail(profileId, detail);
-            return detail;
-          })
-          .catch(() => {
-            failedCompletionObjectLoads.set(key, Date.now());
-            if (failedCompletionObjectLoads.size > 128) {
-              const oldest = failedCompletionObjectLoads.keys().next().value;
-              if (oldest) failedCompletionObjectLoads.delete(oldest);
-            }
-            return null;
-          })
-          .finally(() => completionObjectLoadPromises.delete(key));
-        completionObjectLoadPromises.set(key, load);
+        load = loadCompletionObjectDetail(profileId, namespace, request.name);
       }
       loads.set(key, load);
     }
@@ -672,6 +723,78 @@
       name: detail.object.name,
       columns: detail.columns.map((column) => column.name)
     }));
+  }
+
+  async function preloadCompletionObjectDetails(
+    profileId: string,
+    objects: readonly SchemaObjectView[]
+  ) {
+    if (
+      !connections[profileId] ||
+      !hasNativeRuntime() ||
+      stagedTableTabForProfile(profileId)
+    ) {
+      return 0;
+    }
+    const candidates = objects
+      .filter((object) => object.kind === 'table' || object.kind === 'view')
+      .slice(0, COMPLETION_OBJECT_CACHE_LIMIT);
+    const missing = candidates.filter(
+      (object) =>
+        !completionObjectDetails[
+          completionObjectKey(profileId, object.namespace, object.name)
+        ]
+    );
+    if (!missing.length) return candidates.length;
+    invalidateProfileTablePreviews(profileId);
+    let cursor = 0;
+    let loaded = candidates.length - missing.length;
+    const worker = async () => {
+      while (connections[profileId] && !stagedTableTabForProfile(profileId)) {
+        const object = missing[cursor];
+        cursor += 1;
+        if (!object) return;
+        if (
+          await loadCompletionObjectDetail(
+            profileId,
+            object.namespace,
+            object.name
+          )
+        ) {
+          loaded += 1;
+        }
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(COMPLETION_PRELOAD_CONCURRENCY, missing.length) },
+        () => worker()
+      )
+    );
+    return loaded;
+  }
+
+  function preloadCompletionMetadata(profileId: string, namespace: string) {
+    if (!namespace || !connections[profileId] || !hasNativeRuntime()) {
+      return Promise.resolve(0);
+    }
+    const key = schemaObjectNamespaceKey(profileId, namespace);
+    const existing = completionMetadataPreloadPromises.get(key);
+    if (existing) return existing;
+    const preload = (async () => {
+      try {
+        const objects = loadedSchemaObjectNamespaces.has(key)
+          ? (schemaObjects[profileId] ?? []).filter(
+              (object) => object.namespace === namespace
+            )
+          : (await loadSchemaNamespaceObjects(profileId, namespace)).objects;
+        return await preloadCompletionObjectDetails(profileId, objects);
+      } catch {
+        return 0;
+      }
+    })().finally(() => completionMetadataPreloadPromises.delete(key));
+    completionMetadataPreloadPromises.set(key, preload);
+    return preload;
   }
   const visibleSchemaObjects = $derived.by(() => {
     const profileId = activeProfile?.id;
@@ -831,6 +954,12 @@
           (tab) =>
             tab.id === workspace.active_tab_id && tab.profile_id === profile.id
         );
+        await preloadCompletionMetadata(
+          profile.id,
+          restoredActiveTab?.kind === 'table_data'
+            ? (restoredActiveTab.table_namespace ?? info.context)
+            : (restoredActiveTab?.context_label ?? info.context)
+        );
         if (restoredActiveTab?.kind === 'table_data') {
           tableTabViews[restoredActiveTab.id] = 'structure';
           await loadSchemaObjectDetailForTab(restoredActiveTab);
@@ -878,8 +1007,18 @@
     tableTabs = {};
     tableTabViews = {};
     schemaObjectDetails = {};
+    completionObjectDetails = {};
+    completionObjectLoadPromises.clear();
+    completionMetadataPreloadPromises.clear();
+    completionObjectCacheOrder.clear();
+    failedCompletionObjectLoads.clear();
+    loadedSchemaObjectNamespaces.clear();
     schemaObjectErrors = {};
     schemaObjectLoading = {};
+    schemaNamespaces = {};
+    schemaObjects = {};
+    schemaStates = {};
+    selectedSchemaObjectIds = {};
     storeState = response.store_state;
     storeMessage = response.store_message;
   }
@@ -1129,7 +1268,9 @@
         const context =
           tab.kind === 'table_data' ? tab.table_namespace : tab.context_label;
         const session = await openConnectedTabSession(tab, profileId, context);
-        if (tab.kind === 'table_data') {
+        if (tab.kind === 'query') {
+          await preloadCompletionMetadata(profileId, session.context);
+        } else {
           tableTabs[tab.id] ??= newTableUi();
           await loadTablePage(tab.id, [], 0, false);
         }
@@ -1181,6 +1322,7 @@
 
   async function loadSchemaNamespaces(profileId: string) {
     invalidateProfileTablePreviews(profileId);
+    clearCompletionMetadata(profileId);
     schemaStates[profileId] = 'loading';
     try {
       const response = await invokeCommand('load_schema_namespaces', {
@@ -1204,6 +1346,8 @@
     namespace: string
   ) {
     invalidateProfileTablePreviews(profileId);
+    clearCompletionMetadata(profileId, namespace);
+    const namespaceKey = schemaObjectNamespaceKey(profileId, namespace);
     const namespaceView = schemaNamespaces[profileId]?.find(
       (candidate) => candidate.name === namespace
     );
@@ -1217,6 +1361,7 @@
         (object) => object.namespace !== namespace
       );
       schemaObjects[profileId] = [...others, ...response.objects];
+      loadedSchemaObjectNamespaces.add(namespaceKey);
       if (namespaceView) {
         namespaceView.state = response.stale
           ? 'stale'
@@ -1227,6 +1372,7 @@
       if (response.stale) schemaStates[profileId] = 'stale';
       return response;
     } catch (error) {
+      loadedSchemaObjectNamespaces.delete(namespaceKey);
       if (namespaceView) namespaceView.state = schemaFailureState(error);
       throw error;
     }
@@ -1439,6 +1585,12 @@
           (tab) =>
             tab.id === workspace.active_tab_id && tab.profile_id === profile.id
         );
+        await preloadCompletionMetadata(
+          profile.id,
+          selectedTab?.kind === 'table_data'
+            ? (selectedTab.table_namespace ?? info.context)
+            : (selectedTab?.context_label ?? info.context)
+        );
         if (selectedTab?.kind === 'table_data') {
           tableTabViews[selectedTab.id] = 'structure';
           await loadSchemaObjectDetailForTab(selectedTab);
@@ -1476,6 +1628,7 @@
       delete connections[profile.id];
       delete schemaNamespaces[profile.id];
       delete schemaObjects[profile.id];
+      clearCompletionMetadata(profile.id);
       schemaStates[profile.id] = 'disconnected';
       for (const tab of workspace.tabs) {
         if (tab.profile_id === profile.id) {
@@ -1695,6 +1848,7 @@
         delete connections[profileId];
         delete schemaNamespaces[profileId];
         delete schemaObjects[profileId];
+        clearCompletionMetadata(profileId);
         schemaStates[profileId] = 'disconnected';
         const removedTableIds = workspace.tabs
           .filter(
@@ -2393,6 +2547,7 @@
         session.context = response.context;
         tab.context_label = response.context;
         pendingExecution = null;
+        await preloadCompletionMetadata(session.profile_id, response.context);
         await saveWorkspaceNow();
         statusMessage = response.message;
       } catch (error) {
@@ -2486,11 +2641,19 @@
     const key = `${activeProfile.id}:${namespace}`;
     expandedNamespaces[key] = !expandedNamespaces[key];
     if (!expandedNamespaces[key]) return;
+    if (
+      loadedSchemaObjectNamespaces.has(
+        schemaObjectNamespaceKey(activeProfile.id, namespace)
+      )
+    ) {
+      return;
+    }
     await runAction(async () => {
       const response = await loadSchemaNamespaceObjects(
         activeProfile.id,
         namespace
       );
+      await preloadCompletionObjectDetails(activeProfile.id, response.objects);
       statusMessage = `${response.stale ? 'Showing stale cached metadata for' : 'Loaded'} ${response.objects.length} database objects from ${namespace}.`;
     });
   }
@@ -2515,8 +2678,21 @@
       );
       for (const namespace of response.namespaces) {
         if (expandedNamespaces[`${profileId}:${namespace.name}`]) {
-          await loadSchemaNamespaceObjects(profileId, namespace.name);
+          const objects = await loadSchemaNamespaceObjects(
+            profileId,
+            namespace.name
+          );
+          await preloadCompletionObjectDetails(profileId, objects.objects);
         }
+      }
+      const completionNamespace =
+        activeTab?.kind === 'table_data'
+          ? activeTab.table_namespace
+          : (activeSession?.context ??
+            activeTab?.context_label ??
+            activeConnection?.context);
+      if (completionNamespace) {
+        await preloadCompletionMetadata(profileId, completionNamespace);
       }
       statusMessage = response.stale
         ? 'The metadata session could not refresh; retained cache is visibly stale.'
@@ -2537,6 +2713,7 @@
     expandedNamespaces[`${profileId}:${namespace}`] = true;
     await runAction(async () => {
       const response = await loadSchemaNamespaceObjects(profileId, namespace);
+      await preloadCompletionObjectDetails(profileId, response.objects);
       statusMessage = response.stale
         ? `${namespace} could not refresh; its retained cache is labelled stale.`
         : `Refreshed ${namespace} without changing other namespaces.`;
