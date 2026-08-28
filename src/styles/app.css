@@ -289,6 +289,28 @@ button:hover:not(:disabled) {
   font-size: 0.76rem;
 }
 
+.compatibility-warning {
+  padding-right: 10px;
+}
+
+.compatibility-warning-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  line-height: 1.4;
+}
+
+.compatibility-warning-close {
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  flex: 0 0 34px;
+  color: inherit;
+}
+
 .workbench {
   position: relative;
   isolation: isolate;
@@ -780,13 +802,76 @@ main.has-query-results .editor-workspace {
 }
 
 .result-error {
-  padding: 9px 11px;
-  border: 1px solid var(--warning);
+  display: grid;
+  min-height: 0;
+  max-height: 100%;
+  padding: 11px 12px;
+  gap: 6px;
+  overflow: auto;
+  border: 1px solid var(--danger);
   border-radius: 6px;
-  color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 8%, var(--surface-raised));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface-raised));
   font-size: 0.72rem;
   line-height: 1.45;
+}
+
+.result-error p {
+  margin: 0;
+}
+
+.result-error-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.result-error-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.result-error .eyebrow {
+  color: var(--danger);
+}
+
+.result-error h3 {
+  color: var(--text);
+  font-size: 0.86rem;
+}
+
+.result-error-location {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--divider));
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.result-error-message {
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 620;
+}
+
+.result-error-detail {
+  padding: 9px 11px;
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  color: var(--muted);
+  background: var(--surface-inset);
+  font-family: var(--table-font-family);
+}
+
+.result-error-guidance {
+  color: var(--muted);
+}
+
+.result-error-retry {
+  color: var(--warning);
+  font-weight: 600;
 }
 
 .result-state {
@@ -1849,6 +1934,16 @@ main.has-query-results .editor-workspace {
 }
 
 @media (max-width: 900px) {
+  .compatibility-warning-copy {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .result-error-heading {
+    gap: 4px;
+    flex-direction: column;
+  }
+
   .app-shell {
     --query-editor-pane-min-height: calc(
       var(--sql-editor-compact-height) + 9.3125rem

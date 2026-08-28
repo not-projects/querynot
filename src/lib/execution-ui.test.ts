@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   executionElapsedMs,
+  executionErrorPresentation,
   executionStateLabel,
   finishExecutionCancellation,
   isExecutionActive,
@@ -59,6 +60,47 @@ describe('execution UI lifecycle', () => {
     expect(executionStateLabel('queued')).toBe('Queued');
     expect(executionStateLabel('succeeded')).toBe('Succeeded');
     expect(executionStateLabel('retry_pending')).toBe('retry pending');
+  });
+
+  it('turns native execution errors into readable result guidance', () => {
+    expect(
+      executionErrorPresentation({
+        message: 'The server rejected this statement.',
+        category: 'syntax',
+        detail: 'Vendor error code: 1064.',
+        retryable: false,
+        statementIndex: 1,
+        statementStart: 24,
+        statementEnd: 47
+      })
+    ).toEqual({
+      categoryLabel: 'SQL syntax issue',
+      heading: 'Query failed',
+      message: 'The server rejected this statement.',
+      detail: 'Vendor error code: 1064.',
+      location: 'Statement 2 · SQL bytes 24–47',
+      guidance:
+        'Review the SQL near the reported statement, then run the corrected query.',
+      retryHint: null
+    });
+  });
+
+  it('provides a safe fallback and retry hint for uncategorized errors', () => {
+    const presentation = executionErrorPresentation({
+      message: 'The database could not complete this query.',
+      category: null,
+      detail: null,
+      retryable: true,
+      statementIndex: null,
+      statementStart: null,
+      statementEnd: null
+    });
+
+    expect(presentation.categoryLabel).toBe('Database error');
+    expect(presentation.location).toBeNull();
+    expect(presentation.retryHint).toBe(
+      'Retry may succeed after the cause is resolved.'
+    );
   });
 
   it('materializes the first native batch before the start response can initialize UI state', () => {

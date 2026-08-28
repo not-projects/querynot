@@ -13,6 +13,8 @@ QueryNot 0.1.12 is the current live cross-platform release on the dedicated sign
 
 Version `0.1.12` retains a scrollable three-and-a-half-row SQL viewport at the result splitter's upper bound. SQL completion also preloads the active database/schema's table and view names plus a bounded set of columns through the isolated metadata session, while keeping on-demand lookup as a fallback for larger or temporarily unavailable catalogs.
 
+On `master`, completion metadata warmup begins after connection and tab-session readiness without keeping the profile in Connecting, compatibility warnings for out-of-matrix servers can be dismissed for the current connection, and rejected or failed queries show readable error details and guidance in Results.
+
 Version `0.1.6` gives Connections and Schema an even, persisted draggable split; keeps schema search and refresh in compact labelled icon controls; sizes result columns from loaded content up to the established 180px cap; and adds table font and text-size settings. Well-formed MySQL 5.7.x versions are write-capable under the same transaction, destructive-query, bound-mutation, TLS, and legacy-warning safeguards. MySQL 5.7.44 remains the exact automated conformance fixture, so the wider 5.7.x behavior is not presented as independent patch certification.
 
 Version `0.1.7` clarifies the application header, execution and document controls, result actions, Settings, and Add connection without changing database, credential, or filesystem boundaries. Persistent dialog actions stay reachable while content scrolls independently; optional credentials and client identity remain progressively disclosed; SQLite setup begins with the exact selected file; and current-view export captures the visible row order only when the user chooses it.
@@ -80,9 +82,9 @@ npm run tauri -- build --no-bundle
 npm run release:validate-updater-signing
 npm run release:verify-updater-signature -- <payload> <payload.sig>
 npm run release:create-updater-manifest -- --directory <bundle-dir> --output artifacts/release-candidate/latest.json --report artifacts/release-candidate/updater-manifest-report.json
-npm run release:validate-update-candidate -- --directory <candidate-dir> --tag v0.1.12 --report artifacts/candidate-validation.json
-npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.12 --confirm publish-v0.1.12 --report artifacts/publication-plan.json
-npm run release:verify-asset-metadata -- --release <release.json> --plan <publication-plan.json> --version 0.1.12 --tag v0.1.12 --source <commit> --draft true --report <report.json>
+npm run release:validate-update-candidate -- --directory <candidate-dir> --tag v0.1.13 --report artifacts/candidate-validation.json
+npm run release:prepare-update-publication -- --directory <candidate-dir> --output artifacts/publication --tag v0.1.13 --confirm publish-v0.1.13 --report artifacts/publication-plan.json
+npm run release:verify-asset-metadata -- --release <release.json> --plan <publication-plan.json> --version 0.1.13 --tag v0.1.13 --source <commit> --draft true --report <report.json>
 ```
 
 `npm run verify:phase1` reruns the complete Phase 1 local gate from a clean committed tree and writes a commit-addressed evidence report. It does not substitute for post-release native Windows vault and accessibility observation.

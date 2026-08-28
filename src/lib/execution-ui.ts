@@ -11,6 +11,16 @@ export const activeExecutionStates = [
   'cancelling'
 ] as const;
 
+export interface ExecutionErrorUi {
+  message: string;
+  category: string | null;
+  detail: string | null;
+  retryable: boolean;
+  statementIndex: number | null;
+  statementStart: number | null;
+  statementEnd: number | null;
+}
+
 export interface ExecutionUi {
   id: string;
   tabId: string;
@@ -19,7 +29,17 @@ export interface ExecutionUi {
   completedAt: number | null;
   statementsCompleted: number;
   receivedRows: number;
-  error: string | null;
+  error: ExecutionErrorUi | null;
+}
+
+export interface ExecutionErrorPresentation {
+  categoryLabel: string;
+  heading: string;
+  message: string;
+  detail: string | null;
+  location: string | null;
+  guidance: string;
+  retryHint: string | null;
 }
 
 export interface ResultUi {
@@ -110,4 +130,98 @@ export function executionStateLabel(state: string): string {
     failed: 'Failed'
   };
   return labels[state] ?? state.replaceAll('_', ' ');
+}
+
+export function executionErrorPresentation(
+  error: ExecutionErrorUi
+): ExecutionErrorPresentation {
+  const categories: Record<
+    string,
+    Pick<ExecutionErrorPresentation, 'categoryLabel' | 'guidance'>
+  > = {
+    authentication: {
+      categoryLabel: 'Authentication issue',
+      guidance:
+        'Review the saved credential for this connection before trying again.'
+    },
+    authorization: {
+      categoryLabel: 'Permission issue',
+      guidance:
+        'Check that this connection can access the referenced objects and operation.'
+    },
+    connectivity: {
+      categoryLabel: 'Connection issue',
+      guidance:
+        'Check the database connection and reconnect this tab before trying again.'
+    },
+    tls: {
+      categoryLabel: 'Secure connection issue',
+      guidance:
+        'Review the connection TLS settings and certificate files before trying again.'
+    },
+    timeout: {
+      categoryLabel: 'Timeout',
+      guidance:
+        'Check server availability and workload before deciding whether to run the query again.'
+    },
+    cancelled: {
+      categoryLabel: 'Cancelled',
+      guidance: 'The query stopped before it completed.'
+    },
+    syntax: {
+      categoryLabel: 'SQL syntax issue',
+      guidance:
+        'Review the SQL near the reported statement, then run the corrected query.'
+    },
+    constraint: {
+      categoryLabel: 'Database constraint',
+      guidance:
+        'Review the submitted values and database constraints before trying again.'
+    },
+    transaction: {
+      categoryLabel: 'Transaction issue',
+      guidance:
+        'Resolve the tab transaction state before running another possible write.'
+    },
+    unsupported_capability: {
+      categoryLabel: 'Unsupported operation',
+      guidance:
+        'This connection or server version does not support the requested operation.'
+    },
+    local_storage: {
+      categoryLabel: 'Local storage issue',
+      guidance:
+        'Review local storage availability before trying the operation again.'
+    },
+    internal: {
+      categoryLabel: 'Internal safety check',
+      guidance:
+        'No further query work was accepted. Review the query and connection state before trying again.'
+    }
+  };
+  const category = error.category ? categories[error.category] : null;
+  const location = [
+    error.statementIndex === null
+      ? null
+      : `Statement ${error.statementIndex + 1}`,
+    error.statementStart !== null && error.statementEnd !== null
+      ? `SQL bytes ${error.statementStart}–${error.statementEnd}`
+      : null
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(' · ');
+
+  return {
+    categoryLabel: category?.categoryLabel ?? 'Database error',
+    heading: 'Query failed',
+    message: error.message,
+    detail: error.detail,
+    location: location || null,
+    guidance:
+      category?.guidance ??
+      'Review the database message and query before trying again.',
+    retryHint: error.retryable
+      ? 'Retry may succeed after the cause is resolved.'
+      : null
+  };
 }

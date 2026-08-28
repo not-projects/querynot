@@ -50,11 +50,13 @@
   import { updater } from './lib/updater.svelte';
   import {
     executionElapsedMs,
+    executionErrorPresentation,
     executionStateLabel,
     finishExecutionCancellation,
     isExecutionActive,
     resultFromFirstBatch,
     setExecutionState,
+    type ExecutionErrorUi,
     type ExecutionUi,
     type ResultUi
   } from './lib/execution-ui';
@@ -91,6 +93,11 @@
   type TablePosition = {
     cursor: TaggedValueView[];
     offset: number;
+  };
+
+  type CompletionMetadataRevision = {
+    profile: number;
+    namespace: number;
   };
 
   const COMPLETION_OBJECT_CACHE_LIMIT = 256;
@@ -214,6 +221,7 @@
   let previousFocus: HTMLElement | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let connections = $state<Record<string, ConnectionInfoView>>({});
+  let dismissedCompatibilityWarnings = $state<Record<string, string>>({});
   let connectionOperations = $state<Record<string, 'test' | 'connect'>>({});
   let tabSessionOperations = $state<Record<string, boolean>>({});
   let tabSessionErrors = $state<Record<string, string>>({});
@@ -244,6 +252,8 @@
     string,
     Promise<number>
   >();
+  const completionProfileRevisions = new SvelteMap<string, number>();
+  const completionNamespaceRevisions = new SvelteMap<string, number>();
   const completionObjectCacheOrder = new Map<string, true>();
   const failedCompletionObjectLoads = new Map<string, number>();
   const loadedSchemaObjectNamespaces = new Set<string>();
@@ -300,6 +310,13 @@
   const activeConnection = $derived(
     activeProfile ? (connections[activeProfile.id] ?? null) : null
   );
+  const activeCompatibilityWarning = $derived.by(() => {
+    if (!activeProfile || !activeConnection?.compatibility_warning) return null;
+    return dismissedCompatibilityWarnings[activeProfile.id] ===
+      compatibilityWarningSignature(activeConnection)
+      ? null
+      : activeConnection.compatibility_warning;
+  });
   const activeTableView = $derived<'structure' | 'rows' | null>(
     activeTab?.kind === 'table_data'
       ? (tableTabViews[activeTab.id] ?? 'structure')
@@ -312,6 +329,11 @@
   );
   const activeExecution = $derived(
     activeTab ? (executions[activeTab.id] ?? null) : null
+  );
+  const activeExecutionError = $derived(
+    activeExecution?.error
+      ? executionErrorPresentation(activeExecution.error)
+      : null
   );
   const activeResults = $derived(
     activeTab ? (results[activeTab.id] ?? []) : []
@@ -578,10 +600,62 @@
     return `${profileId}\u0000${namespace}`;
   }
 
+  function captureCompletionMetadataRevision(
+    profileId: string,
+    namespace: string
+  ): CompletionMetadataRevision | null {
+    if (!connections[profileId]) return null;
+    return {
+      profile: completionProfileRevisions.get(profileId) ?? 0,
+      namespace:
+        completionNamespaceRevisions.get(
+          schemaObjectNamespaceKey(profileId, namespace)
+        ) ?? 0
+    };
+  }
+
+  function completionMetadataRevisionIsCurrent(
+    profileId: string,
+    namespace: string,
+    revision: CompletionMetadataRevision
+  ) {
+    return (
+      Boolean(connections[profileId]) &&
+      (completionProfileRevisions.get(profileId) ?? 0) === revision.profile &&
+      (completionNamespaceRevisions.get(
+        schemaObjectNamespaceKey(profileId, namespace)
+      ) ?? 0) === revision.namespace
+    );
+  }
+
   function clearCompletionMetadata(profileId: string, namespace?: string) {
+    const preloadPrefix = `${profileId}\u0000`;
+    if (namespace) {
+      const namespaceKey = schemaObjectNamespaceKey(profileId, namespace);
+      completionNamespaceRevisions.set(
+        namespaceKey,
+        (completionNamespaceRevisions.get(namespaceKey) ?? 0) + 1
+      );
+      completionMetadataPreloadPromises.delete(namespaceKey);
+    } else {
+      completionProfileRevisions.set(
+        profileId,
+        (completionProfileRevisions.get(profileId) ?? 0) + 1
+      );
+      for (const key of [...completionMetadataPreloadPromises.keys()]) {
+        if (key.startsWith(preloadPrefix)) {
+          completionMetadataPreloadPromises.delete(key);
+        }
+      }
+      for (const key of [...completionNamespaceRevisions.keys()]) {
+        if (key.startsWith(preloadPrefix)) {
+          completionNamespaceRevisions.delete(key);
+        }
+      }
+    }
     const detailPrefix = namespace
       ? completionObjectKey(profileId, namespace, '')
-      : `${profileId}\u0000`;
+      : preloadPrefix;
     for (const key of Object.keys(completionObjectDetails)) {
       if (key.startsWith(detailPrefix)) delete completionObjectDetails[key];
     }
@@ -628,8 +702,15 @@
   function loadCompletionObjectDetail(
     profileId: string,
     namespace: string,
-    name: string
+    name: string,
+    revision = captureCompletionMetadataRevision(profileId, namespace)
   ): Promise<SchemaObjectDetailView | null> {
+    if (
+      !revision ||
+      !completionMetadataRevisionIsCurrent(profileId, namespace, revision)
+    ) {
+      return Promise.resolve(null);
+    }
     const key = completionObjectKey(profileId, namespace, name);
     const cached = completionObjectDetails[key];
     if (cached) return Promise.resolve(cached);
@@ -637,7 +718,8 @@
     if (failedAt !== undefined && Date.now() - failedAt < 5_000) {
       return Promise.resolve(null);
     }
-    let load = completionObjectLoadPromises.get(key);
+    const loadKey = `${key}\u0000${revision.profile}\u0000${revision.namespace}`;
+    let load = completionObjectLoadPromises.get(loadKey);
     if (!load) {
       load = invokeCommand('load_schema_object_detail', {
         profile_id: profileId,
@@ -645,19 +727,28 @@
         object_name: name
       })
         .then((detail) => {
+          if (
+            !completionMetadataRevisionIsCurrent(profileId, namespace, revision)
+          ) {
+            return null;
+          }
           cacheCompletionObjectDetail(profileId, detail);
           return detail;
         })
         .catch(() => {
-          failedCompletionObjectLoads.set(key, Date.now());
-          if (failedCompletionObjectLoads.size > 128) {
-            const oldest = failedCompletionObjectLoads.keys().next().value;
-            if (oldest) failedCompletionObjectLoads.delete(oldest);
+          if (
+            completionMetadataRevisionIsCurrent(profileId, namespace, revision)
+          ) {
+            failedCompletionObjectLoads.set(key, Date.now());
+            if (failedCompletionObjectLoads.size > 128) {
+              const oldest = failedCompletionObjectLoads.keys().next().value;
+              if (oldest) failedCompletionObjectLoads.delete(oldest);
+            }
           }
           return null;
         })
-        .finally(() => completionObjectLoadPromises.delete(key));
-      completionObjectLoadPromises.set(key, load);
+        .finally(() => completionObjectLoadPromises.delete(loadKey));
+      completionObjectLoadPromises.set(loadKey, load);
     }
     return load;
   }
@@ -705,15 +796,14 @@
         loads.set(key, Promise.resolve(cached));
         continue;
       }
-      let load = completionObjectLoadPromises.get(key);
-      if (!load) {
-        if (!invalidatedPreviews) {
-          invalidateProfileTablePreviews(profileId);
-          invalidatedPreviews = true;
-        }
-        load = loadCompletionObjectDetail(profileId, namespace, request.name);
+      if (!invalidatedPreviews) {
+        invalidateProfileTablePreviews(profileId);
+        invalidatedPreviews = true;
       }
-      loads.set(key, load);
+      loads.set(
+        key,
+        loadCompletionObjectDetail(profileId, namespace, request.name)
+      );
     }
     const details = (await Promise.all(loads.values())).filter(
       (detail): detail is SchemaObjectDetailView => Boolean(detail)
@@ -727,7 +817,8 @@
 
   async function preloadCompletionObjectDetails(
     profileId: string,
-    objects: readonly SchemaObjectView[]
+    objects: readonly SchemaObjectView[],
+    revision?: CompletionMetadataRevision
   ) {
     if (
       !connections[profileId] ||
@@ -736,9 +827,22 @@
     ) {
       return 0;
     }
+    const namespace = objects.find(
+      (object) => object.kind === 'table' || object.kind === 'view'
+    )?.namespace;
     const candidates = objects
-      .filter((object) => object.kind === 'table' || object.kind === 'view')
+      .filter(
+        (object) =>
+          object.namespace === namespace &&
+          (object.kind === 'table' || object.kind === 'view')
+      )
       .slice(0, COMPLETION_OBJECT_CACHE_LIMIT);
+    const warmupRevision =
+      revision ??
+      (namespace
+        ? captureCompletionMetadataRevision(profileId, namespace)
+        : null);
+    if (!namespace || !warmupRevision) return 0;
     const missing = candidates.filter(
       (object) =>
         !completionObjectDetails[
@@ -750,7 +854,14 @@
     let cursor = 0;
     let loaded = candidates.length - missing.length;
     const worker = async () => {
-      while (connections[profileId] && !stagedTableTabForProfile(profileId)) {
+      while (
+        completionMetadataRevisionIsCurrent(
+          profileId,
+          namespace,
+          warmupRevision
+        ) &&
+        !stagedTableTabForProfile(profileId)
+      ) {
         const object = missing[cursor];
         cursor += 1;
         if (!object) return;
@@ -758,7 +869,8 @@
           await loadCompletionObjectDetail(
             profileId,
             object.namespace,
-            object.name
+            object.name,
+            warmupRevision
           )
         ) {
           loaded += 1;
@@ -783,18 +895,52 @@
     if (existing) return existing;
     const preload = (async () => {
       try {
-        const objects = loadedSchemaObjectNamespaces.has(key)
-          ? (schemaObjects[profileId] ?? []).filter(
-              (object) => object.namespace === namespace
-            )
-          : (await loadSchemaNamespaceObjects(profileId, namespace)).objects;
-        return await preloadCompletionObjectDetails(profileId, objects);
+        let objects: readonly SchemaObjectView[];
+        if (loadedSchemaObjectNamespaces.has(key)) {
+          objects = (schemaObjects[profileId] ?? []).filter(
+            (object) => object.namespace === namespace
+          );
+        } else {
+          const response = await loadSchemaNamespaceObjects(
+            profileId,
+            namespace
+          );
+          if (!response.applied) return 0;
+          objects = response.objects;
+        }
+        const revision = captureCompletionMetadataRevision(
+          profileId,
+          namespace
+        );
+        if (!revision) return 0;
+        return await preloadCompletionObjectDetails(
+          profileId,
+          objects,
+          revision
+        );
       } catch {
         return 0;
       }
-    })().finally(() => completionMetadataPreloadPromises.delete(key));
+    })().finally(() => {
+      if (completionMetadataPreloadPromises.get(key) === preload) {
+        completionMetadataPreloadPromises.delete(key);
+      }
+    });
     completionMetadataPreloadPromises.set(key, preload);
     return preload;
+  }
+
+  function startCompletionMetadataWarmup(profileId: string, namespace: string) {
+    void preloadCompletionMetadata(profileId, namespace);
+  }
+
+  function startCompletionObjectDetailsWarmup(
+    profileId: string,
+    objects: readonly SchemaObjectView[]
+  ) {
+    void preloadCompletionObjectDetails(profileId, objects).catch(
+      () => undefined
+    );
   }
   const visibleSchemaObjects = $derived.by(() => {
     const profileId = activeProfile?.id;
@@ -948,17 +1094,12 @@
         const info = await invokeCommand('connect_profile', {
           profile_id: profile.id
         });
+        delete dismissedCompatibilityWarnings[profile.id];
         connections[profile.id] = info;
         await loadSchemaNamespaces(profile.id);
         const restoredActiveTab = workspace.tabs.find(
           (tab) =>
             tab.id === workspace.active_tab_id && tab.profile_id === profile.id
-        );
-        await preloadCompletionMetadata(
-          profile.id,
-          restoredActiveTab?.kind === 'table_data'
-            ? (restoredActiveTab.table_namespace ?? info.context)
-            : (restoredActiveTab?.context_label ?? info.context)
         );
         if (restoredActiveTab?.kind === 'table_data') {
           tableTabViews[restoredActiveTab.id] = 'structure';
@@ -972,6 +1113,12 @@
             statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. Only its restored active tab was opened; other tabs remain lazy.`;
           }
         }
+        startCompletionMetadataWarmup(
+          profile.id,
+          restoredActiveTab?.kind === 'table_data'
+            ? (restoredActiveTab.table_namespace ?? info.context)
+            : (restoredActiveTab?.context_label ?? info.context)
+        );
       } catch (error) {
         statusMessage = `${profile.name} automatic reconnect failed safely: ${safeErrorMessage(error)}`;
       }
@@ -991,6 +1138,7 @@
         workspace.panel_sizes.sidebar_connections_percent
       );
     connections = {};
+    dismissedCompatibilityWarnings = {};
     connectionOperations = {};
     tabSessionOperations = {};
     tabSessionErrors = {};
@@ -1010,6 +1158,8 @@
     completionObjectDetails = {};
     completionObjectLoadPromises.clear();
     completionMetadataPreloadPromises.clear();
+    completionProfileRevisions.clear();
+    completionNamespaceRevisions.clear();
     completionObjectCacheOrder.clear();
     failedCompletionObjectLoads.clear();
     loadedSchemaObjectNamespaces.clear();
@@ -1053,9 +1203,57 @@
     return null;
   }
 
-  function retainTableStagingAfterConnectionLoss(tabId: string) {
+  function safeErrorDetail(error: unknown): string | null {
+    if (error && typeof error === 'object' && 'safe_detail' in error) {
+      const detail = (error as { safe_detail?: unknown }).safe_detail;
+      if (typeof detail === 'string') return detail;
+    }
+    return null;
+  }
+
+  function safeErrorRetryable(error: unknown): boolean {
+    if (error && typeof error === 'object' && 'retryable' in error) {
+      return (error as { retryable?: unknown }).retryable === true;
+    }
+    return false;
+  }
+
+  function queryExecutionError(error: unknown): ExecutionErrorUi {
+    return {
+      message: safeErrorMessage(error),
+      category: safeErrorCategory(error),
+      detail: safeErrorDetail(error),
+      retryable: safeErrorRetryable(error),
+      statementIndex: null,
+      statementStart: null,
+      statementEnd: null
+    };
+  }
+
+  function recordQueryStartFailure(tabId: string, error: unknown) {
+    const failedAt = Date.now();
+    const executionError = queryExecutionError(error);
+    executions[tabId] = {
+      id: `rejected-${tabId}-${failedAt}`,
+      tabId,
+      state: 'failed',
+      startedAt: failedAt,
+      completedAt: failedAt,
+      statementsCompleted: 0,
+      receivedRows: 0,
+      error: executionError
+    };
+    results[tabId] = [];
+    delete selectedResultIds[tabId];
+    statusMessage = executionError.message;
+  }
+
+  function retainTableStagingAfterConnectionLoss(
+    tabId: string,
+    preserveExecution = false
+  ) {
     delete sessions[tabId];
-    delete executions[tabId];
+    if (!preserveExecution) delete executions[tabId];
     delete results[tabId];
     delete selectedResultIds[tabId];
     const table = tableTabs[tabId];
@@ -1269,7 +1467,7 @@
           tab.kind === 'table_data' ? tab.table_namespace : tab.context_label;
         const session = await openConnectedTabSession(tab, profileId, context);
         if (tab.kind === 'query') {
-          await preloadCompletionMetadata(profileId, session.context);
+          startCompletionMetadataWarmup(profileId, session.context);
         } else {
           tableTabs[tab.id] ??= newTableUi();
           await loadTablePage(tab.id, [], 0, false);
@@ -1347,6 +1545,7 @@
   ) {
     invalidateProfileTablePreviews(profileId);
     clearCompletionMetadata(profileId, namespace);
+    const revision = captureCompletionMetadataRevision(profileId, namespace);
     const namespaceKey = schemaObjectNamespaceKey(profileId, namespace);
     const namespaceView = schemaNamespaces[profileId]?.find(
       (candidate) => candidate.name === namespace
@@ -1357,6 +1556,12 @@
         profile_id: profileId,
         namespace
       });
+      if (
+        !revision ||
+        !completionMetadataRevisionIsCurrent(profileId, namespace, revision)
+      ) {
+        return { ...response, applied: false };
+      }
       const others = (schemaObjects[profileId] ?? []).filter(
         (object) => object.namespace !== namespace
       );
@@ -1370,10 +1575,15 @@
             : 'empty';
       }
       if (response.stale) schemaStates[profileId] = 'stale';
-      return response;
+      return { ...response, applied: true };
     } catch (error) {
-      loadedSchemaObjectNamespaces.delete(namespaceKey);
-      if (namespaceView) namespaceView.state = schemaFailureState(error);
+      if (
+        revision &&
+        completionMetadataRevisionIsCurrent(profileId, namespace, revision)
+      ) {
+        loadedSchemaObjectNamespaces.delete(namespaceKey);
+        if (namespaceView) namespaceView.state = schemaFailureState(error);
+      }
       throw error;
     }
   }
@@ -1555,6 +1765,22 @@
     });
   }
 
+  function compatibilityWarningSignature(connection: ConnectionInfoView) {
+    return [
+      connection.engine,
+      connection.exact_version,
+      connection.compatibility_status,
+      connection.compatibility_warning ?? ''
+    ].join('\u0000');
+  }
+
+  function dismissActiveCompatibilityWarning() {
+    if (!activeProfile || !activeConnection?.compatibility_warning) return;
+    dismissedCompatibilityWarnings[activeProfile.id] =
+      compatibilityWarningSignature(activeConnection);
+    statusMessage = `Dismissed the compatibility warning for this ${activeConnection.engine} ${activeConnection.exact_version} connection.`;
+  }
+
   async function connectProfile(profile: ProfileView) {
     if (!hasNativeRuntime()) return;
     const stagedTab = stagedTableTabForProfile(profile.id);
@@ -1571,6 +1797,7 @@
         const info = await invokeCommand('connect_profile', {
           profile_id: profile.id
         });
+        delete dismissedCompatibilityWarnings[profile.id];
         connections[profile.id] = info;
         const schema = await loadSchemaNamespaces(profile.id);
         statusMessage = `${profile.name} connected to ${info.engine} ${info.exact_version}. Metadata uses a separate native session.`;
@@ -1585,18 +1812,18 @@
           (tab) =>
             tab.id === workspace.active_tab_id && tab.profile_id === profile.id
         );
-        await preloadCompletionMetadata(
-          profile.id,
-          selectedTab?.kind === 'table_data'
-            ? (selectedTab.table_namespace ?? info.context)
-            : (selectedTab?.context_label ?? info.context)
-        );
         if (selectedTab?.kind === 'table_data') {
           tableTabViews[selectedTab.id] = 'structure';
           await loadSchemaObjectDetailForTab(selectedTab);
         } else if (selectedTab) {
           await ensureTabSession(selectedTab);
         }
+        startCompletionMetadataWarmup(
+          profile.id,
+          selectedTab?.kind === 'table_data'
+            ? (selectedTab.table_namespace ?? info.context)
+            : (selectedTab?.context_label ?? info.context)
+        );
       } finally {
         delete connectionOperations[profile.id];
       }
@@ -1626,6 +1853,7 @@
         profile_id: profile.id
       });
       delete connections[profile.id];
+      delete dismissedCompatibilityWarnings[profile.id];
       delete schemaNamespaces[profile.id];
       delete schemaObjects[profile.id];
       clearCompletionMetadata(profile.id);
@@ -1846,6 +2074,7 @@
       if (result.status === 'deleted') {
         profiles = profiles.filter((profile) => profile.id !== profileId);
         delete connections[profileId];
+        delete dismissedCompatibilityWarnings[profileId];
         delete schemaNamespaces[profileId];
         delete schemaObjects[profileId];
         clearCompletionMetadata(profileId);
@@ -2547,7 +2776,7 @@
         session.context = response.context;
         tab.context_label = response.context;
         pendingExecution = null;
-        await preloadCompletionMetadata(session.profile_id, response.context);
+        startCompletionMetadataWarmup(session.profile_id, response.context);
         await saveWorkspaceNow();
         statusMessage = response.message;
       } catch (error) {
@@ -2653,7 +2882,7 @@
         activeProfile.id,
         namespace
       );
-      await preloadCompletionObjectDetails(activeProfile.id, response.objects);
+      startCompletionObjectDetailsWarmup(activeProfile.id, response.objects);
       statusMessage = `${response.stale ? 'Showing stale cached metadata for' : 'Loaded'} ${response.objects.length} database objects from ${namespace}.`;
     });
   }
@@ -2682,7 +2911,7 @@
             profileId,
             namespace.name
           );
-          await preloadCompletionObjectDetails(profileId, objects.objects);
+          startCompletionObjectDetailsWarmup(profileId, objects.objects);
         }
       }
       const completionNamespace =
@@ -2692,7 +2921,7 @@
             activeTab?.context_label ??
             activeConnection?.context);
       if (completionNamespace) {
-        await preloadCompletionMetadata(profileId, completionNamespace);
+        startCompletionMetadataWarmup(profileId, completionNamespace);
       }
       statusMessage = response.stale
         ? 'The metadata session could not refresh; retained cache is visibly stale.'
@@ -2713,7 +2942,7 @@
     expandedNamespaces[`${profileId}:${namespace}`] = true;
     await runAction(async () => {
       const response = await loadSchemaNamespaceObjects(profileId, namespace);
-      await preloadCompletionObjectDetails(profileId, response.objects);
+      startCompletionObjectDetailsWarmup(profileId, response.objects);
       statusMessage = response.stale
         ? `${namespace} could not refresh; its retained cache is labelled stale.`
         : `Refreshed ${namespace} without changing other namespaces.`;
@@ -2873,7 +3102,13 @@
   async function startExecutionRequest(request: StartExecutionRequest) {
     if (!hasNativeRuntime()) return;
     await runAction(async () => {
-      const response = await invokeCommand('start_execution', request);
+      let response: ExecutionStartResponse;
+      try {
+        response = await invokeCommand('start_execution', request);
+      } catch (error) {
+        recordQueryStartFailure(request.tab_id, error);
+        return;
+      }
       if (response.status === 'confirmation_required') {
         pendingExecution = { request, response };
         await openModal('destructive');
@@ -3036,17 +3271,28 @@
         : 'Execution completed without row results.';
     } else if (event.event_type === 'failed') {
       setExecutionState(execution, 'failed');
-      execution.error = event.error;
+      execution.error = {
+        message: event.error ?? 'The database could not complete this query.',
+        category: event.error_category,
+        detail: null,
+        retryable: event.retryable === true,
+        statementIndex: event.statement_index,
+        statementStart: event.statement_start,
+        statementEnd: event.statement_end
+      };
       if (event.transaction && sessions[event.tab_id]) {
         sessions[event.tab_id].transaction = event.transaction;
       }
       if (event.error_category === 'connectivity')
-        retainTableStagingAfterConnectionLoss(event.tab_id);
-      const range =
-        event.statement_start !== null && event.statement_end !== null
-          ? ` at bytes ${event.statement_start}–${event.statement_end}`
-          : '';
-      statusMessage = `${event.error ?? 'Database execution failed safely.'}${range}${event.retryable ? ' Retry is available after resolving the cause.' : ''}`;
+        retainTableStagingAfterConnectionLoss(event.tab_id, true);
+      const presentation = executionErrorPresentation(execution.error);
+      statusMessage = [
+        presentation.message,
+        presentation.location,
+        presentation.retryHint
+      ]
+        .filter((value): value is string => Boolean(value))
+        .join(' ');
     } else if (event.event_type === 'cancelled') {
       finishExecutionCancellation(execution);
       if (event.transaction && sessions[event.tab_id]) {
@@ -3062,9 +3308,17 @@
 
   function rejectExecutionEvent(execution: ExecutionUi, executionId: string) {
     setExecutionState(execution, 'failed');
-    execution.error =
-      'A duplicate, late, unknown, or out-of-order result event was rejected.';
-    statusMessage = execution.error;
+    execution.error = {
+      message:
+        'A duplicate, late, unknown, or out-of-order result event was rejected.',
+      category: 'internal',
+      detail: null,
+      retryable: false,
+      statementIndex: null,
+      statementStart: null,
+      statementEnd: null
+    };
+    statusMessage = execution.error.message;
     void invokeCommand('cancel_execution', {
       execution_id: executionId
     }).catch(() => undefined);
@@ -3903,16 +4157,26 @@
     </div>
   {/if}
 
-  {#if activeConnection?.compatibility_warning}
-    <div class="recovery-banner" role="alert">
-      <strong>
-        {activeConnection.legacy
-          ? 'Legacy server connection'
-          : activeConnection.compatibility_status === 'query_only'
-            ? 'Query-only compatibility mode'
-            : 'Connection warning'}
-      </strong>
-      <span>{activeConnection.compatibility_warning}</span>
+  {#if activeCompatibilityWarning && activeConnection}
+    <div class="recovery-banner compatibility-warning" role="alert">
+      <div class="compatibility-warning-copy">
+        <strong>
+          {activeConnection.legacy
+            ? 'Legacy server connection'
+            : activeConnection.compatibility_status === 'query_only'
+              ? 'Query-only compatibility mode'
+              : 'Connection warning'}
+        </strong>
+        <span>{activeCompatibilityWarning}</span>
+      </div>
+      <button
+        type="button"
+        class="icon-button compatibility-warning-close"
+        aria-label="Dismiss compatibility warning"
+        title="Dismiss for this connection"
+        onclick={dismissActiveCompatibilityWarning}
+        ><Icon name="close" size={14} /></button
+      >
     </div>
   {/if}
 
@@ -4486,9 +4750,44 @@
                   {/if}
                 </span>
               </div>
-              {#if activeExecution?.error}
-                <div class="result-error" role="alert">
-                  {activeExecution.error}
+              {#if activeExecutionError}
+                <div
+                  class="result-error"
+                  role="alert"
+                  aria-labelledby="query-error-heading"
+                  aria-atomic="true"
+                >
+                  <div class="result-error-heading">
+                    <div>
+                      <p class="eyebrow">
+                        {activeExecutionError.categoryLabel}
+                      </p>
+                      <h3 id="query-error-heading">
+                        {activeExecutionError.heading}
+                      </h3>
+                    </div>
+                    {#if activeExecutionError.location}
+                      <span class="result-error-location">
+                        {activeExecutionError.location}
+                      </span>
+                    {/if}
+                  </div>
+                  <p class="result-error-message">
+                    {activeExecutionError.message}
+                  </p>
+                  {#if activeExecutionError.detail}
+                    <p class="result-error-detail">
+                      {activeExecutionError.detail}
+                    </p>
+                  {/if}
+                  <p class="result-error-guidance">
+                    {activeExecutionError.guidance}
+                  </p>
+                  {#if activeExecutionError.retryHint}
+                    <p class="result-error-retry">
+                      {activeExecutionError.retryHint}
+                    </p>
+                  {/if}
                 </div>
               {/if}
               {#if emptyResultsState}

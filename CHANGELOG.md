@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-08-29
+
+### Fixed
+
+- Moved SQL-completion metadata warmup behind successful connection and tab-session readiness so large catalogs no longer leave the profile in Connecting or block ordinary work while columns preload in the background.
+- Made out-of-matrix connection warnings dismissible for the current connection without changing its compatibility restrictions.
+- Presented both rejected query starts and database execution failures inside Results with a readable category, safe database message, statement location when available, and cause-specific retry guidance.
+
 ## [0.1.12] - 2026-08-27
 
 ### Added

@@ -77,6 +77,12 @@ let createdTabCount = 0;
 let executionCount = 0;
 let pausedExecutionId = null;
 window.__QUERYNOT_FIXTURE_COMMANDS__ = commandLog;
+window.__QUERYNOT_COMPLETION_WARMUP_RESOLUTIONS__ = 0;
+let releaseCompletionWarmup;
+const completionWarmupGate = new Promise((resolve) => {
+  releaseCompletionWarmup = resolve;
+});
+window.__QUERYNOT_RELEASE_COMPLETION_WARMUP__ = () => releaseCompletionWarmup();
 
 function queryTab(id, title, profileId, profileLabel, position) {
   return {
@@ -101,16 +107,19 @@ function queryTab(id, title, profileId, profileLabel, position) {
 }
 
 function connection(profileId) {
+  const reporting = profileId === 'long-profile';
   return {
     profile_id: profileId,
     profile_name: profileId === 'emissary' ? 'Emissary' : 'Reporting',
     engine: profileId === 'emissary' ? 'SQLite' : 'MySQL',
-    exact_version: profileId === 'emissary' ? '3.51.3' : '8.4.10',
+    exact_version: profileId === 'emissary' ? '3.51.3' : '9.1.0',
     dialect: profileId === 'emissary' ? 'sqlite' : 'mysql',
     context: profileId === 'emissary' ? 'main' : 'analytics',
-    read_only: false,
-    compatibility_status: 'supported',
-    compatibility_warning: null,
+    read_only: reporting,
+    compatibility_status: reporting ? 'query_only' : 'supported',
+    compatibility_warning: reporting
+      ? 'MySQL 9.1.0 is outside this release’s fully supported matrix, so possible writes remain disabled.'
+      : null,
     legacy: false,
     capabilities: {
       metadata: true,
@@ -362,6 +371,9 @@ async function emitFailedResult(executionId) {
       error: 'Synthetic permission denial for rendered state coverage.',
       error_category: 'authorization',
       retryable: false,
+      statement_index: 0,
+      statement_start: 0,
+      statement_end: 31,
       transaction: { automatic: true, certainty: 'clean' }
     })
   );
@@ -379,7 +391,7 @@ function taggedValue(valueType, text) {
 
 mockWindows('main');
 mockIPC(
-  (command, payload) => {
+  async (command, payload) => {
     const request = payload?.request ?? {};
     commandLog.push({ command, request: structuredClone(request) });
     switch (command) {
@@ -442,6 +454,8 @@ mockIPC(
           stale: false
         };
       case 'load_schema_object_detail':
+        await completionWarmupGate;
+        window.__QUERYNOT_COMPLETION_WARMUP_RESOLUTIONS__ += 1;
         return {
           object: {
             namespace: request.namespace,
@@ -499,6 +513,18 @@ mockIPC(
         };
       case 'open_tab_session':
         return session(request.profile_id, request.tab_id);
+      case 'change_tab_context':
+        return {
+          context: request.context,
+          transaction: { automatic: true, certainty: 'clean' },
+          message: 'Changed the fixture tab context.'
+        };
+      case 'close_tab_session':
+        return {
+          completed: true,
+          cancelled: false,
+          message: 'Closed the fixture tab session.'
+        };
       case 'browse_table':
         return {
           definition: {
@@ -545,6 +571,15 @@ mockIPC(
           message: 'Loaded one deterministic row.'
         };
       case 'start_execution':
+        if (request.sql.includes('QUERYNOT_REJECTED_STATE')) {
+          throw {
+            category: 'syntax',
+            safe_message:
+              'The SQL planner could not identify a complete statement to run.',
+            safe_detail: 'Review the selected SQL and statement boundaries.',
+            retryable: false
+          };
+        }
         executionCount += 1;
         {
           const executionId = `layout-execution-${executionCount}`;

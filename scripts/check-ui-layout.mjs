@@ -153,6 +153,11 @@ const failedResultScreenshotPath = resolve(
   'artifacts',
   'ui-layout-results-failed.png'
 );
+const rejectedResultScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-rejected.png'
+);
 const emptyResultScreenshotPath = resolve(
   root,
   'artifacts',
@@ -178,6 +183,11 @@ const forcedColorsScreenshotPath = resolve(
   root,
   'artifacts',
   'ui-layout-forced-colors.png'
+);
+const compatibilityWarningScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-compatibility-warning.png'
 );
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
@@ -1402,9 +1412,63 @@ try {
   await workbenchPage.setViewportSize({ width: 1280, height: 800 });
   initialWorkbenchAlignment.large_scale_150_percent = largeScaleAlignment;
   await emissaryRow.locator('.connection-action').click();
-  await workbenchPage
-    .getByRole('button', { name: 'Disconnect', exact: true })
-    .waitFor();
+  const disconnectButton = workbenchPage.getByRole('button', {
+    name: 'Disconnect',
+    exact: true
+  });
+  await disconnectButton.waitFor();
+  await workbenchPage.waitForFunction(
+    () =>
+      window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+        (entry) => entry.command === 'load_schema_object_detail'
+      ).length === 2
+  );
+  const nonBlockingCompletionWarmup = await workbenchPage.evaluate(() => ({
+    connection_state: document
+      .querySelector('[data-profile-id="emissary"] .connection-state')
+      ?.textContent?.trim(),
+    connection_action: document
+      .querySelector('[data-profile-id="emissary"] .connection-action')
+      ?.textContent?.trim(),
+    context_state: document
+      .querySelector('.context-bar .context-state')
+      ?.textContent?.trim(),
+    aria_busy: document.querySelector('.app-shell')?.getAttribute('aria-busy'),
+    run_enabled:
+      document.querySelector('.query-toolbar .primary-action') instanceof
+        HTMLButtonElement &&
+      !document.querySelector('.query-toolbar .primary-action').disabled,
+    session_opens: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
+      (entry) => entry.command === 'open_tab_session'
+    ).length,
+    detail_resolutions: window.__QUERYNOT_COMPLETION_WARMUP_RESOLUTIONS__
+  }));
+  assert(
+    nonBlockingCompletionWarmup.connection_state === 'Connected' &&
+      nonBlockingCompletionWarmup.connection_action === 'Disconnect' &&
+      nonBlockingCompletionWarmup.context_state === 'Connected' &&
+      nonBlockingCompletionWarmup.aria_busy === 'false' &&
+      nonBlockingCompletionWarmup.run_enabled &&
+      nonBlockingCompletionWarmup.session_opens === 1 &&
+      nonBlockingCompletionWarmup.detail_resolutions === 0,
+    `connection remained blocked by completion metadata warmup (${JSON.stringify(nonBlockingCompletionWarmup)})`
+  );
+  const warmupEditor = workbenchPage.locator('.cm-content');
+  await warmupEditor.focus();
+  assert(
+    await warmupEditor.evaluate(
+      (element) => element === document.activeElement
+    ),
+    'the SQL editor was not interactive while completion metadata warmed'
+  );
+  await workbenchPage.evaluate(() =>
+    window.__QUERYNOT_RELEASE_COMPLETION_WARMUP__()
+  );
+  await workbenchPage.waitForFunction(
+    () => window.__QUERYNOT_COMPLETION_WARMUP_RESOLUTIONS__ === 2
+  );
+  initialWorkbenchAlignment.non_blocking_completion_warmup =
+    nonBlockingCompletionWarmup;
   const completionMetadataPreload = await workbenchPage.evaluate(() => ({
     object_lists: window.__QUERYNOT_FIXTURE_COMMANDS__.filter(
       (entry) =>
@@ -1418,12 +1482,14 @@ try {
           entry.request.namespace === 'main'
       )
       .map((entry) => entry.request.object_name)
-      .sort()
+      .sort(),
+    resolved_details: window.__QUERYNOT_COMPLETION_WARMUP_RESOLUTIONS__
   }));
   assert(
     completionMetadataPreload.object_lists === 1 &&
       completionMetadataPreload.object_details.join('|') ===
-        'fraction_totals|fractions',
+        'fraction_totals|fractions' &&
+      completionMetadataPreload.resolved_details === 2,
     `connection did not preload current-context completion metadata (${JSON.stringify(completionMetadataPreload)})`
   );
   initialWorkbenchAlignment.completion_metadata_preload =
@@ -3102,19 +3168,61 @@ try {
   await workbenchPage.screenshot({ path: rowlessResultScreenshotPath });
 
   await runStateQuery("SELECT 'QUERYNOT_FAILED_STATE';");
-  const failedResult = workbenchPage.getByRole('alert');
+  const failedResult = workbenchPage.locator('.result-error');
   await failedResult
     .getByText('Synthetic permission denial for rendered state coverage.')
     .waitFor();
+  const failedResultCopy = await failedResult.evaluate((element) => ({
+    category: element.querySelector('.eyebrow')?.textContent?.trim() ?? '',
+    heading: element.querySelector('h3')?.textContent?.trim() ?? '',
+    location:
+      element.querySelector('.result-error-location')?.textContent?.trim() ??
+      '',
+    guidance:
+      element.querySelector('.result-error-guidance')?.textContent?.trim() ?? ''
+  }));
   assert(
     (
       await workbenchPage
         .locator('.results-context strong.failed')
         .textContent()
-    )?.trim() === 'Failed',
-    'failed execution did not own the Results status'
+    )?.trim() === 'Failed' &&
+      failedResultCopy.category === 'Permission issue' &&
+      failedResultCopy.heading === 'Query failed' &&
+      failedResultCopy.location === 'Statement 1 · SQL bytes 0–31' &&
+      failedResultCopy.guidance.includes('access the referenced objects'),
+    `failed execution is not readable in Results (${JSON.stringify(failedResultCopy)})`
   );
   await workbenchPage.screenshot({ path: failedResultScreenshotPath });
+
+  await runStateQuery("SELECT 'QUERYNOT_REJECTED_STATE';");
+  await failedResult
+    .getByText(
+      'The SQL planner could not identify a complete statement to run.'
+    )
+    .waitFor();
+  const rejectedResultCopy = await failedResult.evaluate((element) => ({
+    category: element.querySelector('.eyebrow')?.textContent?.trim() ?? '',
+    heading: element.querySelector('h3')?.textContent?.trim() ?? '',
+    message:
+      element.querySelector('.result-error-message')?.textContent?.trim() ?? '',
+    detail:
+      element.querySelector('.result-error-detail')?.textContent?.trim() ?? '',
+    result_context: Array.from(
+      document.querySelector('.results-context')?.children ?? []
+    ).map((candidate) => candidate.textContent?.trim() ?? '')
+  }));
+  assert(
+    rejectedResultCopy.category === 'SQL syntax issue' &&
+      rejectedResultCopy.heading === 'Query failed' &&
+      rejectedResultCopy.message.includes('complete statement') &&
+      rejectedResultCopy.detail ===
+        'Review the selected SQL and statement boundaries.' &&
+      rejectedResultCopy.result_context[0] === 'Failed' &&
+      rejectedResultCopy.result_context[1] === '0 result sets',
+    `pre-execution query error did not move into Results (${JSON.stringify(rejectedResultCopy)})`
+  );
+  await workbenchPage.screenshot({ path: rejectedResultScreenshotPath });
 
   await runStateQuery("SELECT 'QUERYNOT_EMPTY_STATE';");
   const emptyGridState = workbenchPage.locator('.grid-empty-state');
@@ -3232,6 +3340,61 @@ try {
     `closing an active query left its connection group (${JSON.stringify(localTabClose)})`
   );
   populatedWorkbench.local_tab_close = localTabClose;
+
+  const reportingRow = workbenchPage.locator(
+    '.connection-row[data-profile-id="long-profile"]'
+  );
+  await reportingRow.locator('.connection-main').click();
+  await reportingRow.locator('.connection-action').click();
+  const compatibilityWarning = workbenchPage.locator('.compatibility-warning');
+  await compatibilityWarning
+    .getByText(/outside this release’s fully supported matrix/)
+    .waitFor();
+  const compatibilityWarningState = await compatibilityWarning.evaluate(
+    (element) => ({
+      heading: element.querySelector('strong')?.textContent?.trim() ?? '',
+      message: element.querySelector('span')?.textContent?.trim() ?? '',
+      close_label:
+        element
+          .querySelector('.compatibility-warning-close')
+          ?.getAttribute('aria-label') ?? '',
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth
+    })
+  );
+  assert(
+    compatibilityWarningState.heading === 'Query-only compatibility mode' &&
+      compatibilityWarningState.message.includes(
+        'possible writes remain disabled'
+      ) &&
+      compatibilityWarningState.close_label ===
+        'Dismiss compatibility warning' &&
+      compatibilityWarningState.document_scroll_width <=
+        compatibilityWarningState.viewport_width,
+    `compatibility warning is incomplete or overflows (${JSON.stringify(compatibilityWarningState)})`
+  );
+  await workbenchPage.screenshot({ path: compatibilityWarningScreenshotPath });
+  const dismissCompatibilityWarning = compatibilityWarning.getByRole('button', {
+    name: 'Dismiss compatibility warning'
+  });
+  await dismissCompatibilityWarning.focus();
+  assert(
+    await dismissCompatibilityWarning.evaluate(
+      (element) => element === document.activeElement
+    ),
+    'compatibility warning close action could not receive keyboard focus'
+  );
+  await dismissCompatibilityWarning.press('Enter');
+  await compatibilityWarning.waitFor({ state: 'detached' });
+  assert(
+    (await reportingRow.locator('.connection-state').textContent())?.trim() ===
+      'Connected' &&
+      (
+        await reportingRow.locator('.connection-action').textContent()
+      )?.trim() === 'Disconnect',
+    'dismissing the compatibility warning changed the active connection'
+  );
+  populatedWorkbench.compatibility_warning = compatibilityWarningState;
   await workbenchPage.close();
 
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -3282,12 +3445,14 @@ try {
       'artifacts/ui-layout-results-waiting.png',
       'artifacts/ui-layout-results-rowless.png',
       'artifacts/ui-layout-results-failed.png',
+      'artifacts/ui-layout-results-rejected.png',
       'artifacts/ui-layout-results-empty.png',
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-file-menu.png',
       'artifacts/ui-layout-file-menu-720.png',
       'artifacts/ui-layout-forced-colors.png',
+      'artifacts/ui-layout-compatibility-warning.png',
       'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png',
       'artifacts/ui-layout-sidebar.png',
