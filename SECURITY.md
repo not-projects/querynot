@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-QueryNot `0.1.12` is the current public release for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon under one signed updater contract. Security fixes are applied on a best-effort basis to the current `master` branch and supported release line.
+QueryNot `0.1.13` is the current public release for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon under one signed updater contract. Security fixes are applied on a best-effort basis to the current `master` branch and supported release line.
 
 | Version | Supported |
 | --- | --- |

@@ -4,7 +4,7 @@ Operational context for coding agents and contributor tooling. This is the agent
 
 ## Repository Role
 
-QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.12 is the current live release on the signed-updater channel for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon.
+QueryNot is a local-first desktop SQL client from Not Projects. Version 0.1.13 is the current live release on the signed-updater channel for Windows 11 x86-64, Linux x86-64, macOS Intel, and macOS Apple silicon.
 
 > Query your data, not your patience.
 
@@ -56,11 +56,11 @@ Version 0.1.11 mounts SQL completion at the themed application shell, lazily res
 
 Version 0.1.12 preloads the active database/schema's relation names and a bounded set of table/view columns through the metadata session when a connection or query-tab context becomes active. Larger and temporarily unavailable catalogs retain the existing on-demand fallback.
 
-On `master`, completion metadata warmup starts after connection and tab-session readiness without holding the connection action open, out-of-matrix compatibility warnings can be dismissed for the current connection, and rejected or failed queries present readable errors in Results.
+Version 0.1.13 starts completion metadata warmup after connection and tab-session readiness without holding the connection action open, lets users dismiss out-of-matrix compatibility warnings for the current connection, and presents readable rejected or failed query errors in Results.
 
 CI uses fail-closed documentation, frontend, and native scopes. Frontend-only changes retain dependency, audit, Svelte, Chromium, unit, formatting, and production-build coverage without compiling unchanged desktop code. Native and unknown changes add one Linux Rust-quality lane, Windows core tests, dependency review, and Linux x86-64, Windows x86-64, macOS Intel, and macOS Apple-silicon compile checks. Stable purpose-specific Rust caches use dependency-aware keys that ignore only workspace version bumps, are saved only by `master`, and remain separate from the signed candidate's per-target release caches and exact-commit/no-rebuild trust boundary.
 
-The current live `0.1.12` support and publication envelope is Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads under ADR 0016. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
+The current live `0.1.13` support and publication envelope is Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads under ADR 0016. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
 
 ## Verified Commands
 
