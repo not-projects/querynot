@@ -81,7 +81,9 @@ The deep audit requires `QUERYNOT_UPDATER_PUBLIC_KEY` because it rechecks every 
 
 The public candidate and publication contract is fail closed. A missing server digest, extra asset, duplicate name, hash or byte-count mismatch, wrong tag/source, invalid signature, or stale confirmation stops publication.
 
-The current completed signed release is `v0.1.13`: candidate run [`33213911766`](https://github.com/not-projects/querynot/actions/runs/33213911766), publication run [`33214714537`](https://github.com/not-projects/querynot/actions/runs/33214714537), source commit `f64b87b1fd5328f5a5c7b873c025e9ca60ced631`, and release [`v0.1.13`](https://github.com/not-projects/querynot/releases/tag/v0.1.13). Routine exact-candidate, updater-signature, draft/public GitHub asset-metadata, and bounded endpoint-smoke gates passed; the optional full-package public deep audit was intentionally not run for this fast patch shipment.
+The current completed signed release is `v0.1.14`: candidate run [`33398703729`](https://github.com/not-projects/querynot/actions/runs/33398703729), publication run [`33400362354`](https://github.com/not-projects/querynot/actions/runs/33400362354), source commit `b2537fd0cb19a18d4fec49f59e99b79ed3b462f1`, and release [`v0.1.14`](https://github.com/not-projects/querynot/releases/tag/v0.1.14). Routine exact-candidate, updater-signature, draft/public GitHub asset-metadata, and bounded endpoint-smoke gates passed; the optional full-package public deep audit was intentionally not run.
+
+The previous `v0.1.13` release used candidate run [`33213911766`](https://github.com/not-projects/querynot/actions/runs/33213911766), publication run [`33214714537`](https://github.com/not-projects/querynot/actions/runs/33214714537), and source commit `f64b87b1fd5328f5a5c7b873c025e9ca60ced631`.
 
 The previous `v0.1.12` release used candidate run [`33077747652`](https://github.com/not-projects/querynot/actions/runs/33077747652), publication run [`33079149205`](https://github.com/not-projects/querynot/actions/runs/33079149205), and source commit `c0cff8b4364c19a3364d55fbeb8bb55bcbac52e7`.
 

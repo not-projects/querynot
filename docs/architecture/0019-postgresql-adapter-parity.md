@@ -1,13 +1,13 @@
 # ADR 0019: Capability-driven PostgreSQL adapter parity
 
 Date: 2026-08-31
-Status: Implemented on `master`; disposable conformance and release evidence pending
+Status: Shipped in `0.1.14` as a development preview; disposable PostgreSQL conformance and support evidence pending
 
 ## Context
 
 The approved product roadmap names PostgreSQL as QueryNot's first post-initial-release engine and explicitly uses it to test whether the common adapter contract can absorb schemas, arrays, cancellation, row identity, and transaction differences without presentation-layer engine branching.
 
-The live `0.1.13` release supports SQLite and the published MySQL/MariaDB matrix. Adding a PostgreSQL choice to the connection form without the native lifecycle, dialect, metadata, result, and safety paths would violate the vertical-slice rule. Conversely, describing a newly compiled adapter as released before a disposable server matrix passes would overstate the compatibility evidence.
+The live `0.1.14` supported database matrix remains SQLite and the published MySQL/MariaDB lines. It also contains the PostgreSQL adapter as a development preview. Adding that PostgreSQL choice to the connection form without the native lifecycle, dialect, metadata, result, and safety paths would violate the vertical-slice rule. Conversely, describing the compiled preview as supported before a disposable server matrix passes would overstate the compatibility evidence.
 
 ## Decision
 
@@ -44,13 +44,13 @@ Table browsing and staged changes reuse the immutable native plans, deterministi
 
 | Stage | Scope | Status |
 | --- | --- | --- |
-| Contract and implementation | Profile target, adapter dispatch, PostgreSQL dialect/table planning, native lifecycle, UI engine choice, editor language/completion | Implemented on `master` |
-| Local regression | Rust unit tests, frontend contract/completion tests, Svelte/TypeScript checks, workspace compile | Required before handoff |
+| Contract and implementation | Profile target, adapter dispatch, PostgreSQL dialect/table planning, native lifecycle, UI engine choice, editor language/completion | Shipped in `0.1.14` as a development preview |
+| Local regression | Rust unit tests, frontend contract/completion tests, Svelte/TypeScript checks, workspace compile | Passed for the exact `0.1.14` source in release CI |
 | Disposable PostgreSQL conformance | Checksum- or digest-pinned PostgreSQL `18.6`; generated marker; password and client-certificate auth; disabled/system/custom-CA TLS cases; identity, schema/routine overloads, arrays/types, streaming, zero rows, transactions, cancellation, browse/edit/conflict/rollback | Pending; the MySQL-family fixture harness explicitly refuses to claim this evidence |
-| Release integration | Add the proven PostgreSQL fixture to candidate CI, traceability, compatibility matrix, dependency/security evidence, and all four target compile/package lanes | Pending |
-| Native release evidence | Trust-store/client-identity observations, accessibility/UI review, performance/resource observation, dogfood, and signed package candidate audit | Pending |
+| Release integration | Add the proven PostgreSQL fixture to candidate CI, traceability, compatibility matrix, dependency/security evidence, and all four target compile/package lanes | Partial: all four compiled/signed package lanes passed; PostgreSQL fixture and support traceability remain pending |
+| Native release evidence | Trust-store/client-identity observations, accessibility/UI review, performance/resource observation, dogfood, and signed package candidate audit | Partial: signed package candidate audit passed; native observations remain pending |
 
-Until the pending gates pass, documentation may say that `master` contains the PostgreSQL adapter, but the live release and compatibility tables must not claim PostgreSQL support.
+Until the pending gates pass, documentation may say that live `0.1.14` contains the PostgreSQL development preview, but the compatibility tables must not claim PostgreSQL support.
 
 ## Consequences
 
