@@ -66,6 +66,7 @@ enum LexState {
 pub enum SqlDialect {
     Sqlite,
     MySql,
+    Postgres,
 }
 
 pub fn plan_execution(
@@ -166,7 +167,183 @@ pub fn split_statements_for_dialect(
     match dialect {
         SqlDialect::Sqlite => split_statements(document),
         SqlDialect::MySql => split_mysql_statements(document),
+        SqlDialect::Postgres => split_postgres_statements(document),
     }
+}
+
+fn split_postgres_statements(document: &str) -> Result<Vec<SqlStatement>, SqlPlanError> {
+    if document.len() > MAX_SQL_BYTES {
+        return Err(SqlPlanError::TooLarge);
+    }
+    let bytes = document.as_bytes();
+    let mut state = LexState::Code;
+    let mut dollar_tag: Option<String> = None;
+    let mut single_quote_backslash_escapes = false;
+    let mut block_depth = 0_u32;
+    let mut index = 0;
+    let mut start = 0;
+    let mut statements = Vec::new();
+    while index < bytes.len() {
+        if let Some(tag) = dollar_tag.as_deref() {
+            if bytes[index..].starts_with(tag.as_bytes()) {
+                index += tag.len();
+                dollar_tag = None;
+            } else {
+                index += 1;
+            }
+            continue;
+        }
+        let current = bytes[index];
+        let next = bytes.get(index + 1).copied();
+        match state {
+            LexState::Code => match (current, next) {
+                (b'\'', _) => {
+                    single_quote_backslash_escapes = postgres_escape_string_prefix(document, index);
+                    state = LexState::SingleQuote;
+                }
+                (b'"', _) => state = LexState::DoubleQuote,
+                (b'-', Some(b'-')) => {
+                    state = LexState::LineComment;
+                    index += 1;
+                }
+                (b'/', Some(b'*')) => {
+                    state = LexState::BlockComment;
+                    block_depth = 1;
+                    index += 1;
+                }
+                (b'$', _) => {
+                    if let Some(tag) = postgres_dollar_tag(document, index) {
+                        index += tag.len();
+                        dollar_tag = Some(tag.to_owned());
+                        continue;
+                    }
+                }
+                (b';', _) => {
+                    if let Some((trimmed_start, trimmed_end)) =
+                        trim_range(document, start, index + 1)
+                    {
+                        statements.push(SqlStatement {
+                            index: statements.len() as u32,
+                            start: trimmed_start,
+                            end: trimmed_end,
+                            sql: document[trimmed_start..trimmed_end].to_owned(),
+                        });
+                    }
+                    start = index + 1;
+                }
+                _ => {}
+            },
+            LexState::SingleQuote => {
+                if current == b'\\' && single_quote_backslash_escapes {
+                    index += usize::from(next.is_some());
+                } else if current == b'\\' && next == Some(b'\'') {
+                    // `standard_conforming_strings` is session-configurable.
+                    // Without an explicit E prefix, executing this text could
+                    // give the server and native safety planner different
+                    // statement boundaries, so refuse to guess.
+                    return Err(SqlPlanError::Ambiguous);
+                } else if current == b'\'' {
+                    if next == Some(b'\'') {
+                        index += 1;
+                    } else {
+                        single_quote_backslash_escapes = false;
+                        state = LexState::Code;
+                    }
+                }
+            }
+            LexState::DoubleQuote => {
+                if current == b'"' {
+                    if next == Some(b'"') {
+                        index += 1;
+                    } else {
+                        state = LexState::Code;
+                    }
+                }
+            }
+            LexState::LineComment => {
+                if current == b'\n' || current == b'\r' {
+                    state = LexState::Code;
+                }
+            }
+            LexState::BlockComment => match (current, next) {
+                (b'/', Some(b'*')) => {
+                    block_depth = block_depth.saturating_add(1);
+                    index += 1;
+                }
+                (b'*', Some(b'/')) => {
+                    block_depth = block_depth.saturating_sub(1);
+                    index += 1;
+                    if block_depth == 0 {
+                        state = LexState::Code;
+                    }
+                }
+                _ => {}
+            },
+            LexState::Backtick | LexState::Bracket => {
+                unreachable!("PostgreSQL does not enter MySQL/SQLite identifier states")
+            }
+        }
+        index += 1;
+    }
+    if dollar_tag.is_some()
+        || block_depth != 0
+        || !matches!(state, LexState::Code | LexState::LineComment)
+    {
+        return Err(SqlPlanError::Ambiguous);
+    }
+    if let Some((trimmed_start, trimmed_end)) = trim_range(document, start, document.len()) {
+        statements.push(SqlStatement {
+            index: statements.len() as u32,
+            start: trimmed_start,
+            end: trimmed_end,
+            sql: document[trimmed_start..trimmed_end].to_owned(),
+        });
+    }
+    Ok(statements)
+}
+
+fn postgres_dollar_tag(document: &str, start: usize) -> Option<&str> {
+    let tail = document.get(start..)?;
+    if !tail.starts_with('$') || !postgres_token_boundary_before(document, start) {
+        return None;
+    }
+    for (relative, character) in tail[1..].char_indices() {
+        let end = relative + 1;
+        if character == '$' {
+            return (end <= 129).then(|| &tail[..=end]);
+        }
+        let first = relative == 0;
+        let valid = if first {
+            character == '_' || character.is_ascii_alphabetic() || !character.is_ascii()
+        } else {
+            character == '_' || character.is_ascii_alphanumeric() || !character.is_ascii()
+        };
+        if !valid {
+            return None;
+        }
+    }
+    None
+}
+
+fn postgres_escape_string_prefix(document: &str, quote: usize) -> bool {
+    let Some(prefix) = document.get(..quote) else {
+        return false;
+    };
+    let Some((prefix_start, character)) = prefix.char_indices().next_back() else {
+        return false;
+    };
+    matches!(character, 'e' | 'E') && postgres_token_boundary_before(document, prefix_start)
+}
+
+fn postgres_token_boundary_before(document: &str, start: usize) -> bool {
+    document.get(..start).is_some_and(|prefix| {
+        prefix.chars().next_back().is_none_or(|character| {
+            !(character == '_'
+                || character == '$'
+                || character.is_alphanumeric()
+                || !character.is_ascii())
+        })
+    })
 }
 
 fn split_mysql_statements(document: &str) -> Result<Vec<SqlStatement>, SqlPlanError> {
@@ -800,6 +977,42 @@ mod tests {
         assert_eq!(statements.len(), 2);
         assert!(statements[0].sql.contains("still one"));
         assert!(statements[1].sql.contains("`semi;colon`"));
+    }
+
+    #[test]
+    fn postgres_dollar_quotes_and_nested_comments_keep_statement_boundaries() {
+        let sql = "CREATE FUNCTION public.answer() RETURNS integer AS $body$\nBEGIN\n  /* outer /* nested ; */ still outer */\n  RETURN 42;\nEND;\n$body$ LANGUAGE plpgsql;\nSELECT 'after;function';";
+        let statements = split_statements_for_dialect(sql, SqlDialect::Postgres).unwrap();
+
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].sql.contains("RETURN 42;"));
+        assert!(statements[0].sql.ends_with("LANGUAGE plpgsql;"));
+        assert_eq!(statements[1].sql, "SELECT 'after;function';");
+        assert!(
+            split_statements_for_dialect("SELECT $unterminated$body", SqlDialect::Postgres)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn postgres_escape_and_unicode_dollar_strings_are_bounded_without_utf8_guessing() {
+        let escaped = r"SELECT E'it\'s; still one'; SELECT 'doubled ''; quote';";
+        let statements = split_statements_for_dialect(escaped, SqlDialect::Postgres).unwrap();
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].sql.contains("still one"));
+
+        let unicode = "DO $тег$ BEGIN RAISE NOTICE 'данные; ещё'; END $тег$; SELECT 2;";
+        let statements = split_statements_for_dialect(unicode, SqlDialect::Postgres).unwrap();
+        assert_eq!(statements.len(), 2);
+        assert!(statements[0].sql.contains("данные; ещё"));
+
+        assert_eq!(
+            split_statements_for_dialect(
+                r"SELECT 'configuration-dependent\' boundary'; DROP TABLE records;",
+                SqlDialect::Postgres,
+            ),
+            Err(SqlPlanError::Ambiguous)
+        );
     }
 
     #[test]

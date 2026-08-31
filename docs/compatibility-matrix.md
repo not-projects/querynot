@@ -35,6 +35,12 @@ The live `0.1.13` release recognizes every well-formed MySQL `5.7.x` identity as
 
 MySQL 8.0 reached the lifecycle date identified by the vendor before this selection date; it is treated like a legacy compatibility line in UI/release notes even though the approved PRD separately calls out the mandatory 5.7 indicator. No safety control is weakened for either line.
 
+## Unreleased PostgreSQL development boundary
+
+Current `master` contains a compiled PostgreSQL adapter. PostgreSQL `18.x` is the selected write-capable development line and `18.6` is the exact planned disposable conformance baseline, following the PostgreSQL project's 2026-08-13 current minor release. Other majors connect in visible query-only mode. This is implementation scope, not release evidence: no PostgreSQL row is part of the live `0.1.13` matrix until the dedicated password/client-certificate, TLS, metadata/routine, scalar/array, streaming, cancellation, transaction, table-editing, cross-platform compile, and candidate gates in ADR 0019 pass.
+
+The existing five-server feasibility and conformance harness remains MySQL/MariaDB-only and explicitly rejects PostgreSQL targets rather than producing misleading evidence.
+
 The retained Phase 4 reports cover the full Phase 3 contract plus deterministic keyset paging, labelled read-only fallbacks in the local planner, bound hostile structured filters, typed validation, insert/update/delete, generated-value refresh, optimistic conflicts, and atomic rollback. Positive system-trust validation against a publicly trusted target and native Windows trust-store behavior remain post-release owner observations; fixture automation intentionally never contacts a non-fixture database.
 
 ## Current live signed 0.1.13 release

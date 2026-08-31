@@ -210,12 +210,22 @@ describe('SQL context completion', () => {
       'SELECT json_d|',
       config({ engine: 'MariaDB', exactVersion: '11.4.12' })
     );
+    const postgres = complete(
+      'SELECT jsonb_b|',
+      config({
+        dialect: 'postgresql',
+        engine: 'PostgreSQL',
+        exactVersion: '18.6'
+      })
+    );
 
     expect(labels(sqlite)).toContain('unixepoch');
     expect(labels(sqlite)).not.toContain('from_unixtime');
     expect(labels(mysql57)).not.toContain('row_number');
     expect(labels(mariaDb)).toContain('json_detailed');
     expect(labels(mariaDb)).toContain('from_unixtime');
+    expect(labels(postgres)).toContain('jsonb_build_object');
+    expect(labels(postgres)).not.toContain('from_unixtime');
   });
 
   it('does not open an empty implicit completion list while typing', () => {

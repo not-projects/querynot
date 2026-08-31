@@ -146,6 +146,47 @@ const sqliteFunctions = [
   'zeroblob'
 ] as const;
 
+const postgresFunctions = [
+  'array_agg',
+  'array_append',
+  'array_length',
+  'array_position',
+  'array_remove',
+  'cardinality',
+  'char_length',
+  'current_database',
+  'current_date',
+  'current_schema',
+  'current_timestamp',
+  'date_part',
+  'date_trunc',
+  'extract',
+  'generate_series',
+  'json_agg',
+  'json_array_length',
+  'json_build_array',
+  'json_build_object',
+  'json_object_agg',
+  'jsonb_agg',
+  'jsonb_array_length',
+  'jsonb_build_array',
+  'jsonb_build_object',
+  'jsonb_object_agg',
+  'now',
+  'octet_length',
+  'pg_backend_pid',
+  'regexp_replace',
+  'split_part',
+  'string_agg',
+  'substring',
+  'to_char',
+  'to_date',
+  'to_json',
+  'to_jsonb',
+  'to_timestamp',
+  'unnest'
+] as const;
+
 // This is the common built-in surface across QueryNot's MySQL 5.7+
 // and MariaDB 10.11/11.4 adapter matrix. Version-specific additions live
 // below so an older connected engine is not offered syntax it cannot run.
@@ -898,6 +939,11 @@ function withLoadedTables(
 
 function functionNames(config: SqlContextCompletionConfig) {
   const mariaDb = config.engine.toLocaleLowerCase().includes('mariadb');
+  if (config.dialect === 'postgresql') {
+    return [
+      ...new Set([...commonFunctions, ...postgresFunctions, ...windowFunctions])
+    ];
+  }
   if (config.dialect !== 'mysql') {
     return [...new Set([...commonFunctions, ...sqliteFunctions])];
   }
@@ -926,7 +972,12 @@ function applyFunction(label: string): NonNullable<Completion['apply']> {
 
 function functionCompletions(config: SqlContextCompletionConfig) {
   const engine =
-    config.engine || (config.dialect === 'mysql' ? 'MySQL' : 'SQLite');
+    config.engine ||
+    (config.dialect === 'mysql'
+      ? 'MySQL'
+      : config.dialect === 'postgresql'
+        ? 'PostgreSQL'
+        : 'SQLite');
   return functionNames(config).map<Completion>((label) => ({
     label,
     type: 'function',

@@ -10,6 +10,7 @@ pub mod history;
 pub mod ids;
 pub mod mysql;
 pub mod ownership;
+pub mod postgres;
 pub mod profile;
 pub mod result;
 pub mod settings;

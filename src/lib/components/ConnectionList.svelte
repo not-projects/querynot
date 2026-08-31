@@ -43,6 +43,12 @@
       : `${profile.host}:${profile.port}`;
   }
 
+  function profileEngine(profile: ProfileView) {
+    if (profile.kind === 'sqlite') return 'SQLite';
+    if (profile.kind === 'postgres') return 'PostgreSQL';
+    return 'MySQL';
+  }
+
   function connectionState(profileId: string) {
     const operation = connectionOperations[profileId];
     if (operation === 'test') return 'Testing';
@@ -117,7 +123,7 @@
             <span class="connection-endpoint">{profileEndpoint(profile)}</span>
             <span aria-hidden="true">·</span>
             <span class="engine-label">
-              {profile.kind === 'sqlite' ? 'SQLite' : 'MySQL'}
+              {profileEngine(profile)}
             </span>
           </small>
         </span>
@@ -162,7 +168,7 @@
             label={`More actions for ${profile.name}`}
             menuLabel={`Actions for ${profile.name}`}
             heading={profile.name}
-            meta={`${connectionState(profile.id)} · ${profile.kind === 'sqlite' ? 'SQLite' : 'MySQL'}`}
+            meta={`${connectionState(profile.id)} · ${profileEngine(profile)}`}
             items={profileActionItems(profile)}
             onselect={(itemId) => selectProfileAction(profile, itemId)}
           />

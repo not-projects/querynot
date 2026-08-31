@@ -1717,6 +1717,15 @@
     selectedTlsClientKeyName = null;
   }
 
+  function setServerKind(kind: 'mysql_family' | 'postgres') {
+    if (profileForm.kind === kind) return;
+    const previousDefaultPort = profileForm.kind === 'postgres' ? 5432 : 3306;
+    if (!profileForm.port || profileForm.port === previousDefaultPort) {
+      profileForm.port = kind === 'postgres' ? 5432 : 3306;
+    }
+    profileForm.kind = kind;
+  }
+
   async function chooseConnectionFile() {
     if (!hasNativeRuntime()) {
       statusMessage =
@@ -4960,7 +4969,9 @@
                 />
                 <span>
                   <strong>Server</strong>
-                  <small>MySQL or MariaDB over direct TCP and TLS</small>
+                  <small
+                    >PostgreSQL, MySQL, or MariaDB over direct TCP and TLS</small
+                  >
                 </span>
               </label>
               <label>
@@ -5084,6 +5095,26 @@
                 </div>
                 <div class="profile-section-content profile-fields">
                   <label class="field field-full">
+                    <span>Database engine</span>
+                    <select
+                      value={profileForm.kind}
+                      disabled={Boolean(editingProfileId)}
+                      onchange={(event) =>
+                        setServerKind(
+                          (event.currentTarget as HTMLSelectElement).value as
+                            'mysql_family' | 'postgres'
+                        )}
+                    >
+                      <option value="postgres">PostgreSQL</option>
+                      <option value="mysql_family">MySQL / MariaDB</option>
+                    </select>
+                    {#if editingProfileId}
+                      <small
+                        >The server engine cannot change after saving.</small
+                      >
+                    {/if}
+                  </label>
+                  <label class="field field-full">
                     <span>Connection name</span>
                     <input
                       required
@@ -5120,7 +5151,11 @@
                     />
                   </label>
                   <label class="field">
-                    <span>Default database <small>Optional</small></span>
+                    <span
+                      >{profileForm.kind === 'postgres'
+                        ? 'Database'
+                        : 'Default database'} <small>Optional</small></span
+                    >
                     <input
                       maxlength="255"
                       autocomplete="off"

@@ -32,6 +32,16 @@ pub enum ConnectionTarget {
         tls_client_certificate_path: Option<String>,
         tls_client_key_path: Option<String>,
     },
+    Postgres {
+        host: String,
+        port: u16,
+        default_database: Option<String>,
+        username: String,
+        tls_mode: TlsMode,
+        tls_ca_path: Option<String>,
+        tls_client_certificate_path: Option<String>,
+        tls_client_key_path: Option<String>,
+    },
 }
 
 impl std::fmt::Debug for ConnectionTarget {
@@ -53,6 +63,32 @@ impl std::fmt::Debug for ConnectionTarget {
                 tls_client_key_path,
             } => formatter
                 .debug_struct("MysqlFamily")
+                .field("host", host)
+                .field("port", port)
+                .field("default_database", default_database)
+                .field("username", username)
+                .field("tls_mode", tls_mode)
+                .field("tls_ca_path", &tls_ca_path.as_ref().map(|_| "[REDACTED]"))
+                .field(
+                    "tls_client_certificate_path",
+                    &tls_client_certificate_path.as_ref().map(|_| "[REDACTED]"),
+                )
+                .field(
+                    "tls_client_key_path",
+                    &tls_client_key_path.as_ref().map(|_| "[REDACTED]"),
+                )
+                .finish(),
+            Self::Postgres {
+                host,
+                port,
+                default_database,
+                username,
+                tls_mode,
+                tls_ca_path,
+                tls_client_certificate_path,
+                tls_client_key_path,
+            } => formatter
+                .debug_struct("Postgres")
                 .field("host", host)
                 .field("port", port)
                 .field("default_database", default_database)
@@ -157,6 +193,17 @@ impl ConnectionProfile {
                 }
             }
             ConnectionTarget::MysqlFamily {
+                host,
+                port,
+                default_database,
+                username,
+                tls_mode,
+                tls_ca_path,
+                tls_client_certificate_path,
+                tls_client_key_path,
+                ..
+            }
+            | ConnectionTarget::Postgres {
                 host,
                 port,
                 default_database,

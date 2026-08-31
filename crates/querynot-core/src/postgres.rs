@@ -6,7 +6,7 @@ use crate::result::{
     MAX_BATCH_BYTES, MAX_BATCH_ROWS, MAX_RETAINED_BYTES, MAX_RETAINED_ROWS, PAUSED_CURSOR_LIFETIME,
     ResultBatch, ResultColumn, ResultTerminal, ResultTerminalState, tagged_value_size,
 };
-use crate::sql::ExecutionPlan;
+use crate::sql::{ExecutionPlan, leading_statement_keyword};
 use crate::sqlite::{
     ExecutionControl, SchemaColumn, SchemaForeignKey, SchemaIndex, SchemaNamespace, SchemaObject,
     SchemaObjectDetail, SchemaObjectKind, SqliteExecutionEvent, SqliteTransactionState,
@@ -19,44 +19,41 @@ use crate::table::{
 use crate::vault::ConnectionSecrets;
 use crate::{ExecutionId, QueryNotError, ResultSetId, TaggedValue};
 use futures_util::TryStreamExt;
-use pkcs8::{EncryptedPrivateKeyInfo, SecretDocument, der::pem::LineEnding};
 use secrecy::ExposeSecret;
-use sqlx::mysql::{MySqlArguments, MySqlConnectOptions, MySqlRow, MySqlSslMode};
+use sqlx::postgres::{PgArguments, PgConnectOptions, PgRow, PgSslMode, PgValueFormat};
 use sqlx::query::Query;
+use sqlx::types::chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use sqlx::{
-    AssertSqlSafe, Column, ConnectOptions, Connection, Either, Executor, MySql, MySqlConnection,
+    AssertSqlSafe, Column, ConnectOptions, Connection, Either, Executor, PgConnection, Postgres,
     Row, SqlSafeStr, Statement, TypeInfo, ValueRef,
 };
-use std::path::Path;
 use std::sync::{
     Arc, Mutex as StdMutex,
     atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, mpsc};
-use zeroize::Zeroizing;
 
 const MAX_METADATA_BYTES: usize = 64 * 1024;
 const MAX_SCHEMA_OBJECTS: usize = 10_000;
-const MAX_CLIENT_KEY_BYTES: u64 = 1024 * 1024;
+const EXACT_POSTGRES_FIXTURE: &str = "18.6";
 
 #[derive(Clone)]
-pub struct MySqlSession {
-    connection: Arc<Mutex<MySqlConnection>>,
-    control_options: MySqlConnectOptions,
-    connection_id: Arc<AtomicU64>,
+pub struct PostgresSession {
+    connection: Arc<Mutex<PgConnection>>,
+    control_options: PgConnectOptions,
+    backend_pid: Arc<AtomicU64>,
     read_only: bool,
     automatic: Arc<AtomicBool>,
     transaction: Arc<StdMutex<TransactionCertainty>>,
-    transaction_variable_available: bool,
     active_cancel: Arc<StdMutex<Option<Arc<AtomicBool>>>>,
     active_cancel_confirmed: Arc<StdMutex<Option<Arc<AtomicBool>>>>,
 }
 
-impl std::fmt::Debug for MySqlSession {
+impl std::fmt::Debug for PostgresSession {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
-            .debug_struct("MySqlSession")
+            .debug_struct("PostgresSession")
             .field("connection", &"[NATIVE SESSION]")
             .field("control_options", &"[REDACTED]")
             .field("read_only", &self.read_only)
@@ -64,41 +61,27 @@ impl std::fmt::Debug for MySqlSession {
     }
 }
 
-impl MySqlSession {
+impl PostgresSession {
     pub async fn open(
         profile: &ConnectionProfile,
         secrets: &ConnectionSecrets,
     ) -> Result<Self, QueryNotError> {
         let options = connect_options(profile, secrets)?;
-        let mut connection = MySqlConnection::connect_with(&options)
+        let mut connection = PgConnection::connect_with(&options)
             .await
-            .map_err(map_mysql_connect_error)?;
-        connection
-            .execute("SET SESSION autocommit = 1")
-            .await
-            .map_err(map_mysql_execution_error)?;
+            .map_err(map_postgres_connect_error)?;
         let info = connection_info(&mut connection, profile).await?;
-        // MySQL 8 and the supported MariaDB lines expose an authoritative
-        // session variable. MySQL 5.7 does not, so it uses the conservative
-        // statement-effect state machine below while still reading autocommit
-        // from the server after every statement.
-        let transaction_variable_available =
-            sqlx::query_scalar::<_, i64>("SELECT @@session.in_transaction")
-                .fetch_one(&mut connection)
-                .await
-                .is_ok();
-        let connection_id: u64 = sqlx::query_scalar("SELECT CONNECTION_ID()")
+        let backend_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
             .fetch_one(&mut connection)
             .await
-            .map_err(map_mysql_execution_error)?;
+            .map_err(map_postgres_execution_error)?;
         Ok(Self {
             connection: Arc::new(Mutex::new(connection)),
             control_options: options,
-            connection_id: Arc::new(AtomicU64::new(connection_id)),
+            backend_pid: Arc::new(AtomicU64::new(backend_pid.max(0) as u64)),
             read_only: info.read_only,
             automatic: Arc::new(AtomicBool::new(true)),
             transaction: Arc::new(StdMutex::new(TransactionCertainty::Clean)),
-            transaction_variable_available,
             active_cancel: Arc::new(StdMutex::new(None)),
             active_cancel_confirmed: Arc::new(StdMutex::new(None)),
         })
@@ -109,9 +92,9 @@ impl MySqlSession {
         secrets: &ConnectionSecrets,
     ) -> Result<AdapterConnectionInfo, QueryNotError> {
         let options = connect_options(profile, secrets)?;
-        let mut connection = MySqlConnection::connect_with(&options)
+        let mut connection = PgConnection::connect_with(&options)
             .await
-            .map_err(map_mysql_connect_error)?;
+            .map_err(map_postgres_connect_error)?;
         connection_info(&mut connection, profile).await
     }
 
@@ -138,20 +121,20 @@ impl MySqlSession {
             .lock()
             .ok()
             .and_then(|active| active.as_ref().cloned());
-        let connection_id = self.connection_id.load(Ordering::Acquire);
+        let backend_pid = i32::try_from(self.backend_pid.load(Ordering::Acquire)).ok();
         let options = self.control_options.clone();
-        if connection_id != 0
-            && let Ok(handle) = tokio::runtime::Handle::try_current()
+        if let (Some(backend_pid), Ok(handle)) =
+            (backend_pid, tokio::runtime::Handle::try_current())
         {
             handle.spawn(async move {
-                let Ok(mut control) = MySqlConnection::connect_with(&options).await else {
+                let Ok(mut control) = PgConnection::connect_with(&options).await else {
                     return;
                 };
-                let statement = format!("KILL QUERY {connection_id}");
-                if sqlx::raw_sql(AssertSqlSafe(statement.as_str()))
-                    .execute(&mut control)
+                if sqlx::query_scalar::<_, bool>("SELECT pg_cancel_backend($1)")
+                    .bind(backend_pid)
+                    .fetch_one(&mut control)
                     .await
-                    .is_ok()
+                    .unwrap_or(false)
                     && let Some(confirmed) = confirmed
                 {
                     confirmed.store(true, Ordering::Release);
@@ -171,17 +154,20 @@ impl MySqlSession {
 
     pub async fn namespaces(&self) -> Result<Vec<SchemaNamespace>, QueryNotError> {
         let mut connection = self.connection.lock().await;
-        let rows =
-            sqlx::query("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA ORDER BY SCHEMA_NAME")
-                .fetch_all(&mut *connection)
-                .await
-                .map_err(map_mysql_execution_error)?;
+        let rows = sqlx::query(
+            "SELECT nspname FROM pg_catalog.pg_namespace \
+             WHERE nspname NOT LIKE 'pg_toast%' AND nspname NOT LIKE 'pg_temp_%' \
+             ORDER BY nspname",
+        )
+        .fetch_all(&mut *connection)
+        .await
+        .map_err(map_postgres_execution_error)?;
         if rows.len() > MAX_SCHEMA_OBJECTS {
             return Err(metadata_limit_error());
         }
         rows.into_iter()
             .map(|row| {
-                let name: String = row.try_get(0).map_err(map_mysql_execution_error)?;
+                let name: String = row.try_get(0).map_err(map_postgres_execution_error)?;
                 validate_metadata(&name)?;
                 Ok(SchemaNamespace { name })
             })
@@ -192,25 +178,33 @@ impl MySqlSession {
         validate_metadata(namespace)?;
         let mut connection = self.connection.lock().await;
         let rows = sqlx::query(
-            "SELECT TABLE_SCHEMA, TABLE_NAME, CASE WHEN TABLE_TYPE = 'VIEW' THEN 'view' ELSE 'table' END AS object_kind \
-             FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? \
+            "SELECT n.nspname, c.relname, \
+                    CASE WHEN c.relkind IN ('v', 'm') THEN 'view' ELSE 'table' END \
+             FROM pg_catalog.pg_class c \
+             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+             WHERE n.nspname = $1 AND c.relkind IN ('r', 'p', 'f', 'v', 'm') \
              UNION ALL \
-             SELECT ROUTINE_SCHEMA, ROUTINE_NAME, 'routine' FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = ? \
+             SELECT n.nspname, \
+                    p.proname || '(' || pg_catalog.pg_get_function_identity_arguments(p.oid) || ')', \
+                    'routine' \
+             FROM pg_catalog.pg_proc p \
+             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
+             WHERE n.nspname = $1 \
              ORDER BY 2, 3",
         )
         .bind(namespace)
-        .bind(namespace)
         .fetch_all(&mut *connection)
         .await
-        .map_err(map_mysql_execution_error)?;
+        .map_err(map_postgres_execution_error)?;
         if rows.len() > MAX_SCHEMA_OBJECTS {
             return Err(metadata_limit_error());
         }
         rows.into_iter()
             .map(|row| {
-                let object_namespace: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-                let name: String = row.try_get(1).map_err(map_mysql_execution_error)?;
-                let kind: String = row.try_get(2).map_err(map_mysql_execution_error)?;
+                let object_namespace: String =
+                    row.try_get(0).map_err(map_postgres_execution_error)?;
+                let name: String = row.try_get(1).map_err(map_postgres_execution_error)?;
+                let kind: String = row.try_get(2).map_err(map_postgres_execution_error)?;
                 validate_metadata(&object_namespace)?;
                 validate_metadata(&name)?;
                 Ok(SchemaObject {
@@ -240,20 +234,23 @@ impl MySqlSession {
     pub async fn change_context(&self, context: &str) -> Result<String, QueryNotError> {
         validate_metadata(context)?;
         let mut connection = self.connection.lock().await;
-        let statement = format!("USE {}", quote_identifier(context));
+        let statement = format!(
+            "SET search_path TO {}, pg_catalog",
+            quote_identifier(context)
+        );
         connection
             .execute(AssertSqlSafe(statement.as_str()))
             .await
-            .map_err(map_mysql_execution_error)?;
-        let confirmed: Option<String> = sqlx::query_scalar("SELECT DATABASE()")
+            .map_err(map_postgres_execution_error)?;
+        let confirmed: Option<String> = sqlx::query_scalar("SELECT current_schema()")
             .fetch_one(&mut *connection)
             .await
-            .map_err(map_mysql_execution_error)?;
+            .map_err(map_postgres_execution_error)?;
         match confirmed {
             Some(confirmed) if confirmed == context => Ok(confirmed),
             _ => Err(QueryNotError::database(
                 crate::ErrorCategory::Connectivity,
-                "The server did not confirm the requested database context.",
+                "The server did not confirm the requested PostgreSQL schema context.",
                 true,
             )),
         }
@@ -268,25 +265,25 @@ impl MySqlSession {
         let mut connection = self.connection.lock().await;
         let detail = load_object_detail(&mut connection, namespace, table).await?;
         let definition = TableDefinition::from_detail(&detail, self.read_only, !self.read_only);
-        let plan = plan_browse(&definition, TableDialect::MySql, input)?;
+        let plan = plan_browse(&definition, TableDialect::Postgres, input)?;
         let mut query = sqlx::query(AssertSqlSafe(plan.sql.as_str()));
         for value in plan.parameters.iter().cloned() {
-            query = bind_mysql_value(query, value)?;
+            query = bind_postgres_value(query, value)?;
         }
         let rows = query
             .fetch_all(&mut *connection)
             .await
-            .map_err(map_mysql_execution_error)?;
+            .map_err(map_postgres_execution_error)?;
         let mut values = rows
             .iter()
-            .map(mysql_values)
+            .map(postgres_values)
             .collect::<Result<Vec<_>, _>>()?;
         if values
             .iter()
             .any(|row| row.len() != definition.columns.len())
         {
             return Err(QueryNotError::internal(
-                "MySQL-family table paging returned a stale row shape.",
+                "PostgreSQL table paging returned a stale row shape.",
             ));
         }
         validate_table_page_values(&values)?;
@@ -323,7 +320,7 @@ impl MySqlSession {
         if self.read_only {
             return Err(QueryNotError::database(
                 crate::ErrorCategory::UnsupportedCapability,
-                "This MySQL-family session is read-only.",
+                "This PostgreSQL session is read-only.",
                 false,
             ));
         }
@@ -338,17 +335,17 @@ impl MySqlSession {
         }
         let mut connection = self.connection.lock().await;
         connection
-            .execute("START TRANSACTION")
+            .execute("BEGIN")
             .await
-            .map_err(map_mysql_execution_error)?;
+            .map_err(map_postgres_execution_error)?;
         let mut affected_rows = 0_u64;
         for operation in &plan.operations {
             let mut query = sqlx::query(AssertSqlSafe(operation.sql.as_str()));
             for value in operation.parameters.iter().cloned() {
-                query = match bind_mysql_value(query, value) {
+                query = match bind_postgres_value(query, value) {
                     Ok(bound) => bound,
                     Err(error) => {
-                        rollback_mysql_mutations(self, &mut connection).await?;
+                        rollback_postgres_mutations(self, &mut connection).await?;
                         return Err(error);
                     }
                 };
@@ -358,7 +355,7 @@ impl MySqlSession {
                     affected_rows = affected_rows.saturating_add(result.rows_affected());
                 }
                 Ok(_) => {
-                    rollback_mysql_mutations(self, &mut connection).await?;
+                    rollback_postgres_mutations(self, &mut connection).await?;
                     return Err(QueryNotError::database(
                         crate::ErrorCategory::Constraint,
                         "A staged row no longer matched exactly one original row. The complete batch was rolled back and remains staged.",
@@ -366,8 +363,8 @@ impl MySqlSession {
                     ));
                 }
                 Err(error) => {
-                    let mapped = map_mysql_execution_error(error);
-                    rollback_mysql_mutations(self, &mut connection).await?;
+                    let mapped = map_postgres_execution_error(error);
+                    rollback_postgres_mutations(self, &mut connection).await?;
                     return Err(mapped);
                 }
             }
@@ -395,13 +392,7 @@ impl MySqlSession {
         &self,
         automatic: bool,
     ) -> Result<SqliteTransactionState, QueryNotError> {
-        let mut connection = self.connection.lock().await;
-        let current = reconcile_transaction(
-            &mut connection,
-            &self.transaction,
-            self.transaction_variable_available,
-        )
-        .await?;
+        let current = session_transaction_state(self);
         if automatic && current.certainty != TransactionCertainty::Clean {
             return Err(QueryNotError::database(
                 crate::ErrorCategory::Transaction,
@@ -409,72 +400,38 @@ impl MySqlSession {
                 false,
             ));
         }
-        connection
-            .execute(if automatic {
-                "SET SESSION autocommit = 1"
-            } else {
-                "SET SESSION autocommit = 0"
-            })
-            .await
-            .map_err(map_mysql_execution_error)?;
         self.automatic.store(automatic, Ordering::Release);
-        set_transaction_certainty(&self.transaction, TransactionCertainty::Clean);
-        reconcile_transaction(
-            &mut connection,
-            &self.transaction,
-            self.transaction_variable_available,
-        )
-        .await
+        Ok(session_transaction_state(self))
     }
 
     pub async fn commit(&self) -> Result<SqliteTransactionState, QueryNotError> {
-        let mut connection = self.connection.lock().await;
-        let current = reconcile_transaction(
-            &mut connection,
-            &self.transaction,
-            self.transaction_variable_available,
-        )
-        .await?;
-        if current.certainty == TransactionCertainty::Clean {
+        if transaction_certainty(&self.transaction) == TransactionCertainty::Clean {
             return Err(no_transaction_error("commit"));
         }
+        let mut connection = self.connection.lock().await;
         connection
             .execute("COMMIT")
             .await
-            .map_err(map_mysql_execution_error)?;
+            .map_err(map_postgres_execution_error)?;
         set_transaction_certainty(&self.transaction, TransactionCertainty::Clean);
-        reconcile_transaction(
-            &mut connection,
-            &self.transaction,
-            self.transaction_variable_available,
-        )
-        .await
+        Ok(session_transaction_state(self))
     }
 
     pub async fn rollback(&self) -> Result<SqliteTransactionState, QueryNotError> {
-        let mut connection = self.connection.lock().await;
-        let current = reconcile_transaction(
-            &mut connection,
-            &self.transaction,
-            self.transaction_variable_available,
-        )
-        .await?;
-        if current.certainty == TransactionCertainty::Clean {
+        if transaction_certainty(&self.transaction) == TransactionCertainty::Clean {
             return Err(no_transaction_error("roll back"));
         }
+        let mut connection = self.connection.lock().await;
         connection
             .execute("ROLLBACK")
             .await
-            .map_err(map_mysql_execution_error)?;
+            .map_err(map_postgres_execution_error)?;
         set_transaction_certainty(&self.transaction, TransactionCertainty::Clean);
-        reconcile_transaction(
-            &mut connection,
-            &self.transaction,
-            self.transaction_variable_available,
-        )
-        .await
+        Ok(session_transaction_state(self))
     }
+}
 
+impl PostgresSession {
     pub async fn execute(
         &self,
         execution_id: ExecutionId,
@@ -500,7 +457,7 @@ impl MySqlSession {
             .await;
         let mut connection = self.connection.lock().await;
         let mut statements_completed = 0;
-        let mut total_received: usize = 0;
+        let mut total_received = 0_usize;
         let mut failed = false;
 
         'statements: for statement in plan.statements {
@@ -517,7 +474,7 @@ impl MySqlSession {
                         statement_end: Some(statement.end),
                         error: QueryNotError::database(
                             crate::ErrorCategory::UnsupportedCapability,
-                            "This server version is outside the tested matrix; QueryNot disabled possible writes for this connection.",
+                            "This PostgreSQL version is outside the tested matrix; QueryNot disabled possible writes for this connection.",
                             false,
                         ),
                         transaction: session_transaction_state(self),
@@ -525,6 +482,32 @@ impl MySqlSession {
                     .await;
                 break;
             }
+            let keyword = leading_statement_keyword(&statement.sql);
+            let transaction_control = matches!(
+                keyword.as_deref(),
+                Some("BEGIN" | "START" | "COMMIT" | "END" | "ROLLBACK")
+            );
+            if !self.automatic.load(Ordering::Acquire)
+                && transaction_certainty(&self.transaction) == TransactionCertainty::Clean
+                && !transaction_control
+            {
+                if let Err(error) = connection.execute("BEGIN").await {
+                    failed = true;
+                    let _ = events
+                        .send(SqliteExecutionEvent::Failed {
+                            execution_id,
+                            statement_index: Some(statement.index),
+                            statement_start: Some(statement.start),
+                            statement_end: Some(statement.end),
+                            error: map_postgres_execution_error(error),
+                            transaction: unknown_transaction(self),
+                        })
+                        .await;
+                    break;
+                }
+                set_transaction_certainty(&self.transaction, TransactionCertainty::Active);
+            }
+
             let statement_started = Instant::now();
             let prepared_columns = (&mut *connection)
                 .prepare(AssertSqlSafe(statement.sql.as_str()).into_sql_str())
@@ -568,12 +551,12 @@ impl MySqlSession {
                         }
                         if result.columns.len() != row.len() {
                             statement_error = Some(QueryNotError::internal(
-                                "The MySQL-family result shape changed without a result-set boundary.",
+                                "The PostgreSQL result shape changed without a result-set boundary.",
                             ));
                             failed = true;
                             break 'stream;
                         }
-                        let values = match mysql_values(&row) {
+                        let values = match postgres_values(&row) {
                             Ok(values) => values,
                             Err(error) => {
                                 statement_error = Some(error);
@@ -656,11 +639,11 @@ impl MySqlSession {
                     }
                     Ok(None) => break 'stream,
                     Err(error) => {
-                        if mysql_error_category(&error) == crate::ErrorCategory::Cancelled {
+                        if postgres_error_category(&error) == crate::ErrorCategory::Cancelled {
                             cancel_confirmed.store(true, Ordering::Release);
                             cancel.store(false, Ordering::Release);
                         } else if cancel.load(Ordering::Acquire) {
-                            statement_error = Some(map_mysql_execution_error(error));
+                            statement_error = Some(map_postgres_execution_error(error));
                             failed = true;
                         }
                         break 'stream;
@@ -686,12 +669,9 @@ impl MySqlSession {
                 }
             }
             if let Some(error) = statement_error {
-                let transaction = transaction_after_error(
-                    &mut connection,
-                    &self.transaction,
-                    self.transaction_variable_available,
-                )
-                .await;
+                if transaction_certainty(&self.transaction) != TransactionCertainty::Clean {
+                    set_transaction_certainty(&self.transaction, TransactionCertainty::Active);
+                }
                 let _ = events
                     .send(SqliteExecutionEvent::Failed {
                         execution_id,
@@ -699,7 +679,7 @@ impl MySqlSession {
                         statement_start: Some(statement.start),
                         statement_end: Some(statement.end),
                         error,
-                        transaction,
+                        transaction: session_transaction_state(self),
                     })
                     .await;
                 break 'statements;
@@ -707,38 +687,7 @@ impl MySqlSession {
             if failed || !cancel.load(Ordering::Acquire) {
                 break;
             }
-            if !self.transaction_variable_available {
-                reconcile_mysql57_statement_effect(
-                    &self.transaction,
-                    &statement.sql,
-                    self.automatic.load(Ordering::Acquire),
-                );
-            }
-            let transaction = match reconcile_transaction(
-                &mut connection,
-                &self.transaction,
-                self.transaction_variable_available,
-            )
-            .await
-            {
-                Ok(transaction) => transaction,
-                Err(error) => {
-                    failed = true;
-                    let _ = events
-                        .send(SqliteExecutionEvent::Failed {
-                            execution_id,
-                            statement_index: Some(statement.index),
-                            statement_start: Some(statement.start),
-                            statement_end: Some(statement.end),
-                            error,
-                            transaction: unknown_transaction(self),
-                        })
-                        .await;
-                    break;
-                }
-            };
-            self.automatic
-                .store(transaction.automatic, Ordering::Release);
+            reconcile_statement_effect(self, keyword.as_deref());
             statements_completed += 1;
             let _ = events
                 .send(SqliteExecutionEvent::StatementMessage {
@@ -746,22 +695,12 @@ impl MySqlSession {
                     statement_index: statement.index,
                     rows_affected,
                     duration: statement_started.elapsed(),
-                    transaction,
+                    transaction: session_transaction_state(self),
                 })
                 .await;
         }
 
-        let transaction = if failed {
-            session_transaction_state(self)
-        } else {
-            reconcile_transaction(
-                &mut connection,
-                &self.transaction,
-                self.transaction_variable_available,
-            )
-            .await
-            .unwrap_or_else(|_| unknown_transaction(self))
-        };
+        let transaction = session_transaction_state(self);
         if !failed {
             if cancel.load(Ordering::Acquire) {
                 let _ = events
@@ -972,8 +911,8 @@ async fn wait_for_more(
 fn connect_options(
     profile: &ConnectionProfile,
     secrets: &ConnectionSecrets,
-) -> Result<MySqlConnectOptions, QueryNotError> {
-    let ConnectionTarget::MysqlFamily {
+) -> Result<PgConnectOptions, QueryNotError> {
+    let ConnectionTarget::Postgres {
         host,
         port,
         default_database,
@@ -986,27 +925,30 @@ fn connect_options(
     else {
         return Err(QueryNotError::database(
             crate::ErrorCategory::UnsupportedCapability,
-            "The MySQL-family adapter cannot open a SQLite profile.",
+            "The PostgreSQL adapter cannot open another connection family.",
             false,
         ));
     };
     let ssl_mode = match tls_mode {
-        TlsMode::Disabled => MySqlSslMode::Disabled,
-        TlsMode::Required => MySqlSslMode::Required,
-        TlsMode::VerifyIdentity | TlsMode::CustomCa => MySqlSslMode::VerifyIdentity,
+        TlsMode::Disabled => PgSslMode::Disable,
+        TlsMode::Required => PgSslMode::Require,
+        TlsMode::VerifyIdentity | TlsMode::CustomCa => PgSslMode::VerifyFull,
     };
-    let mut options = MySqlConnectOptions::new()
+    let mut options = PgConnectOptions::new()
         .host(host)
         .port(*port)
-        .username(username)
         .password(secrets.database_password().expose_secret())
+        .application_name("QueryNot")
         .ssl_mode(ssl_mode)
         .disable_statement_logging();
+    if !username.is_empty() {
+        options = options.username(username);
+    }
     if let Some(database) = default_database {
         options = options.database(database);
     }
     if let Some(path) = tls_ca_path {
-        options = options.ssl_ca(path);
+        options = options.ssl_root_cert(path);
     }
     if let Some(path) = tls_client_certificate_path {
         options = options.ssl_client_cert(path);
@@ -1016,133 +958,63 @@ fn connect_options(
         if passphrase.is_empty() {
             options = options.ssl_client_key(path);
         } else {
-            let decrypted_pem = decrypt_client_key_pem(Path::new(path), passphrase)?;
+            let decrypted_pem =
+                crate::mysql::decrypt_client_key_pem(std::path::Path::new(path), passphrase)?;
             options = options.ssl_client_key_from_pem(decrypted_pem.as_bytes());
         }
     }
     Ok(options)
 }
 
-pub(crate) fn decrypt_client_key_pem(
-    path: &Path,
-    passphrase: &str,
-) -> Result<Zeroizing<String>, QueryNotError> {
-    let metadata = std::fs::metadata(path).map_err(|_| {
-        QueryNotError::database(
-            crate::ErrorCategory::Tls,
-            "The granted client private key is unavailable; no connection was attempted.",
-            false,
-        )
-    })?;
-    if !metadata.is_file() {
-        return Err(QueryNotError::database(
-            crate::ErrorCategory::Tls,
-            "The granted client private key is not a regular file; no connection was attempted.",
-            false,
-        ));
-    }
-    if metadata.len() > MAX_CLIENT_KEY_BYTES {
-        return Err(QueryNotError::database(
-            crate::ErrorCategory::Tls,
-            "The client private key exceeds the 1 MiB safety limit.",
-            false,
-        ));
-    }
-    let encrypted_pem = Zeroizing::new(std::fs::read_to_string(path).map_err(|_| {
-        QueryNotError::database(
-            crate::ErrorCategory::Tls,
-            "The granted client private key could not be read safely.",
-            false,
-        )
-    })?);
-    let (label, document) = SecretDocument::from_pem(&encrypted_pem).map_err(|_| {
-        QueryNotError::database(
-            crate::ErrorCategory::Tls,
-            "The client private key is not a supported PEM document.",
-            false,
-        )
-    })?;
-    if label != "ENCRYPTED PRIVATE KEY" {
-        return Err(QueryNotError::database(
-            crate::ErrorCategory::Tls,
-            "A client-key passphrase was supplied, but the key is not encrypted PKCS#8 PEM.",
-            false,
-        ));
-    }
-    let encrypted = EncryptedPrivateKeyInfo::try_from(document.as_bytes()).map_err(|_| {
-        QueryNotError::database(
-            crate::ErrorCategory::Tls,
-            "The encrypted client private key has an invalid PKCS#8 structure.",
-            false,
-        )
-    })?;
-    let decrypted = encrypted.decrypt(passphrase.as_bytes()).map_err(|_| {
-        QueryNotError::database(
-            crate::ErrorCategory::Authorization,
-            "The client private key could not be unlocked with the supplied passphrase.",
-            false,
-        )
-    })?;
-    decrypted
-        .to_pem("PRIVATE KEY", LineEnding::LF)
-        .map_err(|_| {
-            QueryNotError::database(
-                crate::ErrorCategory::Tls,
-                "The unlocked client private key could not be prepared for TLS.",
-                false,
-            )
-        })
-}
-
 async fn connection_info(
-    connection: &mut MySqlConnection,
+    connection: &mut PgConnection,
     profile: &ConnectionProfile,
 ) -> Result<AdapterConnectionInfo, QueryNotError> {
-    let row = sqlx::query("SELECT VERSION(), @@version_comment, DATABASE()")
-        .fetch_one(&mut *connection)
-        .await
-        .map_err(map_mysql_execution_error)?;
-    let reported_version: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-    let version_comment: String = row.try_get(1).map_err(map_mysql_execution_error)?;
-    let context: Option<String> = row.try_get(2).map_err(map_mysql_execution_error)?;
-    let version_says_mariadb = reported_version.to_ascii_lowercase().contains("mariadb");
-    let comment_says_mariadb = version_comment.to_ascii_lowercase().contains("mariadb");
-    if version_says_mariadb != comment_says_mariadb {
+    let row = sqlx::query(
+        "SELECT version(), current_setting('server_version'), current_database(), current_schema(), \
+                current_setting('transaction_read_only') = 'on'",
+    )
+    .fetch_one(&mut *connection)
+    .await
+    .map_err(map_postgres_execution_error)?;
+    let reported_identity: String = row.try_get(0).map_err(map_postgres_execution_error)?;
+    if !reported_identity.starts_with("PostgreSQL ") {
         return Err(QueryNotError::database(
             crate::ErrorCategory::UnsupportedCapability,
-            "The server reported an ambiguous MySQL/MariaDB identity; QueryNot refused to guess.",
+            "The endpoint did not report an unambiguous PostgreSQL server identity; QueryNot refused to guess.",
             false,
         ));
     }
-    let product = if version_says_mariadb {
-        "MariaDB"
-    } else {
-        "MySQL"
-    };
-    let exact_version = reported_version
-        .split('-')
-        .next()
-        .unwrap_or(&reported_version)
-        .to_owned();
-    let (compatibility_status, legacy, exact_fixture) =
-        classify_compatibility(product, &exact_version);
+    let reported_version: String = row.try_get(1).map_err(map_postgres_execution_error)?;
+    let exact_version = parse_exact_version(&reported_version).ok_or_else(|| {
+        QueryNotError::database(
+            crate::ErrorCategory::UnsupportedCapability,
+            "The PostgreSQL server reported a version that QueryNot could not classify safely.",
+            false,
+        )
+    })?;
+    let database: String = row.try_get(2).map_err(map_postgres_execution_error)?;
+    let context: Option<String> = row.try_get(3).map_err(map_postgres_execution_error)?;
+    let server_read_only: bool = row.try_get(4).map_err(map_postgres_execution_error)?;
+    validate_metadata(&database)?;
+    let (compatibility_status, exact_fixture) = classify_compatibility(&exact_version);
     let mut warnings = Vec::new();
     if compatibility_status == CompatibilityStatus::QueryOnly {
         warnings.push(format!(
-            "{product} {exact_version} is outside the tested compatibility matrix; possible writes are disabled."
+            "PostgreSQL {exact_version} is outside the tested PostgreSQL 18.x compatibility line; possible writes are disabled."
         ));
-    }
-    if compatibility_status == CompatibilityStatus::Supported && !exact_fixture {
+    } else if !exact_fixture {
         warnings.push(format!(
-            "{product} {exact_version} is write-enabled under the MySQL 5.7 compatibility line; 5.7.44 remains the exact conformance fixture."
+            "PostgreSQL {exact_version} is write-enabled under the PostgreSQL 18.x compatibility line; {EXACT_POSTGRES_FIXTURE} remains the exact conformance baseline."
         ));
     }
-    if legacy {
-        warnings.push(format!(
-            "{product} {exact_version} is a legacy/EOL line and should be upgraded."
-        ));
+    if server_read_only {
+        warnings.push(
+            "The PostgreSQL server reports read-only transactions; QueryNot disabled writes for this connection."
+                .to_owned(),
+        );
     }
-    if let ConnectionTarget::MysqlFamily { tls_mode, .. } = &profile.target {
+    if let ConnectionTarget::Postgres { tls_mode, .. } = &profile.target {
         match tls_mode {
             TlsMode::Disabled => warnings.push(
                 "This connection is unencrypted and intended only for explicitly trusted local development."
@@ -1155,13 +1027,13 @@ async fn connection_info(
             TlsMode::VerifyIdentity | TlsMode::CustomCa => {}
         }
     }
-    let read_only = compatibility_status == CompatibilityStatus::QueryOnly;
+    let read_only = compatibility_status == CompatibilityStatus::QueryOnly || server_read_only;
     Ok(AdapterConnectionInfo {
         identity: ServerIdentity {
-            family: DatabaseFamily::MySqlFamily,
-            product: product.to_owned(),
+            family: DatabaseFamily::Postgres,
+            product: "PostgreSQL".to_owned(),
             exact_version,
-            legacy,
+            legacy: false,
         },
         capabilities: AdapterCapabilities {
             metadata: true,
@@ -1172,60 +1044,75 @@ async fn connection_info(
             safe_table_mutations: !read_only,
         },
         read_only,
-        context: context.unwrap_or_else(|| "(no default database)".to_owned()),
-        dialect: "mysql".to_owned(),
+        context: context.unwrap_or_else(|| "public".to_owned()),
+        dialect: "postgresql".to_owned(),
         compatibility_status,
         compatibility_warning: (!warnings.is_empty()).then(|| warnings.join(" ")),
     })
 }
 
-fn classify_compatibility(product: &str, exact_version: &str) -> (CompatibilityStatus, bool, bool) {
-    let mysql57 = product == "MySQL" && mysql_version_line(exact_version) == Some((5, 7));
-    match (product, exact_version) {
-        ("MySQL", "5.7.44") => (CompatibilityStatus::Supported, true, true),
-        ("MySQL", "8.0.46") => (CompatibilityStatus::Supported, true, true),
-        ("MySQL", "8.4.10") | ("MariaDB", "10.11.18" | "11.4.12") => {
-            (CompatibilityStatus::Supported, false, true)
-        }
-        _ if mysql57 => (CompatibilityStatus::Supported, true, false),
-        _ => (CompatibilityStatus::QueryOnly, false, false),
-    }
-}
-
-fn mysql_version_line(exact_version: &str) -> Option<(u64, u64)> {
-    let mut components = exact_version.split('.');
-    let major = components.next()?.parse().ok()?;
-    let minor = components.next()?.parse().ok()?;
+fn parse_exact_version(reported: &str) -> Option<String> {
+    let numeric = reported
+        .split(|character: char| !(character.is_ascii_digit() || character == '.'))
+        .find(|part| !part.is_empty())?;
+    let mut components = numeric.split('.');
+    components.next()?.parse::<u64>().ok()?;
     components.next()?.parse::<u64>().ok()?;
     if components.next().is_some() {
         return None;
     }
-    Some((major, minor))
+    Some(numeric.to_owned())
+}
+
+fn classify_compatibility(exact_version: &str) -> (CompatibilityStatus, bool) {
+    let major = exact_version
+        .split_once('.')
+        .and_then(|(major, _)| major.parse::<u64>().ok());
+    if major == Some(18) {
+        (
+            CompatibilityStatus::Supported,
+            exact_version == EXACT_POSTGRES_FIXTURE,
+        )
+    } else {
+        (CompatibilityStatus::QueryOnly, false)
+    }
 }
 
 async fn load_object_detail(
-    connection: &mut MySqlConnection,
+    connection: &mut PgConnection,
     namespace: &str,
     object_name: &str,
 ) -> Result<SchemaObjectDetail, QueryNotError> {
     let table_kind: Option<String> = sqlx::query_scalar(
-        "SELECT TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
+        "SELECT c.relkind::text FROM pg_catalog.pg_class c \
+         JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+         WHERE n.nspname = $1 AND c.relname = $2 AND c.relkind IN ('r', 'p', 'f', 'v', 'm')",
     )
     .bind(namespace)
     .bind(object_name)
     .fetch_optional(&mut *connection)
     .await
-    .map_err(map_mysql_execution_error)?;
+    .map_err(map_postgres_execution_error)?;
     if table_kind.is_none() {
         let definition: Option<String> = sqlx::query_scalar(
-            "SELECT ROUTINE_DEFINITION FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = ? AND ROUTINE_NAME = ?",
+            "SELECT pg_catalog.pg_get_functiondef(p.oid) \
+             FROM pg_catalog.pg_proc p \
+             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
+             WHERE n.nspname = $1 \
+               AND p.proname || '(' || pg_catalog.pg_get_function_identity_arguments(p.oid) || ')' = $2",
         )
         .bind(namespace)
         .bind(object_name)
         .fetch_optional(&mut *connection)
         .await
-        .map_err(map_mysql_execution_error)?
-        .flatten();
+        .map_err(map_postgres_execution_error)?;
+        if definition.is_none() {
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::Authorization,
+                "The requested PostgreSQL schema object is unavailable or no longer exists.",
+                false,
+            ));
+        }
         return Ok(SchemaObjectDetail {
             object: SchemaObject {
                 namespace: namespace.to_owned(),
@@ -1239,167 +1126,155 @@ async fn load_object_detail(
             routines_supported: true,
         });
     }
-    let kind = if table_kind.as_deref() == Some("VIEW") {
+    let kind = if matches!(table_kind.as_deref(), Some("v" | "m")) {
         SchemaObjectKind::View
     } else {
         SchemaObjectKind::Table
     };
     let column_rows = sqlx::query(
-        "SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA \
-         FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? \
-         ORDER BY ORDINAL_POSITION",
+        "SELECT a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod), NOT a.attnotnull, \
+                pg_catalog.pg_get_expr(d.adbin, d.adrelid), \
+                (a.attgenerated <> '' OR a.attidentity <> '') \
+         FROM pg_catalog.pg_attribute a \
+         JOIN pg_catalog.pg_class c ON c.oid = a.attrelid \
+         JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+         LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum \
+         WHERE n.nspname = $1 AND c.relname = $2 AND a.attnum > 0 AND NOT a.attisdropped \
+         ORDER BY a.attnum",
     )
     .bind(namespace)
     .bind(object_name)
     .fetch_all(&mut *connection)
     .await
-    .map_err(map_mysql_execution_error)?;
+    .map_err(map_postgres_execution_error)?;
     let mut columns = column_rows
         .into_iter()
         .map(|row| {
-            let name: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-            let declared_type: String = row.try_get(1).map_err(map_mysql_execution_error)?;
+            let name: String = row.try_get(0).map_err(map_postgres_execution_error)?;
+            let declared_type: String = row.try_get(1).map_err(map_postgres_execution_error)?;
             validate_metadata(&name)?;
             validate_metadata(&declared_type)?;
-            let extra: String = row.try_get(4).map_err(map_mysql_execution_error)?;
             Ok(SchemaColumn {
                 name,
                 declared_type,
-                nullable: row
-                    .try_get::<String, _>(2)
-                    .map_err(map_mysql_execution_error)?
-                    == "YES",
-                default_expression: row.try_get(3).map_err(map_mysql_execution_error)?,
+                nullable: row.try_get(2).map_err(map_postgres_execution_error)?,
+                default_expression: row.try_get(3).map_err(map_postgres_execution_error)?,
                 primary_key_position: 0,
-                generated: extra.to_ascii_uppercase().contains("GENERATED")
-                    || extra.to_ascii_uppercase().contains("AUTO_INCREMENT"),
+                generated: row.try_get(4).map_err(map_postgres_execution_error)?,
             })
         })
         .collect::<Result<Vec<_>, QueryNotError>>()?;
     let primary_key_rows = sqlx::query(
-        "SELECT COLUMN_NAME, ORDINAL_POSITION FROM information_schema.KEY_COLUMN_USAGE \
-         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = 'PRIMARY' \
-         ORDER BY ORDINAL_POSITION",
+        "SELECT a.attname, key.ordinality::bigint \
+         FROM pg_catalog.pg_class c \
+         JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+         JOIN pg_catalog.pg_index i ON i.indrelid = c.oid AND i.indisprimary \
+         JOIN LATERAL unnest(i.indkey) WITH ORDINALITY key(attnum, ordinality) ON true \
+         JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum = key.attnum \
+         WHERE n.nspname = $1 AND c.relname = $2 ORDER BY key.ordinality",
     )
     .bind(namespace)
     .bind(object_name)
     .fetch_all(&mut *connection)
     .await
-    .map_err(map_mysql_execution_error)?;
+    .map_err(map_postgres_execution_error)?;
     for row in primary_key_rows {
-        let name: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-        let position = u32::try_from(mysql_metadata_counter(&row, 1)?).map_err(|_| {
-            QueryNotError::database(
-                crate::ErrorCategory::UnsupportedCapability,
-                "MySQL-family key metadata exceeds the supported ordinal range.",
-                false,
-            )
-        })?;
+        let name: String = row.try_get(0).map_err(map_postgres_execution_error)?;
+        let position: i64 = row.try_get(1).map_err(map_postgres_execution_error)?;
+        let position = u32::try_from(position).map_err(|_| metadata_limit_error())?;
         if let Some(column) = columns.iter_mut().find(|column| column.name == name) {
             column.primary_key_position = position;
         }
     }
     let foreign_key_rows = sqlx::query(
-        "SELECT k.CONSTRAINT_NAME, k.ORDINAL_POSITION, k.REFERENCED_TABLE_NAME, \
-                k.COLUMN_NAME, k.REFERENCED_COLUMN_NAME, r.UPDATE_RULE, r.DELETE_RULE \
-         FROM information_schema.KEY_COLUMN_USAGE k \
-         JOIN information_schema.REFERENTIAL_CONSTRAINTS r \
-           ON r.CONSTRAINT_SCHEMA = k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME \
-         WHERE k.TABLE_SCHEMA = ? AND k.TABLE_NAME = ? AND k.REFERENCED_TABLE_NAME IS NOT NULL \
-         ORDER BY k.CONSTRAINT_NAME, k.ORDINAL_POSITION",
+        "SELECT con.oid::bigint, key.ordinality::bigint - 1, referenced.relname, \
+                source_column.attname, referenced_column.attname, \
+                CASE con.confupdtype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' \
+                     WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END, \
+                CASE con.confdeltype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' \
+                     WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END \
+         FROM pg_catalog.pg_constraint con \
+         JOIN pg_catalog.pg_class source ON source.oid = con.conrelid \
+         JOIN pg_catalog.pg_namespace n ON n.oid = source.relnamespace \
+         JOIN pg_catalog.pg_class referenced ON referenced.oid = con.confrelid \
+         JOIN LATERAL generate_subscripts(con.conkey, 1) key(ordinality) ON true \
+         JOIN pg_catalog.pg_attribute source_column \
+           ON source_column.attrelid = source.oid AND source_column.attnum = con.conkey[key.ordinality] \
+         JOIN pg_catalog.pg_attribute referenced_column \
+           ON referenced_column.attrelid = referenced.oid AND referenced_column.attnum = con.confkey[key.ordinality] \
+         WHERE con.contype = 'f' AND n.nspname = $1 AND source.relname = $2 \
+         ORDER BY con.oid, key.ordinality",
     )
     .bind(namespace)
     .bind(object_name)
     .fetch_all(&mut *connection)
     .await
-    .map_err(map_mysql_execution_error)?;
-    let mut foreign_keys = Vec::new();
-    let mut previous_constraint = String::new();
-    let mut foreign_key_id = 0_i64;
-    for row in foreign_key_rows {
-        let constraint: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-        if constraint != previous_constraint {
-            foreign_key_id += 1;
-            previous_constraint = constraint;
-        }
-        foreign_keys.push(SchemaForeignKey {
-            id: foreign_key_id,
-            sequence: i64::try_from(mysql_metadata_counter(&row, 1)?)
-                .ok()
-                .and_then(|value| value.checked_sub(1))
-                .ok_or_else(|| {
-                    QueryNotError::database(
-                        crate::ErrorCategory::UnsupportedCapability,
-                        "MySQL-family foreign-key metadata contains an invalid ordinal.",
-                        false,
-                    )
-                })?,
-            referenced_table: row.try_get(2).map_err(map_mysql_execution_error)?,
-            from_column: row.try_get(3).map_err(map_mysql_execution_error)?,
-            to_column: row.try_get(4).map_err(map_mysql_execution_error)?,
-            on_update: row.try_get(5).map_err(map_mysql_execution_error)?,
-            on_delete: row.try_get(6).map_err(map_mysql_execution_error)?,
-        });
-    }
+    .map_err(map_postgres_execution_error)?;
+    let foreign_keys = foreign_key_rows
+        .into_iter()
+        .map(|row| {
+            Ok(SchemaForeignKey {
+                id: row.try_get(0).map_err(map_postgres_execution_error)?,
+                sequence: row.try_get(1).map_err(map_postgres_execution_error)?,
+                referenced_table: row.try_get(2).map_err(map_postgres_execution_error)?,
+                from_column: row.try_get(3).map_err(map_postgres_execution_error)?,
+                to_column: row.try_get(4).map_err(map_postgres_execution_error)?,
+                on_update: row.try_get(5).map_err(map_postgres_execution_error)?,
+                on_delete: row.try_get(6).map_err(map_postgres_execution_error)?,
+            })
+        })
+        .collect::<Result<Vec<_>, QueryNotError>>()?;
     let index_rows = sqlx::query(
-        "SELECT INDEX_NAME, NON_UNIQUE, COLUMN_NAME, SEQ_IN_INDEX \
-         FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? \
-         ORDER BY INDEX_NAME, SEQ_IN_INDEX",
+        "SELECT index_class.relname, i.indisunique, i.indisprimary, i.indpred IS NOT NULL, \
+                i.indexprs IS NOT NULL, \
+                ARRAY(SELECT a.attname \
+                      FROM unnest(i.indkey) WITH ORDINALITY key(attnum, ordinality) \
+                      JOIN pg_catalog.pg_attribute a ON a.attrelid = table_class.oid AND a.attnum = key.attnum \
+                      WHERE key.attnum > 0 ORDER BY key.ordinality) \
+         FROM pg_catalog.pg_index i \
+         JOIN pg_catalog.pg_class table_class ON table_class.oid = i.indrelid \
+         JOIN pg_catalog.pg_namespace n ON n.oid = table_class.relnamespace \
+         JOIN pg_catalog.pg_class index_class ON index_class.oid = i.indexrelid \
+         WHERE n.nspname = $1 AND table_class.relname = $2 \
+         ORDER BY index_class.relname",
     )
     .bind(namespace)
     .bind(object_name)
     .fetch_all(&mut *connection)
     .await
-    .map_err(map_mysql_execution_error)?;
-    let mut indexes: Vec<SchemaIndex> = Vec::new();
-    for row in index_rows {
-        let name: String = row.try_get(0).map_err(map_mysql_execution_error)?;
-        let unique = mysql_metadata_counter(&row, 1)? == 0;
-        let column: Option<String> = row.try_get(2).map_err(map_mysql_execution_error)?;
-        if indexes.last().is_none_or(|index| index.name != name) {
-            indexes.push(SchemaIndex {
-                origin: if name == "PRIMARY" {
+    .map_err(map_postgres_execution_error)?;
+    let indexes = index_rows
+        .into_iter()
+        .map(|row| {
+            let primary: bool = row.try_get(2).map_err(map_postgres_execution_error)?;
+            Ok(SchemaIndex {
+                name: row.try_get(0).map_err(map_postgres_execution_error)?,
+                unique: row.try_get(1).map_err(map_postgres_execution_error)?,
+                origin: if primary {
                     "primary_key".to_owned()
                 } else {
                     "index".to_owned()
                 },
-                name,
-                unique,
-                columns: Vec::new(),
-                partial: false,
-                has_expressions: false,
-            });
-        }
-        if let Some(column) = column {
-            indexes
-                .last_mut()
-                .expect("index was inserted")
-                .columns
-                .push(column);
-        } else if let Some(index) = indexes.last_mut() {
-            index.has_expressions = true;
-        }
-    }
+                partial: row.try_get(3).map_err(map_postgres_execution_error)?,
+                has_expressions: row.try_get(4).map_err(map_postgres_execution_error)?,
+                columns: row.try_get(5).map_err(map_postgres_execution_error)?,
+            })
+        })
+        .collect::<Result<Vec<_>, QueryNotError>>()?;
     let definition = if kind == SchemaObjectKind::View {
         sqlx::query_scalar(
-            "SELECT VIEW_DEFINITION FROM information_schema.VIEWS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
+            "SELECT pg_catalog.pg_get_viewdef(c.oid, true) \
+             FROM pg_catalog.pg_class c \
+             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+             WHERE n.nspname = $1 AND c.relname = $2",
         )
         .bind(namespace)
         .bind(object_name)
         .fetch_optional(&mut *connection)
         .await
-        .map_err(map_mysql_execution_error)?
+        .map_err(map_postgres_execution_error)?
     } else {
-        let statement = format!(
-            "SHOW CREATE TABLE {}.{}",
-            quote_identifier(namespace),
-            quote_identifier(object_name)
-        );
-        sqlx::query(AssertSqlSafe(statement.as_str()))
-            .fetch_optional(&mut *connection)
-            .await
-            .map_err(map_mysql_execution_error)?
-            .and_then(|row| row.try_get::<String, _>(1).ok())
+        None
     };
     Ok(SchemaObjectDetail {
         object: SchemaObject {
@@ -1415,7 +1290,7 @@ async fn load_object_detail(
     })
 }
 
-fn result_columns(columns: &[sqlx::mysql::MySqlColumn]) -> Vec<ResultColumn> {
+fn result_columns(columns: &[sqlx::postgres::PgColumn]) -> Vec<ResultColumn> {
     columns
         .iter()
         .map(|column| ResultColumn {
@@ -1426,126 +1301,316 @@ fn result_columns(columns: &[sqlx::mysql::MySqlColumn]) -> Vec<ResultColumn> {
         .collect()
 }
 
-fn mysql_values(row: &MySqlRow) -> Result<Vec<TaggedValue>, QueryNotError> {
+fn postgres_values(row: &PgRow) -> Result<Vec<TaggedValue>, QueryNotError> {
     (0..row.len())
-        .map(|index| {
-            let raw = row.try_get_raw(index).map_err(map_mysql_execution_error)?;
-            if raw.is_null() {
-                return Ok(TaggedValue::Null);
-            }
-            let type_name = raw.type_info().name().to_ascii_uppercase();
-            if type_name.contains("INT") || matches!(type_name.as_str(), "YEAR") {
-                return Ok(if type_name.contains("UNSIGNED") {
-                    TaggedValue::UnsignedInteger(
-                        row.try_get_unchecked::<u64, _>(index)
-                            .map_err(map_mysql_execution_error)?
-                            .to_string(),
-                    )
-                } else {
-                    TaggedValue::SignedInteger(
-                        row.try_get_unchecked::<i64, _>(index)
-                            .map_err(map_mysql_execution_error)?
-                            .to_string(),
-                    )
-                });
-            }
-            if matches!(type_name.as_str(), "DECIMAL" | "NEWDECIMAL") {
-                return row
-                    .try_get_unchecked::<sqlx::types::BigDecimal, _>(index)
-                    .map(|value| TaggedValue::Decimal(value.to_string()))
-                    .map_err(map_mysql_execution_error);
-            }
-            if matches!(type_name.as_str(), "FLOAT" | "DOUBLE") {
-                return row
-                    .try_get_unchecked::<f64, _>(index)
-                    .map(TaggedValue::Float)
-                    .map_err(map_mysql_execution_error);
-            }
-            if matches!(
-                type_name.as_str(),
-                "DATE" | "DATETIME" | "TIMESTAMP" | "TIME"
-            ) {
-                let value: String = row
-                    .try_get_unchecked(index)
-                    .map_err(map_mysql_execution_error)?;
-                return Ok(TaggedValue::DateTime {
-                    raw: value,
-                    // The classic protocol does not attach the session time-zone
-                    // offset to a temporal cell. Preserve the engine text and do
-                    // not invent an offset.
-                    timezone_or_offset: None,
-                });
-            }
-            if type_name == "BIT" {
-                let value = row
-                    .try_get_unchecked::<Vec<u8>, _>(index)
-                    .map_err(map_mysql_execution_error)?;
-                return Ok(match value.as_slice() {
-                    [0] => TaggedValue::Boolean(false),
-                    [1] => TaggedValue::Boolean(true),
-                    _ => TaggedValue::Bytes(value),
-                });
-            }
-            if type_name.contains("BLOB") || matches!(type_name.as_str(), "BINARY" | "VARBINARY") {
-                return row
-                    .try_get_unchecked::<Vec<u8>, _>(index)
-                    .map(TaggedValue::Bytes)
-                    .map_err(map_mysql_execution_error);
-            }
-            if matches!(type_name.as_str(), "JSON" | "ENUM" | "SET") {
-                return row
-                    .try_get_unchecked::<String, _>(index)
-                    .map(|raw| TaggedValue::AdapterSpecific { type_name, raw })
-                    .map_err(map_mysql_execution_error);
-            }
-            row.try_get_unchecked::<String, _>(index)
-                .map(TaggedValue::Text)
-                .or_else(|_| {
-                    row.try_get_unchecked::<Vec<u8>, _>(index)
-                        .map(TaggedValue::Bytes)
-                })
-                .map_err(map_mysql_execution_error)
-        })
+        .map(|index| postgres_value(row, index))
         .collect()
 }
 
-fn mysql_metadata_counter(row: &MySqlRow, index: usize) -> Result<u64, QueryNotError> {
-    // MySQL-family information-schema counter columns vary in signedness across
-    // supported server lines. Decode the nonnegative protocol value directly,
-    // then let each caller enforce its narrower semantic range.
-    row.try_get_unchecked::<u64, _>(index)
-        .map_err(map_mysql_execution_error)
+fn postgres_value(row: &PgRow, index: usize) -> Result<TaggedValue, QueryNotError> {
+    let raw = row
+        .try_get_raw(index)
+        .map_err(map_postgres_execution_error)?;
+    if raw.is_null() {
+        return Ok(TaggedValue::Null);
+    }
+    let type_name = raw.type_info().name().to_ascii_uppercase();
+    if raw.format() == PgValueFormat::Text {
+        if type_name == "BYTEA" {
+            return row
+                .try_get_unchecked::<Vec<u8>, _>(index)
+                .map(TaggedValue::Bytes)
+                .map_err(map_postgres_execution_error);
+        }
+        let value = raw.as_str().map_err(|_| {
+            QueryNotError::database(
+                crate::ErrorCategory::UnsupportedCapability,
+                "A PostgreSQL value was not valid UTF-8 in the text protocol.",
+                false,
+            )
+        })?;
+        return postgres_text_value(&type_name, value);
+    }
+    match type_name.as_str() {
+        "BOOL" => row
+            .try_get_unchecked::<bool, _>(index)
+            .map(TaggedValue::Boolean)
+            .map_err(map_postgres_execution_error),
+        "INT2" => integer_value(row.try_get_unchecked::<i16, _>(index)),
+        "INT4" => integer_value(row.try_get_unchecked::<i32, _>(index)),
+        "INT8" => integer_value(row.try_get_unchecked::<i64, _>(index)),
+        "OID" | "XID" | "CID" => row
+            .try_get_unchecked::<sqlx::postgres::types::Oid, _>(index)
+            .map(|value| TaggedValue::UnsignedInteger(value.0.to_string()))
+            .map_err(map_postgres_execution_error),
+        "NUMERIC" => row
+            .try_get_unchecked::<sqlx::types::BigDecimal, _>(index)
+            .map(|value| TaggedValue::Decimal(value.to_string()))
+            .map_err(map_postgres_execution_error),
+        "FLOAT4" => float_value(
+            row.try_get_unchecked::<f32, _>(index).map(f64::from),
+            &type_name,
+        ),
+        "FLOAT8" => float_value(row.try_get_unchecked::<f64, _>(index), &type_name),
+        "BYTEA" => row
+            .try_get_unchecked::<Vec<u8>, _>(index)
+            .map(TaggedValue::Bytes)
+            .map_err(map_postgres_execution_error),
+        "DATE" => row
+            .try_get_unchecked::<NaiveDate, _>(index)
+            .map(|value| TaggedValue::DateTime {
+                raw: value.to_string(),
+                timezone_or_offset: None,
+            })
+            .map_err(map_postgres_execution_error),
+        "TIME" => row
+            .try_get_unchecked::<NaiveTime, _>(index)
+            .map(|value| TaggedValue::DateTime {
+                raw: value.to_string(),
+                timezone_or_offset: None,
+            })
+            .map_err(map_postgres_execution_error),
+        "TIMESTAMP" => row
+            .try_get_unchecked::<NaiveDateTime, _>(index)
+            .map(|value| TaggedValue::DateTime {
+                raw: value.to_string(),
+                timezone_or_offset: None,
+            })
+            .map_err(map_postgres_execution_error),
+        "TIMESTAMPTZ" => row
+            .try_get_unchecked::<DateTime<Utc>, _>(index)
+            .map(|value| TaggedValue::DateTime {
+                raw: value.to_rfc3339(),
+                timezone_or_offset: Some("+00:00".to_owned()),
+            })
+            .map_err(map_postgres_execution_error),
+        "JSON" | "JSONB" => row
+            .try_get_unchecked::<sqlx::types::Json<serde_json::Value>, _>(index)
+            .map(|value| TaggedValue::AdapterSpecific {
+                type_name,
+                raw: value.0.to_string(),
+            })
+            .map_err(map_postgres_execution_error),
+        "UUID" => row
+            .try_get_unchecked::<uuid::Uuid, _>(index)
+            .map(|value| TaggedValue::AdapterSpecific {
+                type_name,
+                raw: value.to_string(),
+            })
+            .map_err(map_postgres_execution_error),
+        name if name.ends_with("[]") => postgres_array_value(row, index, name),
+        "TEXT" | "VARCHAR" | "BPCHAR" | "CHAR" | "NAME" | "UNKNOWN" => row
+            .try_get_unchecked::<String, _>(index)
+            .map(TaggedValue::Text)
+            .map_err(map_postgres_execution_error),
+        _ => Err(QueryNotError::database(
+            crate::ErrorCategory::UnsupportedCapability,
+            format!(
+                "PostgreSQL returned the binary type {type_name}, which this adapter cannot decode losslessly yet. Cast it to text for explicit inspection."
+            ),
+            false,
+        )),
+    }
 }
 
-fn bind_mysql_value<'q>(
-    query: Query<'q, MySql, MySqlArguments>,
+fn postgres_text_value(type_name: &str, value: &str) -> Result<TaggedValue, QueryNotError> {
+    let invalid = || {
+        QueryNotError::database(
+            crate::ErrorCategory::UnsupportedCapability,
+            format!("PostgreSQL returned an invalid {type_name} text value."),
+            false,
+        )
+    };
+    Ok(match type_name {
+        "BOOL" => TaggedValue::Boolean(match value {
+            "t" | "true" => true,
+            "f" | "false" => false,
+            _ => return Err(invalid()),
+        }),
+        "INT2" | "INT4" | "INT8" => {
+            TaggedValue::SignedInteger(value.parse::<i64>().map_err(|_| invalid())?.to_string())
+        }
+        "OID" | "XID" | "CID" => {
+            TaggedValue::UnsignedInteger(value.parse::<u64>().map_err(|_| invalid())?.to_string())
+        }
+        "NUMERIC" => TaggedValue::Decimal(value.to_owned()),
+        "FLOAT4" | "FLOAT8" => match value.parse::<f64>() {
+            Ok(number) if number.is_finite() => TaggedValue::Float(number),
+            _ => TaggedValue::AdapterSpecific {
+                type_name: type_name.to_owned(),
+                raw: value.to_owned(),
+            },
+        },
+        "DATE" | "TIME" | "TIMESTAMP" | "TIMESTAMPTZ" => TaggedValue::DateTime {
+            raw: value.to_owned(),
+            timezone_or_offset: (type_name == "TIMESTAMPTZ")
+                .then(|| postgres_timezone_hint(value))
+                .flatten(),
+        },
+        "JSON" | "JSONB" | "UUID" => TaggedValue::AdapterSpecific {
+            type_name: type_name.to_owned(),
+            raw: value.to_owned(),
+        },
+        name if name.ends_with("[]") => TaggedValue::AdapterSpecific {
+            type_name: type_name.to_owned(),
+            raw: value.to_owned(),
+        },
+        _ => TaggedValue::Text(value.to_owned()),
+    })
+}
+
+fn postgres_timezone_hint(value: &str) -> Option<String> {
+    if value.ends_with('Z') {
+        return Some("Z".to_owned());
+    }
+    let time = value.get(10..)?;
+    time.rfind(['+', '-']).map(|index| time[index..].to_owned())
+}
+
+fn integer_value<T: ToString>(value: Result<T, sqlx::Error>) -> Result<TaggedValue, QueryNotError> {
+    value
+        .map(|value| TaggedValue::SignedInteger(value.to_string()))
+        .map_err(map_postgres_execution_error)
+}
+
+fn float_value(
+    value: Result<f64, sqlx::Error>,
+    type_name: &str,
+) -> Result<TaggedValue, QueryNotError> {
+    value
+        .map(|value| {
+            if value.is_finite() {
+                TaggedValue::Float(value)
+            } else {
+                TaggedValue::AdapterSpecific {
+                    type_name: type_name.to_owned(),
+                    raw: value.to_string(),
+                }
+            }
+        })
+        .map_err(map_postgres_execution_error)
+}
+
+fn postgres_array_value(
+    row: &PgRow,
+    index: usize,
+    type_name: &str,
+) -> Result<TaggedValue, QueryNotError> {
+    macro_rules! array_json {
+        ($type:ty) => {{
+            let values = row
+                .try_get_unchecked::<Vec<Option<$type>>, _>(index)
+                .map_err(map_postgres_execution_error)?;
+            serde_json::to_string(&values).map_err(|_| {
+                QueryNotError::internal(
+                    "A decoded PostgreSQL array could not be bounded for display.",
+                )
+            })?
+        }};
+    }
+    let raw = match type_name {
+        "BOOL[]" => array_json!(bool),
+        "INT2[]" => array_json!(i16),
+        "INT4[]" => array_json!(i32),
+        "INT8[]" => array_json!(i64),
+        "FLOAT4[]" => array_json!(f32),
+        "FLOAT8[]" => array_json!(f64),
+        "TEXT[]" | "VARCHAR[]" | "BPCHAR[]" | "NAME[]" => array_json!(String),
+        "UUID[]" => array_json!(uuid::Uuid),
+        "NUMERIC[]" => {
+            let values = row
+                .try_get_unchecked::<Vec<Option<sqlx::types::BigDecimal>>, _>(index)
+                .map_err(map_postgres_execution_error)?;
+            let values = values
+                .into_iter()
+                .map(|value| value.map(|value| value.to_string()))
+                .collect::<Vec<_>>();
+            serde_json::to_string(&values).map_err(|_| {
+                QueryNotError::internal(
+                    "A decoded PostgreSQL numeric array could not be displayed.",
+                )
+            })?
+        }
+        _ => {
+            return Err(QueryNotError::database(
+                crate::ErrorCategory::UnsupportedCapability,
+                format!(
+                    "PostgreSQL returned the array type {type_name}, which this adapter cannot decode losslessly yet. Cast it to text for explicit inspection."
+                ),
+                false,
+            ));
+        }
+    };
+    Ok(TaggedValue::AdapterSpecific {
+        type_name: type_name.to_owned(),
+        raw,
+    })
+}
+
+fn bind_postgres_value<'q>(
+    query: Query<'q, Postgres, PgArguments>,
     value: TaggedValue,
-) -> Result<Query<'q, MySql, MySqlArguments>, QueryNotError> {
+) -> Result<Query<'q, Postgres, PgArguments>, QueryNotError> {
     Ok(match value {
-        TaggedValue::Null => query.bind(Option::<String>::None),
+        TaggedValue::Null => {
+            return Err(QueryNotError::authorization(
+                "PostgreSQL NULL values must be represented directly in the immutable SQL plan.",
+            ));
+        }
         TaggedValue::Text(value) => query.bind(value),
         TaggedValue::Bytes(value) => query.bind(value),
         TaggedValue::SignedInteger(value) => query.bind(value.parse::<i64>().map_err(|_| {
-            QueryNotError::authorization("A staged MySQL-family integer is out of range.")
+            QueryNotError::authorization("A staged PostgreSQL integer is out of range.")
         })?),
-        TaggedValue::UnsignedInteger(value) => query.bind(value.parse::<u64>().map_err(|_| {
-            QueryNotError::authorization("A staged MySQL-family integer is out of range.")
-        })?),
+        TaggedValue::UnsignedInteger(value) => {
+            let value = value.parse::<u64>().map_err(|_| {
+                QueryNotError::authorization("A PostgreSQL paging value is out of range.")
+            })?;
+            let value = i64::try_from(value).map_err(|_| {
+                QueryNotError::authorization("A PostgreSQL paging value exceeds BIGINT.")
+            })?;
+            query.bind(value)
+        }
         TaggedValue::Decimal(value) => query.bind(
             value
                 .parse::<sqlx::types::BigDecimal>()
                 .map_err(|_| QueryNotError::authorization("A staged decimal is invalid."))?,
         ),
-        TaggedValue::Float(value) => query.bind(value),
+        TaggedValue::Float(value) if value.is_finite() => query.bind(value),
+        TaggedValue::Float(_) => {
+            return Err(QueryNotError::authorization(
+                "A staged PostgreSQL floating-point value must be finite.",
+            ));
+        }
         TaggedValue::Boolean(value) => query.bind(value),
-        TaggedValue::DateTime { raw, .. } => query.bind(raw),
-        TaggedValue::AdapterSpecific { raw, .. } => query.bind(raw),
+        TaggedValue::DateTime { raw, .. } => {
+            if let Ok(value) = DateTime::parse_from_rfc3339(&raw) {
+                query.bind(value)
+            } else if let Ok(value) = NaiveDateTime::parse_from_str(&raw, "%Y-%m-%d %H:%M:%S%.f")
+                .or_else(|_| NaiveDateTime::parse_from_str(&raw, "%Y-%m-%dT%H:%M:%S%.f"))
+            {
+                query.bind(value)
+            } else if let Ok(value) = NaiveDate::parse_from_str(&raw, "%Y-%m-%d") {
+                query.bind(value)
+            } else if let Ok(value) = NaiveTime::parse_from_str(&raw, "%H:%M:%S%.f") {
+                query.bind(value)
+            } else {
+                return Err(QueryNotError::authorization(
+                    "A staged PostgreSQL date/time value is invalid.",
+                ));
+            }
+        }
+        TaggedValue::AdapterSpecific { .. } => {
+            return Err(QueryNotError::authorization(
+                "PostgreSQL adapter-specific and array values remain read-only in table editing.",
+            ));
+        }
     })
 }
 
-async fn rollback_mysql_mutations(
-    session: &MySqlSession,
-    connection: &mut MySqlConnection,
+async fn rollback_postgres_mutations(
+    session: &PostgresSession,
+    connection: &mut PgConnection,
 ) -> Result<(), QueryNotError> {
     if connection.execute("ROLLBACK").await.is_err() {
         set_transaction_certainty(&session.transaction, TransactionCertainty::Unknown);
@@ -1558,103 +1623,27 @@ async fn rollback_mysql_mutations(
     Ok(())
 }
 
-async fn reconcile_transaction(
-    connection: &mut MySqlConnection,
-    transaction: &StdMutex<TransactionCertainty>,
-    transaction_variable_available: bool,
-) -> Result<SqliteTransactionState, QueryNotError> {
-    let automatic = sqlx::query_scalar::<_, i64>("SELECT @@session.autocommit")
-        .fetch_one(&mut *connection)
-        .await
-        .map_err(map_mysql_execution_error)?
-        != 0;
-    let active = if transaction_variable_available {
-        sqlx::query_scalar::<_, i64>("SELECT @@session.in_transaction")
-            .fetch_one(&mut *connection)
-            .await
-            .map_err(map_mysql_execution_error)?
-            != 0
-    } else {
-        transaction_certainty(transaction) == TransactionCertainty::Active
+fn reconcile_statement_effect(session: &PostgresSession, keyword: Option<&str>) {
+    let certainty = match keyword {
+        Some("BEGIN" | "START" | "SAVEPOINT") => TransactionCertainty::Active,
+        Some("COMMIT" | "END" | "ROLLBACK") => TransactionCertainty::Clean,
+        Some(_) if session.automatic.load(Ordering::Acquire) => TransactionCertainty::Clean,
+        Some(_) => TransactionCertainty::Active,
+        None => TransactionCertainty::Unknown,
     };
-    set_transaction_certainty(
-        transaction,
-        if active {
-            TransactionCertainty::Active
-        } else {
-            TransactionCertainty::Clean
-        },
-    );
-    Ok(SqliteTransactionState {
-        automatic,
-        certainty: if active {
-            TransactionCertainty::Active
-        } else {
-            TransactionCertainty::Clean
-        },
-    })
+    set_transaction_certainty(&session.transaction, certainty);
 }
 
-fn reconcile_mysql57_statement_effect(
-    transaction: &StdMutex<TransactionCertainty>,
-    sql: &str,
-    automatic_before_statement: bool,
-) {
-    let keyword = crate::sql::leading_statement_keyword(sql);
-    let effect = match keyword.as_deref() {
-        Some("BEGIN" | "START") => Some(TransactionCertainty::Active),
-        Some("COMMIT" | "ROLLBACK") => Some(TransactionCertainty::Clean),
-        // These classes contain the MySQL 5.7 statements exercised by the
-        // editor that commit implicitly. Unknown administrative forms are
-        // denied by normal authorization and cannot be treated as writes by
-        // an unsupported/query-only connection.
-        Some(
-            "ALTER" | "CREATE" | "DROP" | "RENAME" | "TRUNCATE" | "GRANT" | "REVOKE" | "ANALYZE"
-            | "OPTIMIZE" | "REPAIR" | "LOCK" | "UNLOCK" | "FLUSH" | "RESET" | "INSTALL"
-            | "UNINSTALL",
-        ) => Some(TransactionCertainty::Clean),
-        Some("SET") if sql.to_ascii_uppercase().contains("AUTOCOMMIT") => {
-            Some(TransactionCertainty::Clean)
-        }
-        Some("SHOW" | "DESCRIBE" | "DESC" | "EXPLAIN" | "USE") => None,
-        Some(_) if automatic_before_statement => Some(TransactionCertainty::Clean),
-        Some(_) => Some(TransactionCertainty::Active),
-        None => Some(TransactionCertainty::Unknown),
-    };
-    if let Some(effect) = effect {
-        set_transaction_certainty(transaction, effect);
-    }
-}
-
-async fn transaction_after_error(
-    connection: &mut MySqlConnection,
-    transaction: &StdMutex<TransactionCertainty>,
-    transaction_variable_available: bool,
-) -> SqliteTransactionState {
-    reconcile_transaction(connection, transaction, transaction_variable_available)
-        .await
-        .unwrap_or_else(|_| {
-            set_transaction_certainty(transaction, TransactionCertainty::Unknown);
-            SqliteTransactionState {
-                automatic: false,
-                certainty: TransactionCertainty::Unknown,
-            }
-        })
-}
-
-fn session_transaction_state(session: &MySqlSession) -> SqliteTransactionState {
+fn session_transaction_state(session: &PostgresSession) -> SqliteTransactionState {
     SqliteTransactionState {
         automatic: session.automatic.load(Ordering::Acquire),
         certainty: transaction_certainty(&session.transaction),
     }
 }
 
-fn unknown_transaction(session: &MySqlSession) -> SqliteTransactionState {
+fn unknown_transaction(session: &PostgresSession) -> SqliteTransactionState {
     set_transaction_certainty(&session.transaction, TransactionCertainty::Unknown);
-    SqliteTransactionState {
-        automatic: session.automatic.load(Ordering::Acquire),
-        certainty: TransactionCertainty::Unknown,
-    }
+    session_transaction_state(session)
 }
 
 fn transaction_certainty(transaction: &StdMutex<TransactionCertainty>) -> TransactionCertainty {
@@ -1690,7 +1679,7 @@ fn validate_metadata(value: &str) -> Result<(), QueryNotError> {
     if value.is_empty() || value.len() > MAX_METADATA_BYTES || value.bytes().any(|byte| byte == 0) {
         return Err(QueryNotError::database(
             crate::ErrorCategory::UnsupportedCapability,
-            "MySQL-family metadata exceeds the safe display boundary.",
+            "PostgreSQL metadata exceeds the safe display boundary.",
             false,
         ));
     }
@@ -1706,28 +1695,28 @@ fn metadata_limit_error() -> QueryNotError {
 }
 
 fn quote_identifier(value: &str) -> String {
-    format!("`{}`", value.replace('`', "``"))
+    format!("\"{}\"", value.replace('"', "\"\""))
 }
 
-fn map_mysql_connect_error(error: sqlx::Error) -> QueryNotError {
-    let category = mysql_error_category(&error);
-    let safe_detail = mysql_safe_detail(&error);
+fn map_postgres_connect_error(error: sqlx::Error) -> QueryNotError {
+    let category = postgres_error_category(&error);
+    let safe_detail = postgres_safe_detail(&error);
     let mut mapped = QueryNotError::database(
         category,
         match category {
             crate::ErrorCategory::Authentication => {
-                "The MySQL-family server rejected the supplied credential."
+                "The PostgreSQL server rejected the supplied credential."
             }
             crate::ErrorCategory::Authorization => {
-                "The MySQL-family server denied access to the requested database."
+                "The PostgreSQL server denied access to the requested database."
             }
             crate::ErrorCategory::Tls => {
                 "TLS setup or server identity verification failed; QueryNot did not downgrade the connection."
             }
             crate::ErrorCategory::Connectivity => {
-                "QueryNot could not establish the direct MySQL-family connection."
+                "QueryNot could not establish the direct PostgreSQL connection."
             }
-            _ => "MySQL-family connection setup failed safely.",
+            _ => "PostgreSQL connection setup failed safely.",
         },
         matches!(
             category,
@@ -1738,31 +1727,31 @@ fn map_mysql_connect_error(error: sqlx::Error) -> QueryNotError {
     mapped
 }
 
-fn map_mysql_execution_error(error: sqlx::Error) -> QueryNotError {
-    let category = mysql_error_category(&error);
-    let safe_detail = mysql_safe_detail(&error);
+fn map_postgres_execution_error(error: sqlx::Error) -> QueryNotError {
+    let category = postgres_error_category(&error);
+    let safe_detail = postgres_safe_detail(&error);
     let mut mapped = QueryNotError::database(
         category,
         match category {
             crate::ErrorCategory::Cancelled => {
-                "The server confirmed cancellation of the active statement."
+                "The PostgreSQL server confirmed cancellation of the active statement."
             }
             crate::ErrorCategory::Syntax => "The server rejected the statement syntax.",
             crate::ErrorCategory::Constraint => {
                 "The server rejected the statement because a constraint would be violated."
             }
             crate::ErrorCategory::Authentication => {
-                "The MySQL-family session credential is no longer accepted."
+                "The PostgreSQL session credential is no longer accepted."
             }
-            crate::ErrorCategory::Authorization => "The MySQL-family server denied this operation.",
+            crate::ErrorCategory::Authorization => "The PostgreSQL server denied this operation.",
             crate::ErrorCategory::Timeout => "The server timed out the active operation.",
             crate::ErrorCategory::Transaction => {
-                "The server could not complete the transaction operation."
+                "The PostgreSQL server could not complete the transaction operation."
             }
             crate::ErrorCategory::Connectivity => {
-                "The MySQL-family connection was interrupted during the operation."
+                "The PostgreSQL connection was interrupted during the operation."
             }
-            _ => "The MySQL-family server could not complete the operation.",
+            _ => "The PostgreSQL server could not complete the operation.",
         },
         matches!(
             category,
@@ -1773,12 +1762,12 @@ fn map_mysql_execution_error(error: sqlx::Error) -> QueryNotError {
     mapped
 }
 
-fn mysql_safe_detail(error: &sqlx::Error) -> Option<String> {
+fn postgres_safe_detail(error: &sqlx::Error) -> Option<String> {
     if let Some(code) = error
         .as_database_error()
         .and_then(|database| database.code())
     {
-        return Some(format!("Vendor error code: {code}."));
+        return Some(format!("SQLSTATE: {code}."));
     }
     match error {
         sqlx::Error::ColumnDecode { index, .. } => {
@@ -1794,16 +1783,18 @@ fn mysql_safe_detail(error: &sqlx::Error) -> Option<String> {
     }
 }
 
-fn mysql_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
+fn postgres_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
     if let Some(database) = error.as_database_error() {
-        return match database.code().as_deref() {
-            Some("1045") => crate::ErrorCategory::Authentication,
-            Some("1044" | "1142" | "1143" | "1227") => crate::ErrorCategory::Authorization,
-            Some("1064") => crate::ErrorCategory::Syntax,
-            Some("1062" | "1216" | "1217" | "1451" | "1452") => crate::ErrorCategory::Constraint,
-            Some("1205") => crate::ErrorCategory::Timeout,
-            Some("1213") => crate::ErrorCategory::Transaction,
-            Some("1317") => crate::ErrorCategory::Cancelled,
+        let code = database.code();
+        let code = code.as_deref().unwrap_or_default();
+        return match code {
+            "28P01" => crate::ErrorCategory::Authentication,
+            "42501" | "3D000" => crate::ErrorCategory::Authorization,
+            "42601" => crate::ErrorCategory::Syntax,
+            "57014" => crate::ErrorCategory::Cancelled,
+            "25P02" | "25000" => crate::ErrorCategory::Transaction,
+            code if code.starts_with("23") => crate::ErrorCategory::Constraint,
+            code if code.starts_with("08") => crate::ErrorCategory::Connectivity,
             _ => crate::ErrorCategory::Internal,
         };
     }
@@ -1821,112 +1812,33 @@ fn mysql_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
 mod tests {
     use super::*;
 
-    const ENCRYPTED_TEST_KEY: &str = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n\
-MIGbMFcGCSqGSIb3DQEFDTBKMCkGCSqGSIb3DQEFDDAcBAh52YLnDfkaiAICCAAw\n\
-DAYIKoZIhvcNAgkFADAdBglghkgBZQMEASoEELLQLXiy79nf9pTPjgr0CSUEQNDN\n\
-bHcPS7hxdkIjBcF0AYCeImZ0znQYXSIb/aqVBpiQyIgvzgKwXUG8v1SwNVlbzUFU\n\
-syWTcIRpuGqs+IFaeys=\n\
------END ENCRYPTED PRIVATE KEY-----\n";
-
     #[test]
-    fn encrypted_pkcs8_client_key_is_decrypted_only_with_the_supplied_passphrase() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("client-key.pem");
-        std::fs::write(&path, ENCRYPTED_TEST_KEY).unwrap();
-
-        let decrypted = decrypt_client_key_pem(&path, "hunter42").unwrap();
-        assert!(decrypted.starts_with("-----BEGIN PRIVATE KEY-----"));
-
-        let error = decrypt_client_key_pem(&path, "incorrect").unwrap_err();
-        assert_eq!(error.category, crate::ErrorCategory::Authorization);
-        assert!(!error.safe_message.contains("hunter42"));
-        assert!(!error.safe_message.contains("incorrect"));
+    fn postgres18_line_and_exact_fixture_are_classified_fail_closed() {
+        assert_eq!(
+            classify_compatibility("18.6"),
+            (CompatibilityStatus::Supported, true)
+        );
+        assert_eq!(
+            classify_compatibility("18.4"),
+            (CompatibilityStatus::Supported, false)
+        );
+        assert_eq!(
+            classify_compatibility("17.11"),
+            (CompatibilityStatus::QueryOnly, false)
+        );
+        assert_eq!(
+            classify_compatibility("19.0"),
+            (CompatibilityStatus::QueryOnly, false)
+        );
     }
 
     #[test]
-    fn mysql57_line_and_exact_matrix_classification_are_fail_closed() {
-        for (product, version, expected) in [
-            (
-                "MySQL",
-                "5.7.0",
-                (CompatibilityStatus::Supported, true, false),
-            ),
-            (
-                "MySQL",
-                "5.7.39",
-                (CompatibilityStatus::Supported, true, false),
-            ),
-            (
-                "MySQL",
-                "5.7.44",
-                (CompatibilityStatus::Supported, true, true),
-            ),
-            (
-                "MySQL",
-                "8.0.46",
-                (CompatibilityStatus::Supported, true, true),
-            ),
-            (
-                "MySQL",
-                "8.4.10",
-                (CompatibilityStatus::Supported, false, true),
-            ),
-            (
-                "MariaDB",
-                "10.11.18",
-                (CompatibilityStatus::Supported, false, true),
-            ),
-            (
-                "MariaDB",
-                "11.4.12",
-                (CompatibilityStatus::Supported, false, true),
-            ),
-            (
-                "MySQL",
-                "5.7",
-                (CompatibilityStatus::QueryOnly, false, false),
-            ),
-            (
-                "MySQL",
-                "5.7.44.1",
-                (CompatibilityStatus::QueryOnly, false, false),
-            ),
-            (
-                "MySQL",
-                "8.4.11",
-                (CompatibilityStatus::QueryOnly, false, false),
-            ),
-        ] {
-            assert_eq!(classify_compatibility(product, version), expected);
-        }
-    }
-
-    #[test]
-    fn mysql57_transaction_fallback_tracks_manual_work_and_implicit_commits() {
-        let transaction = StdMutex::new(TransactionCertainty::Clean);
-        reconcile_mysql57_statement_effect(&transaction, "INSERT INTO t VALUES (1)", false);
+    fn version_parser_accepts_vendor_suffixes_without_guessing_malformed_versions() {
         assert_eq!(
-            transaction_certainty(&transaction),
-            TransactionCertainty::Active
+            parse_exact_version("18.6 (Debian 18.6-1)"),
+            Some("18.6".to_owned())
         );
-        reconcile_mysql57_statement_effect(
-            &transaction,
-            "/* deliberate */ CREATE TABLE t2(x INT)",
-            false,
-        );
-        assert_eq!(
-            transaction_certainty(&transaction),
-            TransactionCertainty::Clean
-        );
-        reconcile_mysql57_statement_effect(&transaction, "START TRANSACTION", true);
-        assert_eq!(
-            transaction_certainty(&transaction),
-            TransactionCertainty::Active
-        );
-        reconcile_mysql57_statement_effect(&transaction, "ROLLBACK", true);
-        assert_eq!(
-            transaction_certainty(&transaction),
-            TransactionCertainty::Clean
-        );
+        assert_eq!(parse_exact_version("18beta2"), None);
+        assert_eq!(parse_exact_version("PostgreSQL"), None);
     }
 }

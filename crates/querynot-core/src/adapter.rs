@@ -16,6 +16,7 @@ use tokio::sync::mpsc;
 pub enum DatabaseFamily {
     Sqlite,
     MySqlFamily,
+    Postgres,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -58,6 +59,7 @@ pub struct AdapterCapabilities {
 pub enum AdapterSession {
     Sqlite(SqliteSession),
     MySql(Box<crate::mysql::MySqlSession>),
+    Postgres(Box<crate::postgres::PostgresSession>),
 }
 
 impl AdapterSession {
@@ -78,6 +80,12 @@ impl AdapterSession {
                     .map(Box::new)
                     .map(Self::MySql)
             }
+            ConnectionTarget::Postgres { .. } => {
+                crate::postgres::PostgresSession::open(profile, secrets)
+                    .await
+                    .map(Box::new)
+                    .map(Self::Postgres)
+            }
         }
     }
 
@@ -93,6 +101,9 @@ impl AdapterSession {
             ConnectionTarget::MysqlFamily { .. } => {
                 crate::mysql::MySqlSession::test(profile, secrets).await
             }
+            ConnectionTarget::Postgres { .. } => {
+                crate::postgres::PostgresSession::test(profile, secrets).await
+            }
         }
     }
 
@@ -101,6 +112,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.read_only(),
             Self::MySql(session) => session.read_only(),
+            Self::Postgres(session) => session.read_only(),
         }
     }
 
@@ -108,6 +120,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.request_cancel(),
             Self::MySql(session) => session.request_cancel(),
+            Self::Postgres(session) => session.request_cancel(),
         }
     }
 
@@ -118,6 +131,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.connection_info().await,
             Self::MySql(session) => session.connection_info(profile).await,
+            Self::Postgres(session) => session.connection_info(profile).await,
         }
     }
 
@@ -125,6 +139,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.namespaces().await,
             Self::MySql(session) => session.namespaces().await,
+            Self::Postgres(session) => session.namespaces().await,
         }
     }
 
@@ -132,6 +147,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.objects(namespace).await,
             Self::MySql(session) => session.objects(namespace).await,
+            Self::Postgres(session) => session.objects(namespace).await,
         }
     }
 
@@ -143,6 +159,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.object_detail(namespace, object_name).await,
             Self::MySql(session) => session.object_detail(namespace, object_name).await,
+            Self::Postgres(session) => session.object_detail(namespace, object_name).await,
         }
     }
 
@@ -150,6 +167,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.change_context(context).await,
             Self::MySql(session) => session.change_context(context).await,
+            Self::Postgres(session) => session.change_context(context).await,
         }
     }
 
@@ -162,6 +180,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.browse_table(namespace, table, input).await,
             Self::MySql(session) => session.browse_table(namespace, table, input).await,
+            Self::Postgres(session) => session.browse_table(namespace, table, input).await,
         }
     }
 
@@ -172,6 +191,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.apply_table_mutations(plan).await,
             Self::MySql(session) => session.apply_table_mutations(plan).await,
+            Self::Postgres(session) => session.apply_table_mutations(plan).await,
         }
     }
 
@@ -179,6 +199,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.transaction_state().await,
             Self::MySql(session) => session.transaction_state().await,
+            Self::Postgres(session) => session.transaction_state().await,
         }
     }
 
@@ -189,6 +210,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.set_automatic(automatic).await,
             Self::MySql(session) => session.set_automatic(automatic).await,
+            Self::Postgres(session) => session.set_automatic(automatic).await,
         }
     }
 
@@ -196,6 +218,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.commit().await,
             Self::MySql(session) => session.commit().await,
+            Self::Postgres(session) => session.commit().await,
         }
     }
 
@@ -203,6 +226,7 @@ impl AdapterSession {
         match self {
             Self::Sqlite(session) => session.rollback().await,
             Self::MySql(session) => session.rollback().await,
+            Self::Postgres(session) => session.rollback().await,
         }
     }
 
@@ -221,6 +245,11 @@ impl AdapterSession {
                     .await;
             }
             Self::MySql(session) => {
+                session
+                    .execute(execution_id, plan, tranche_rows, controls, events)
+                    .await;
+            }
+            Self::Postgres(session) => {
                 session
                     .execute(execution_id, plan, tranche_rows, controls, events)
                     .await;

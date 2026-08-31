@@ -105,6 +105,12 @@ async fn run() -> Result<FeasibilityReport, String> {
                     "network feasibility manifests cannot include SQLite targets".to_owned(),
                 );
             }
+            DatabaseFamily::Postgres => {
+                return Err(
+                    "PostgreSQL targets require the dedicated disposable conformance manifest; the five-server MySQL-family release harness cannot claim PostgreSQL evidence"
+                        .to_owned(),
+                );
+            }
         }
     }
 

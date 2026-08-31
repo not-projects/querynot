@@ -12,6 +12,7 @@
   import {
     MariaSQL,
     MySQL,
+    PostgreSQL,
     SQLite,
     keywordCompletionSource,
     schemaCompletionSource,
@@ -98,7 +99,9 @@
         ? engine.toLocaleLowerCase().includes('mariadb')
           ? MariaSQL
           : MySQL
-        : SQLite;
+        : dialect === 'postgresql'
+          ? PostgreSQL
+          : SQLite;
     const config = { dialect: sqlDialect, schema: completionSchema };
     const contextualCompletion = sqlContextCompletionSource({
       dialect,
@@ -341,7 +344,7 @@
 
 <div
   class="sql-editor-host"
-  aria-label={`${dialect === 'mysql' ? 'MySQL-family' : 'SQLite'} SQL editor`}
+  aria-label={`${dialect === 'mysql' ? 'MySQL-family' : dialect === 'postgresql' ? 'PostgreSQL' : 'SQLite'} SQL editor`}
   aria-keyshortcuts={`Tab ArrowDown ArrowUp PageDown PageUp Control+Space ${ariaPrimaryModifier}+Enter ${ariaPrimaryModifier}+Shift+Enter ${ariaPrimaryModifier}+Period`}
   {@attach mountEditor}
 ></div>

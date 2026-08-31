@@ -1011,6 +1011,7 @@ pub(crate) async fn start_execution(
     let dialect = match connected.info.dialect.as_str() {
         "sqlite" => SqlDialect::Sqlite,
         "mysql" => SqlDialect::MySql,
+        "postgresql" => SqlDialect::Postgres,
         _ => {
             return Err(QueryNotError::internal(
                 "The adapter reported an unknown SQL dialect.",
@@ -2063,6 +2064,7 @@ fn table_dialect(dialect: &str) -> Result<TableDialect, QueryNotError> {
     match dialect {
         "sqlite" => Ok(TableDialect::Sqlite),
         "mysql" => Ok(TableDialect::MySql),
+        "postgresql" => Ok(TableDialect::Postgres),
         _ => Err(QueryNotError::internal(
             "The adapter reported an unknown table-mutation dialect.",
         )),

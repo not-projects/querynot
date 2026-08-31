@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-08-31
+
+### Added
+
+- Added the first compiled PostgreSQL adapter as a development-preview connection path, including direct fail-closed TLS and client identity, PostgreSQL 18.x identity classification with 18.6 as the exact planned conformance baseline, isolated schema contexts, overloaded routine metadata, dollar-quoted statement planning, bounded typed/array results, backend cancellation, transactions, deterministic table browsing, and staged atomic mutations through the common native contract.
+- Added PostgreSQL connection creation with the 5432 default, accurate saved-connection labels, PostgreSQL CodeMirror parsing, and engine-aware function completion.
+
+### Changed
+
+- Generalized native table plans to use adapter-specific parameter markers, null-safe comparisons, quoted identifiers, and direct planned NULL values without weakening the existing SQLite/MySQL mutation safeguards.
+
+### Security
+
+- Kept PostgreSQL outside the live release support claim until a dedicated disposable PostgreSQL 18.6 password/client-certificate, TLS, metadata, array/value, cancellation, transaction, and table-mutation conformance gate is retained; the MySQL-family release harness fails closed for PostgreSQL targets.
+- Enforced the existing immutable file/server and server-engine profile boundary in the native update path, so a saved credential cannot be silently rebound to another adapter kind.
+
 ## [0.1.13] - 2026-08-29
 
 ### Fixed

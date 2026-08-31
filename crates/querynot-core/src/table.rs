@@ -18,6 +18,7 @@ pub const MAX_TABLE_COLUMNS: usize = 2_048;
 pub enum TableDialect {
     Sqlite,
     MySql,
+    Postgres,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -368,25 +369,39 @@ pub fn plan_browse(
                         format!("{escaped}%")
                     },
                 ));
-                predicates.push(format!("{quoted} LIKE ? ESCAPE '!'"));
+                let marker = parameter_marker(dialect, parameters.len());
+                predicates.push(format!("{quoted} LIKE {marker} ESCAPE '!'"));
             }
             operator => {
                 let value = filter.value.clone().ok_or_else(|| {
                     QueryNotError::authorization("This filter requires a typed value.")
                 })?;
                 validate_value(column, &value)?;
+                if value == TaggedValue::Null {
+                    predicates.push(match operator {
+                        FilterOperator::Equal => format!("{quoted} IS NULL"),
+                        FilterOperator::NotEqual => format!("{quoted} IS NOT NULL"),
+                        _ => {
+                            return Err(QueryNotError::authorization(
+                                "NULL supports only equal, not-equal, is-null, and is-not-null filters.",
+                            ));
+                        }
+                    });
+                    continue;
+                }
+                parameters.push(value);
+                let marker = parameter_marker(dialect, parameters.len());
                 let comparison = match operator {
-                    FilterOperator::Equal => null_safe_equal(dialect, &quoted),
+                    FilterOperator::Equal => null_safe_equal(dialect, &quoted, &marker),
                     FilterOperator::NotEqual => {
-                        format!("NOT ({})", null_safe_equal(dialect, &quoted))
+                        format!("NOT ({})", null_safe_equal(dialect, &quoted, &marker))
                     }
-                    FilterOperator::LessThan => format!("{quoted} < ?"),
-                    FilterOperator::LessOrEqual => format!("{quoted} <= ?"),
-                    FilterOperator::GreaterThan => format!("{quoted} > ?"),
-                    FilterOperator::GreaterOrEqual => format!("{quoted} >= ?"),
+                    FilterOperator::LessThan => format!("{quoted} < {marker}"),
+                    FilterOperator::LessOrEqual => format!("{quoted} <= {marker}"),
+                    FilterOperator::GreaterThan => format!("{quoted} > {marker}"),
+                    FilterOperator::GreaterOrEqual => format!("{quoted} >= {marker}"),
                     _ => unreachable!("null and text operators were handled above"),
                 };
-                parameters.push(value);
                 predicates.push(comparison);
             }
         }
@@ -470,13 +485,15 @@ pub fn plan_browse(
             .collect::<Vec<_>>()
             .join(", "),
     );
-    sql.push_str(" LIMIT ?");
     parameters.push(TaggedValue::UnsignedInteger(
         (u64::from(input.page_size) + 1).to_string(),
     ));
+    sql.push_str(" LIMIT ");
+    sql.push_str(&parameter_marker(dialect, parameters.len()));
     if !keyset {
-        sql.push_str(" OFFSET ?");
         parameters.push(TaggedValue::UnsignedInteger(input.offset.to_string()));
+        sql.push_str(" OFFSET ");
+        sql.push_str(&parameter_marker(dialect, parameters.len()));
     }
     let plan_bytes = sql
         .len()
@@ -513,8 +530,11 @@ fn keyset_predicate(
             if cursor[prefix] == TaggedValue::Null {
                 parts.push(format!("{quoted} IS NULL"));
             } else {
-                parts.push(format!("{quoted} = ?"));
                 parameters.push(cursor[prefix].clone());
+                parts.push(format!(
+                    "{quoted} = {}",
+                    parameter_marker(dialect, parameters.len())
+                ));
             }
         }
         let column = &definition.columns[order[current].0];
@@ -527,11 +547,14 @@ fn keyset_predicate(
             (SortDirection::Descending, true) => "0 = 1".to_owned(),
             (SortDirection::Ascending, false) => {
                 parameters.push(value.clone());
-                format!("{quoted} > ?")
+                format!("{quoted} > {}", parameter_marker(dialect, parameters.len()))
             }
             (SortDirection::Descending, false) => {
                 parameters.push(value.clone());
-                format!("({quoted} < ? OR {quoted} IS NULL)")
+                format!(
+                    "({quoted} < {} OR {quoted} IS NULL)",
+                    parameter_marker(dialect, parameters.len())
+                )
             }
         };
         parts.push(comparison);
@@ -800,8 +823,12 @@ fn plan_insert(
             MutationCellMode::Value(value) => {
                 validate_value(column, value)?;
                 names.push(quote_identifier(dialect, &column.name));
-                placeholders.push("?");
-                parameters.push(value.clone());
+                if value == &TaggedValue::Null {
+                    placeholders.push("NULL".to_owned());
+                } else {
+                    parameters.push(value.clone());
+                    placeholders.push(parameter_marker(dialect, parameters.len()));
+                }
             }
             MutationCellMode::DatabaseDefault if column.has_default || column.generated => {}
             MutationCellMode::DatabaseDefault => {
@@ -814,7 +841,9 @@ fn plan_insert(
     }
     let sql = if names.is_empty() {
         match dialect {
-            TableDialect::Sqlite => format!("INSERT INTO {qualified} DEFAULT VALUES"),
+            TableDialect::Sqlite | TableDialect::Postgres => {
+                format!("INSERT INTO {qualified} DEFAULT VALUES")
+            }
             TableDialect::MySql => format!("INSERT INTO {qualified} () VALUES ()"),
         }
     } else {
@@ -859,8 +888,16 @@ fn plan_update(
         match &cell.mode {
             MutationCellMode::Value(value) => {
                 validate_value(column, value)?;
-                assignments.push(format!("{} = ?", quote_identifier(dialect, &column.name)));
-                parameters.push(value.clone());
+                let expression = if value == &TaggedValue::Null {
+                    "NULL".to_owned()
+                } else {
+                    parameters.push(value.clone());
+                    parameter_marker(dialect, parameters.len())
+                };
+                assignments.push(format!(
+                    "{} = {expression}",
+                    quote_identifier(dialect, &column.name)
+                ));
             }
             MutationCellMode::DatabaseDefault => {
                 return Err(QueryNotError::authorization(
@@ -870,7 +907,7 @@ fn plan_update(
         }
     }
     let (predicate, predicate_values) =
-        optimistic_predicate(definition, identity, dialect, original)?;
+        optimistic_predicate(definition, identity, dialect, original, parameters.len())?;
     parameters.extend(predicate_values);
     Ok(BoundMutation {
         kind: MutationKind::Update,
@@ -890,7 +927,7 @@ fn plan_delete(
     qualified: &str,
     original: &[TaggedValue],
 ) -> Result<BoundMutation, QueryNotError> {
-    let (predicate, parameters) = optimistic_predicate(definition, identity, dialect, original)?;
+    let (predicate, parameters) = optimistic_predicate(definition, identity, dialect, original, 0)?;
     Ok(BoundMutation {
         kind: MutationKind::Delete,
         sql: format!("DELETE FROM {qualified} WHERE {predicate}"),
@@ -904,6 +941,7 @@ fn optimistic_predicate(
     identity: &TableIdentity,
     dialect: TableDialect,
     original: &[TaggedValue],
+    parameter_offset: usize,
 ) -> Result<(String, Vec<TaggedValue>), QueryNotError> {
     let identity_indexes = identity
         .columns
@@ -934,8 +972,13 @@ fn optimistic_predicate(
     let mut parameters = Vec::new();
     for index in indexes {
         let quoted = quote_identifier(dialect, &definition.columns[index].name);
-        predicates.push(null_safe_equal(dialect, &quoted));
-        parameters.push(original[index].clone());
+        if original[index] == TaggedValue::Null {
+            predicates.push(format!("{quoted} IS NULL"));
+        } else {
+            parameters.push(original[index].clone());
+            let marker = parameter_marker(dialect, parameter_offset + parameters.len());
+            predicates.push(null_safe_equal(dialect, &quoted, &marker));
+        }
     }
     Ok((predicates.join(" AND "), parameters))
 }
@@ -1265,17 +1308,27 @@ fn editor_name(editor: TableEditorKind) -> &'static str {
     }
 }
 
-fn null_safe_equal(dialect: TableDialect, quoted: &str) -> String {
+fn null_safe_equal(dialect: TableDialect, quoted: &str, marker: &str) -> String {
     match dialect {
-        TableDialect::Sqlite => format!("{quoted} IS ?"),
-        TableDialect::MySql => format!("{quoted} <=> ?"),
+        TableDialect::Sqlite => format!("{quoted} IS {marker}"),
+        TableDialect::MySql => format!("{quoted} <=> {marker}"),
+        TableDialect::Postgres => format!("{quoted} IS NOT DISTINCT FROM {marker}"),
+    }
+}
+
+fn parameter_marker(dialect: TableDialect, position: usize) -> String {
+    match dialect {
+        TableDialect::Sqlite | TableDialect::MySql => "?".to_owned(),
+        TableDialect::Postgres => format!("${position}"),
     }
 }
 
 #[must_use]
 pub fn quote_identifier(dialect: TableDialect, value: &str) -> String {
     match dialect {
-        TableDialect::Sqlite => format!("\"{}\"", value.replace('"', "\"\"")),
+        TableDialect::Sqlite | TableDialect::Postgres => {
+            format!("\"{}\"", value.replace('"', "\"\""))
+        }
         TableDialect::MySql => format!("`{}`", value.replace('`', "``")),
     }
 }
@@ -1392,6 +1445,59 @@ mod tests {
             TaggedValue::Text("%x!%' OR 1=1 --%".to_owned())
         );
         assert!(plan.keyset);
+    }
+
+    #[test]
+    fn postgres_plans_use_numbered_parameters_and_double_quoted_identifiers() {
+        let definition = TableDefinition::from_detail(&detail(), false, true);
+        let browse = plan_browse(
+            &definition,
+            TableDialect::Postgres,
+            &BrowseInput {
+                filters: vec![TableFilter {
+                    column: "display_name".to_owned(),
+                    operator: FilterOperator::Contains,
+                    value: Some(TaggedValue::Text("Ada".to_owned())),
+                }],
+                sorts: Vec::new(),
+                cursor: Vec::new(),
+                offset: 0,
+                page_size: 200,
+            },
+        )
+        .unwrap();
+        assert!(browse.sql.contains("LIKE $1 ESCAPE '!'"));
+        assert!(browse.sql.contains("LIMIT $2"));
+        assert!(browse.sql.contains("\"users\"\"; DROP TABLE audit; --\""));
+
+        let mutation = plan_mutations(
+            &definition,
+            TableDialect::Postgres,
+            9,
+            &[MutationInput {
+                kind: MutationKind::Update,
+                original: vec![
+                    TaggedValue::SignedInteger("1".to_owned()),
+                    TaggedValue::Text("before".to_owned()),
+                ],
+                cells: vec![MutationCell {
+                    column: "display_name".to_owned(),
+                    mode: MutationCellMode::Value(TaggedValue::Text("after".to_owned())),
+                }],
+            }],
+        )
+        .unwrap();
+        assert!(mutation.operations[0].sql.contains("= $1"));
+        assert!(
+            mutation.operations[0]
+                .sql
+                .contains("IS NOT DISTINCT FROM $2")
+        );
+        assert!(
+            mutation.operations[0]
+                .sql
+                .contains("IS NOT DISTINCT FROM $3")
+        );
     }
 
     #[test]

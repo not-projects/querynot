@@ -1163,6 +1163,13 @@ fn profile_from_input(
     existing: Option<&ConnectionProfile>,
     now_ms: i64,
 ) -> Result<ConnectionProfile, QueryNotError> {
+    if let Some(existing) = existing
+        && !profile_kind_matches_target(&input.kind, &existing.target)
+    {
+        return Err(QueryNotError::authorization(
+            "A saved connection's file/server type and server engine cannot change. Create a new profile instead.",
+        ));
+    }
     let target = match input.kind.as_str() {
         "sqlite" => {
             let path = if let Some(grant) = input.file_grant_id {
@@ -1183,7 +1190,8 @@ fn profile_from_input(
                 read_only: input.read_only,
             }
         }
-        "mysql_family" => {
+        "mysql_family" | "postgres" => {
+            let postgres = input.kind == "postgres";
             if input.file_grant_id.is_some() {
                 return Err(QueryNotError::authorization(
                     "A network profile cannot consume a local-file grant.",
@@ -1202,6 +1210,12 @@ fn profile_from_input(
             };
             let existing_tls = match existing.map(|profile| &profile.target) {
                 Some(ConnectionTarget::MysqlFamily {
+                    tls_ca_path,
+                    tls_client_certificate_path,
+                    tls_client_key_path,
+                    ..
+                })
+                | Some(ConnectionTarget::Postgres {
                     tls_ca_path,
                     tls_client_certificate_path,
                     tls_client_key_path,
@@ -1240,15 +1254,32 @@ fn profile_from_input(
                 tls_client_certificate_path = None;
                 tls_client_key_path = None;
             }
-            ConnectionTarget::MysqlFamily {
-                host: input.host.unwrap_or_default(),
-                port: input.port.unwrap_or(3306),
-                default_database: input.default_database,
-                username: input.username.unwrap_or_default(),
-                tls_mode,
-                tls_ca_path,
-                tls_client_certificate_path,
-                tls_client_key_path,
+            let host = input.host.unwrap_or_default();
+            let port = input.port.unwrap_or(if postgres { 5432 } else { 3306 });
+            let default_database = input.default_database;
+            let username = input.username.unwrap_or_default();
+            if postgres {
+                ConnectionTarget::Postgres {
+                    host,
+                    port,
+                    default_database,
+                    username,
+                    tls_mode,
+                    tls_ca_path,
+                    tls_client_certificate_path,
+                    tls_client_key_path,
+                }
+            } else {
+                ConnectionTarget::MysqlFamily {
+                    host,
+                    port,
+                    default_database,
+                    username,
+                    tls_mode,
+                    tls_ca_path,
+                    tls_client_certificate_path,
+                    tls_client_key_path,
+                }
             }
         }
         _ => {
@@ -1283,6 +1314,15 @@ fn profile_from_input(
     profile.updated_at_ms = now_ms;
     profile.validate().map_err(validation_error)?;
     Ok(profile)
+}
+
+fn profile_kind_matches_target(kind: &str, target: &ConnectionTarget) -> bool {
+    matches!(
+        (kind, target),
+        ("sqlite", ConnectionTarget::Sqlite { .. })
+            | ("mysql_family", ConnectionTarget::MysqlFamily { .. })
+            | ("postgres", ConnectionTarget::Postgres { .. })
+    )
 }
 
 fn profile_to_view(profile: &ConnectionProfile) -> ProfileView {
@@ -1321,6 +1361,47 @@ fn profile_to_view(profile: &ConnectionProfile) -> ProfileView {
             id: profile.id.to_string(),
             name: profile.name.clone(),
             kind: "mysql_family".to_owned(),
+            file_name: None,
+            tls_ca_file_name: tls_ca_path.as_deref().map(Path::new).map(display_name),
+            tls_client_certificate_file_name: tls_client_certificate_path
+                .as_deref()
+                .map(Path::new)
+                .map(display_name),
+            tls_client_key_file_name: tls_client_key_path
+                .as_deref()
+                .map(Path::new)
+                .map(display_name),
+            read_only: false,
+            host: Some(host.clone()),
+            port: Some(*port),
+            default_database: default_database.clone(),
+            username: Some(username.clone()),
+            tls_mode: Some(
+                match tls_mode {
+                    TlsMode::Disabled => "disabled",
+                    TlsMode::Required => "required",
+                    TlsMode::VerifyIdentity => "verify_identity",
+                    TlsMode::CustomCa => "custom_ca",
+                }
+                .to_owned(),
+            ),
+            has_saved_secret: profile.secret_reference.is_some(),
+            connection_timeout_seconds: profile.connection_timeout_seconds,
+            automatic_reconnect: profile.automatic_reconnect,
+        },
+        ConnectionTarget::Postgres {
+            host,
+            port,
+            default_database,
+            username,
+            tls_mode,
+            tls_ca_path,
+            tls_client_certificate_path,
+            tls_client_key_path,
+        } => ProfileView {
+            id: profile.id.to_string(),
+            name: profile.name.clone(),
+            kind: "postgres".to_owned(),
             file_name: None,
             tls_ca_file_name: tls_ca_path.as_deref().map(Path::new).map(display_name),
             tls_client_certificate_file_name: tls_client_certificate_path
@@ -2018,5 +2099,35 @@ mod tests {
             history_cutoff_ms(10 * HISTORY_CLEANUP_INTERVAL_MS, 3),
             7 * HISTORY_CLEANUP_INTERVAL_MS
         );
+    }
+
+    #[test]
+    fn saved_profile_kind_is_immutable_across_file_and_server_adapters() {
+        let mysql = ConnectionTarget::MysqlFamily {
+            host: "127.0.0.1".to_owned(),
+            port: 3306,
+            default_database: None,
+            username: "fixture".to_owned(),
+            tls_mode: TlsMode::VerifyIdentity,
+            tls_ca_path: None,
+            tls_client_certificate_path: None,
+            tls_client_key_path: None,
+        };
+        let postgres = ConnectionTarget::Postgres {
+            host: "127.0.0.1".to_owned(),
+            port: 5432,
+            default_database: None,
+            username: "fixture".to_owned(),
+            tls_mode: TlsMode::VerifyIdentity,
+            tls_ca_path: None,
+            tls_client_certificate_path: None,
+            tls_client_key_path: None,
+        };
+
+        assert!(profile_kind_matches_target("mysql_family", &mysql));
+        assert!(profile_kind_matches_target("postgres", &postgres));
+        assert!(!profile_kind_matches_target("postgres", &mysql));
+        assert!(!profile_kind_matches_target("mysql_family", &postgres));
+        assert!(!profile_kind_matches_target("sqlite", &postgres));
     }
 }
