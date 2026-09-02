@@ -1,25 +1,25 @@
 # Compatibility and conformance matrix
 
-Status: QueryNot 0.1.14 current live cross-platform release
-Selection date: 2026-08-31
+Status: QueryNot 0.1.15 current live cross-platform release
+Selection date: 2026-09-02
 
-Version `0.1.14` is the current live release for Windows 11 x86-64, Linux x86-64, and macOS 13 or later on Intel and Apple silicon under ADR 0016. Its dedicated QueryNot updater key, exact-candidate publication, draft and public GitHub asset-digest checks, stable updater-endpoint hashes, and Ed25519-BLAKE2b signature checks passed for every platform payload. Historical `0.1.0` and `0.1.1` evidence remains immutable.
+Version `0.1.15` is the current live release for Windows 11 x86-64, Linux x86-64, and macOS 13 or later on Intel and Apple silicon under ADR 0016. Its dedicated QueryNot updater key, exact-candidate publication, draft and public GitHub asset-digest checks, stable updater-endpoint hashes, and Ed25519-BLAKE2b signature checks passed for every platform payload. Historical `0.1.0` and `0.1.1` evidence remains immutable.
 
-The rows below describe the live `0.1.14` publication matrix after the exact multi-platform candidate, GitHub draft/public digest checks, and bounded updater-endpoint smoke test passed. The optional full-package public deep audit was intentionally not run; routine CI performed the release verification. Phase 5 continues to describe the historical `0.1.0` Windows-only boundary, and `evidence/release-updates/0.1.1` retains the first signed-channel records. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain explicit follow-up evidence until performed.
+The rows below describe the live `0.1.15` publication matrix after the exact multi-platform candidate, GitHub draft/public digest checks, and bounded updater-endpoint smoke test passed. The optional full-package public deep audit was intentionally not run; routine CI performed the release verification. Phase 5 continues to describe the historical `0.1.0` Windows-only boundary, and `evidence/release-updates/0.1.1` retains the first signed-channel records. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain explicit follow-up evidence until performed.
 
-## MySQL 5.7 compatibility in 0.1.14
+## MySQL 5.7 compatibility in 0.1.15
 
-The live `0.1.14` release recognizes every well-formed MySQL `5.7.x` identity as the legacy 5.7 compatibility line and keeps ordinary query writes, manual transactions, destructive-statement confirmation, and safe staged row mutations enabled. Non-5.7.44 patches state that 5.7.44 remains the exact automated conformance fixture. Malformed identities and unrecognized MySQL/MariaDB lines remain query-only; the passing `0.1.14` candidate feasibility gate exercises 5.7.44 and does not represent every 5.7 patch as independently certified.
+The live `0.1.15` release recognizes every well-formed MySQL `5.7.x` identity as the legacy 5.7 compatibility line and keeps ordinary query writes, manual transactions, destructive-statement confirmation, and safe staged row mutations enabled. Non-5.7.44 patches state that 5.7.44 remains the exact automated conformance fixture. Malformed identities and unrecognized MySQL/MariaDB lines remain query-only; the passing `0.1.15` candidate feasibility gate exercises 5.7.44 and does not represent every 5.7 patch as independently certified.
 
 ## Application platforms
 
 | Matrix ID | Operating system | Architecture | Web runtime/package | Current status |
 | --- | --- | --- | --- | --- |
-| `windows-11-x64` | Windows 11 | x86-64 | Microsoft Edge WebView2; NSIS + MSI | Current live `0.1.14` distribution row |
-| `windows-10-22h2-x64` | Windows 10 22H2 | x86-64 | WebView2; NSIS + MSI | Deferred; no `0.1.14` support claim |
-| `macos-13-intel` | macOS 13 or later | Intel | System WebKit; x86-64 DMG; candidate built on `macos-15-intel` | Current live `0.1.14` distribution row; Apple notarization is not claimed |
-| `macos-13-apple` | macOS 13 or later | Apple silicon | System WebKit; aarch64 DMG; candidate built on `macos-15` | Current live `0.1.14` distribution row; Apple notarization is not claimed |
-| `linux-x64` | Linux x86-64 | x86-64 | WebKitGTK 4.1; AppImage + Debian + RPM; candidate built on Ubuntu 22.04 | Current live `0.1.14` distribution row; unlisted distro/runtime combinations are not blanket-certified |
+| `windows-11-x64` | Windows 11 | x86-64 | Microsoft Edge WebView2; NSIS + MSI | Current live `0.1.15` distribution row |
+| `windows-10-22h2-x64` | Windows 10 22H2 | x86-64 | WebView2; NSIS + MSI | Deferred; no `0.1.15` support claim |
+| `macos-13-intel` | macOS 13 or later | Intel | System WebKit; x86-64 DMG; candidate built on `macos-15-intel` | Current live `0.1.15` distribution row; Apple notarization is not claimed |
+| `macos-13-apple` | macOS 13 or later | Apple silicon | System WebKit; aarch64 DMG; candidate built on `macos-15` | Current live `0.1.15` distribution row; Apple notarization is not claimed |
+| `linux-x64` | Linux x86-64 | x86-64 | WebKitGTK 4.1; AppImage + Debian + RPM; candidate built on Ubuntu 22.04 | Current live `0.1.15` distribution row; unlisted distro/runtime combinations are not blanket-certified |
 | `ubuntu-24.04-x64` | Ubuntu 24.04 LTS | x86-64 | WebKitGTK 4.1; portable compile check | Compile coverage retained; native package observation remains follow-up evidence |
 
 ## Database fixtures
@@ -35,19 +35,43 @@ The live `0.1.14` release recognizes every well-formed MySQL `5.7.x` identity as
 
 MySQL 8.0 reached the lifecycle date identified by the vendor before this selection date; it is treated like a legacy compatibility line in UI/release notes even though the approved PRD separately calls out the mandatory 5.7 indicator. No safety control is weakened for either line.
 
-## PostgreSQL development-preview boundary in 0.1.14
+## PostgreSQL development-preview boundary in 0.1.15
 
-The live `0.1.14` packages contain the compiled PostgreSQL adapter as a development preview. PostgreSQL `18.x` is the selected write-capable development line and `18.6` is the exact planned disposable conformance baseline, following the PostgreSQL project's 2026-08-13 current minor release. Other majors connect in visible query-only mode. This is implementation and packaging evidence, not a PostgreSQL support claim: no PostgreSQL row is part of the live matrix until the dedicated password/client-certificate, TLS, metadata/routine, scalar/array, streaming, cancellation, transaction, and table-editing fixture gates in ADR 0019 pass.
+The live `0.1.15` packages contain the compiled PostgreSQL adapter as a development preview. PostgreSQL `18.x` is the selected write-capable development line and `18.6` is the exact planned disposable conformance baseline, following the PostgreSQL project's 2026-08-13 current minor release. Other majors connect in visible query-only mode. This is implementation and packaging evidence, not a PostgreSQL support claim: no PostgreSQL row is part of the live matrix until the dedicated password/client-certificate, TLS, metadata/routine, scalar/array, streaming, cancellation, transaction, and table-editing fixture gates in ADR 0019 pass.
 
 The existing five-server feasibility and conformance harness remains MySQL/MariaDB-only and explicitly rejects PostgreSQL targets rather than producing misleading evidence.
 
-## Estimated Explain in the 0.1.15 candidate source
+## Estimated Explain in 0.1.15
 
-Current `master` is prepared as QueryNot 0.1.15 and exposes estimated Explain through one capability-driven adapter contract. SQLite uses `EXPLAIN QUERY PLAN`; the five MySQL/MariaDB lines use `EXPLAIN FORMAT=JSON`; PostgreSQL uses `EXPLAIN (FORMAT JSON)` only inside the development preview. The Phase 3/4 five-server harness checks real scan and indexed JSON plans and verifies that explaining a data-changing statement does not mutate fixture data. Candidate CI remains the authoritative exact-commit gate. This source-level extension does not rewrite the retained `0.1.14` release evidence or add PostgreSQL to the live matrix; its dedicated PostgreSQL conformance row remains pending.
+The live QueryNot 0.1.15 release exposes estimated Explain through one capability-driven adapter contract. SQLite uses `EXPLAIN QUERY PLAN`; the five MySQL/MariaDB lines use `EXPLAIN FORMAT=JSON`; PostgreSQL uses `EXPLAIN (FORMAT JSON)` only inside the development preview. The passing candidate's five-server harness checked real scan and indexed JSON plans and verified that explaining a data-changing statement does not mutate fixture data. This release does not add PostgreSQL to the live support matrix; its dedicated PostgreSQL conformance row remains pending.
 
 The retained Phase 4 reports cover the full Phase 3 contract plus deterministic keyset paging, labelled read-only fallbacks in the local planner, bound hostile structured filters, typed validation, insert/update/delete, generated-value refresh, optimistic conflicts, and atomic rollback. Positive system-trust validation against a publicly trusted target and native Windows trust-store behavior remain post-release owner observations; fixture automation intentionally never contacts a non-fixture database.
 
-## Current live signed 0.1.14 release
+## Current live signed 0.1.15 release
+
+- Release: [`v0.1.15`](https://github.com/not-projects/querynot/releases/tag/v0.1.15)
+- Candidate run: [`33608972601`](https://github.com/not-projects/querynot/actions/runs/33608972601)
+- Publication run: [`33610175686`](https://github.com/not-projects/querynot/actions/runs/33610175686)
+- Source commit: `1aa32280aa0d825d07fd24106f28ddad389ff452`
+- Public verification: GitHub's byte-size and SHA-256 records for all 18 public assets match the reviewed candidate; all seven updater signatures pass with public key ID `FD25C4E1F33E86DD`
+- Verification scope: routine publication gates passed; the optional full-package public deep audit was intentionally not run
+
+| Role | File | Bytes | SHA-256 |
+| --- | --- | ---: | --- |
+| Windows NSIS | `QueryNot_0.1.15_x64-setup.exe` | 3,638,302 | `bf70294a3c3b90e46b2df4301bf5d2a8d5dfcb30f690a9e4bc655b31e0085392` |
+| Windows MSI | `QueryNot_0.1.15_x64_en-US.msi` | 4,894,720 | `e3777aee2bb6aaeb3d404f362b48cf1e9a99df1255093c7cc282d5441a873f76` |
+| Linux AppImage | `QueryNot_0.1.15_amd64.AppImage` | 82,508,280 | `5b434b1aba14b28f95f85a09852500d4a34a59ea9b02d2c29d19887fc5590107` |
+| Linux DEB | `QueryNot_0.1.15_amd64.deb` | 5,035,636 | `026a528d4b73aacd071f608d0821976ab82d3a5cb1eb7b798befe1e9055109f8` |
+| Linux RPM | `QueryNot-0.1.15-1.x86_64.rpm` | 5,036,314 | `57382b00f688e67a3532ca36503535ba6c895bc331dc74d3426a4cebf8819e9f` |
+| macOS Intel DMG | `QueryNot_0.1.15_x64.dmg` | 4,658,817 | `509e5fe897e719ee0a2b279e1414566ce5b37c4e2d52a4e9cf0e44c9e143946b` |
+| macOS Apple-silicon DMG | `QueryNot_0.1.15_aarch64.dmg` | 4,296,284 | `d0631d2f3af83c45f7a9f5bc0842715e13695b1bd011f0e1bd1494bb70cb8827` |
+| macOS Intel updater | `QueryNot_x64.app.tar.gz` | 4,661,141 | `0c48474ab626fd28a2c52c1d9ad0006439771997a6c843e3c77e270043d688b7` |
+| macOS Apple-silicon updater | `QueryNot_aarch64.app.tar.gz` | 4,331,050 | `9a81fd3d3e9a1a9a83b4015955442bb3ff96030bfa31558e49e02cd6658d193d` |
+
+- `latest.json`: 7,785 bytes; SHA-256 `d2ee46015cd3eed14fe954c762d099325d8fce585c869057e73a47837aa449fd`; exact keys `darwin-aarch64`, `darwin-x86_64`, `linux-x86_64`, `linux-x86_64-appimage`, `linux-x86_64-deb`, `linux-x86_64-rpm`, `windows-x86_64`, and `windows-x86_64-nsis`.
+- `SHA256SUMS`: 660 bytes; SHA-256 `410524eafe03c64d85c1c442035acae3b348e5910603fd5c1da2b2bd6415301b`; all seven installable-package checks pass.
+
+## Previous 0.1.14 signed cross-platform release
 
 - Release: [`v0.1.14`](https://github.com/not-projects/querynot/releases/tag/v0.1.14)
 - Candidate run: [`33398703729`](https://github.com/not-projects/querynot/actions/runs/33398703729)
@@ -301,4 +325,4 @@ The retained Phase 4 reports cover the full Phase 3 contract plus deterministic 
 - SHA-256: `80753f765bcae143750b2de1b765405b710ad858fb637c1cfb80c9a06090058c`
 - Updater artifacts: none
 
-The historical WSL2 Debian and AppImage packages remain development evidence only. The public `0.1.14` Linux packages came from the native Ubuntu candidate job and passed the combined release contract. Native hardware observations remain follow-up evidence, and cross-platform compilation alone is still not a support claim.
+The historical WSL2 Debian and AppImage packages remain development evidence only. The public `0.1.15` Linux packages came from the native Ubuntu candidate job and passed the combined release contract. Native hardware observations remain follow-up evidence, and cross-platform compilation alone is still not a support claim.

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "source": "docs/product-requirements.md",
   "source_commit": "9c5b5948cacccfe80a80dfe6720e5f95903e3d64",
-  "source_sha256": "a3ee164ddcb3b41831cde162d5def9ae4a4fe853324d0ca527eea7eb7f62ba18",
+  "source_sha256": "d79728647a409f1f623f8c6a2620179bc0a0a5b19f2abe17bffb16b9b3d17bc1",
   "conventions": {
     "statuses": [
       "planned",
