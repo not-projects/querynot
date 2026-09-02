@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "selected_at": "2026-08-14",
+  "selected_at": "2026-09-02",
   "inputs": [
     {
       "id": "app-run-x86-64",
@@ -40,7 +40,8 @@
       "url": "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage",
       "cache_name": "linuxdeploy-plugin-appimage.AppImage",
       "bytes": 16484856,
-      "sha256": "a45d3e227bc7f397e9cf6bfa4c9507494efa2293357b6e86690a3de2ca992e79",
+      "sha256": "0441769ab38009504d2678c38cd7e526955388dd30a215b4a20afaa5471652f2",
+      "reviewed_identity": "linuxdeploy-plugin-appimage continuous commit 536b068787179ea901964bd7dabc7bf61e4941c3 GitHub asset 538914683",
       "executable": true
     }
   ]
