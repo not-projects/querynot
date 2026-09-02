@@ -1,6 +1,7 @@
 use crate::adapter::{
     AdapterCapabilities, AdapterConnectionInfo, CompatibilityStatus, DatabaseFamily, ServerIdentity,
 };
+use crate::explain::{ExplainRunOutcome, normalize_mysql_family};
 use crate::profile::{ConnectionProfile, ConnectionTarget, TlsMode};
 use crate::result::{
     MAX_BATCH_BYTES, MAX_BATCH_ROWS, MAX_RETAINED_BYTES, MAX_RETAINED_ROWS, PAUSED_CURSOR_LIFETIME,
@@ -473,6 +474,38 @@ impl MySqlSession {
             self.transaction_variable_available,
         )
         .await
+    }
+
+    pub async fn explain(&self, sql: &str, product: &str) -> ExplainRunOutcome {
+        let cancel = Arc::new(AtomicBool::new(true));
+        let cancel_confirmed = Arc::new(AtomicBool::new(false));
+        if let Ok(mut active) = self.active_cancel.lock() {
+            *active = Some(Arc::clone(&cancel));
+        }
+        if let Ok(mut active) = self.active_cancel_confirmed.lock() {
+            *active = Some(Arc::clone(&cancel_confirmed));
+        }
+        let statement = format!("EXPLAIN FORMAT=JSON {sql}");
+        let result = {
+            let mut connection = self.connection.lock().await;
+            sqlx::query_scalar::<_, String>(AssertSqlSafe(statement.as_str()))
+                .fetch_one(&mut *connection)
+                .await
+        };
+        clear_active(&self.active_cancel);
+        clear_active(&self.active_cancel_confirmed);
+        if !cancel.load(Ordering::Acquire) {
+            return ExplainRunOutcome::Cancelled {
+                confirmed: cancel_confirmed.load(Ordering::Acquire),
+            };
+        }
+        match result {
+            Ok(raw) => match normalize_mysql_family(raw, product) {
+                Ok(output) => ExplainRunOutcome::Completed(output),
+                Err(error) => ExplainRunOutcome::Failed(error),
+            },
+            Err(error) => ExplainRunOutcome::Failed(map_mysql_execution_error(error)),
+        }
     }
 
     pub async fn execute(
@@ -1167,6 +1200,7 @@ async fn connection_info(
             metadata: true,
             streaming: true,
             cancellation: true,
+            explain: true,
             transactions: !read_only,
             multiple_results: true,
             safe_table_mutations: !read_only,

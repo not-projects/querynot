@@ -107,6 +107,7 @@ function connection(profileId: string) {
       metadata: true,
       streaming: true,
       cancellation: true,
+      explain: true,
       transactions: true,
       multiple_results: true,
       safe_table_mutations: true

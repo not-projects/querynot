@@ -3,6 +3,7 @@
 pub mod adapter;
 pub mod diagnostics;
 pub mod error;
+pub mod explain;
 pub mod export;
 pub mod fixture;
 pub mod generated;
@@ -28,6 +29,7 @@ pub use adapter::{
     DatabaseFamily, ServerIdentity,
 };
 pub use error::{ErrorCategory, QueryNotError};
+pub use explain::{ExplainOutput, ExplainPlanNode, ExplainRunOutcome, ExplainTarget};
 pub use fixture::{FixtureManifest, FixtureTarget, MarkerProof};
 pub use ids::{
     ExecutionId, ExportId, FileGrantId, HistoryEntryId, MutationPlanId, NativeSessionId, ProfileId,

@@ -30,6 +30,8 @@ export interface ExecutionUi {
   statementsCompleted: number;
   receivedRows: number;
   error: ExecutionErrorUi | null;
+  operationKind?: 'query' | 'explain';
+  eventSequence?: number;
 }
 
 export interface ExecutionErrorPresentation {
@@ -133,7 +135,8 @@ export function executionStateLabel(state: string): string {
 }
 
 export function executionErrorPresentation(
-  error: ExecutionErrorUi
+  error: ExecutionErrorUi,
+  operationKind: 'query' | 'explain' = 'query'
 ): ExecutionErrorPresentation {
   const categories: Record<
     string,
@@ -213,7 +216,7 @@ export function executionErrorPresentation(
 
   return {
     categoryLabel: category?.categoryLabel ?? 'Database error',
-    heading: 'Query failed',
+    heading: operationKind === 'explain' ? 'Explain failed' : 'Query failed',
     message: error.message,
     detail: error.detail,
     location: location || null,

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "source": "docs/product-requirements.md",
   "source_commit": "9c5b5948cacccfe80a80dfe6720e5f95903e3d64",
-  "source_sha256": "4116b3cdda471cc6b64d4ad71daa67af7ecb32c94104459464e5d8c9843f7fc0",
+  "source_sha256": "a3ee164ddcb3b41831cde162d5def9ae4a4fe853324d0ca527eea7eb7f62ba18",
   "conventions": {
     "statuses": [
       "planned",
@@ -15,6 +15,39 @@
     "evidence_links": "repository-relative paths into evidence/; verified rows require at least one retained artifact",
     "planned_test_ids": "PLANNED-* entries reserve coverage and must be replaced by executable IDs before verification"
   },
+  "post_release_extensions": [
+    {
+      "id": "ESTIMATED-EXPLAIN",
+      "status": "implemented",
+      "requirement_ids": [
+        "EXE-8",
+        "EXE-9",
+        "RES-8",
+        "RES-10",
+        "HIS-2",
+        "HIS-3"
+      ],
+      "automated_test_ids": [
+        "AUTO-EXPLAIN-TARGETING",
+        "AUTO-EXPLAIN-DML-NON-MUTATION",
+        "AUTO-EXPLAIN-NORMALIZATION",
+        "AUTO-EXPLAIN-RAW-BOUNDARY",
+        "AUTO-EXPLAIN-HISTORY-COMPATIBILITY",
+        "AUTO-EXPLAIN-UI-LAYOUT",
+        "AUTO-EXPLAIN-CONFORMANCE"
+      ],
+      "supported_matrix_entries": [
+        "sqlite",
+        "mysql-5.7.44",
+        "mysql-8.0",
+        "mysql-8.4-lts",
+        "mariadb-10.11-lts",
+        "mariadb-11.4-lts",
+        "postgresql-18-preview"
+      ],
+      "evidence_state": "Current automated gates are authoritative for this post-release extension; retained release evidence remains scoped to the immutable initial-release requirements."
+    }
+  ],
   "records": [
     {
       "id": "CON-1",

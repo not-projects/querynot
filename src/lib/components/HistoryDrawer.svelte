@@ -112,7 +112,7 @@
           <Icon name="history" size={16} />
           <h2 id="history-drawer-heading">History</h2>
         </div>
-        <p>Queries saved on this device</p>
+        <p>Queries and Explain outcomes saved on this device</p>
       </div>
       <button
         type="button"
@@ -152,11 +152,16 @@
             <button
               type="button"
               class="history-main"
-              aria-label={`Open ${entry.status} query from ${entry.profile_label}`}
+              aria-label={`Open ${entry.status} ${entry.operation_kind} from ${entry.profile_label}`}
               onclick={() => onreopen(entry)}
             >
               <span class="history-entry-heading">
-                <strong>{entry.profile_label}</strong>
+                <strong>
+                  {#if entry.operation_kind === 'explain'}
+                    <span class="history-operation">Explain</span>
+                  {/if}
+                  {entry.profile_label}
+                </strong>
                 <span
                   class="history-status"
                   data-status={statusKey(entry.status)}
@@ -171,7 +176,13 @@
                   {new Date(entry.timestamp_ms).toLocaleString()}
                 </time>
                 <span>{entry.duration_ms} ms</span>
-                <span>{rowCountLabel(entry.received_rows)}</span>
+                <span>
+                  {entry.operation_kind === 'explain'
+                    ? entry.status === 'succeeded'
+                      ? 'Plan generated'
+                      : 'No plan stored'
+                    : rowCountLabel(entry.received_rows)}
+                </span>
               </span>
               <span class="history-open-label">
                 Open query
@@ -216,9 +227,9 @@
       <details class="history-privacy">
         <summary>Stored locally · SQL and metadata only</summary>
         <p>
-          History never stores result rows, credentials, certificate contents,
-          staged edits, or raw driver logs. Backup and storage-forensics
-          deletion is outside QueryNot’s guarantee.
+          History never stores result rows, query-plan payloads, credentials,
+          certificate contents, staged edits, or raw driver logs. Backup and
+          storage-forensics deletion is outside QueryNot’s guarantee.
         </p>
       </details>
     </div>
@@ -427,6 +438,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .history-operation {
+    display: inline-flex;
+    margin-inline-end: 0.35rem;
+    padding: 0.08rem 0.3rem;
+    border: 1px solid var(--divider);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 0.56rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .history-status {

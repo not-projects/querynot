@@ -15,6 +15,8 @@ pub struct HistoryEntry {
     pub context: String,
     pub duration_ms: u64,
     pub status: HistoryStatus,
+    #[serde(default)]
+    pub operation_kind: HistoryOperationKind,
     pub affected_rows: u64,
     pub received_rows: u64,
     pub error_category: Option<ErrorCategory>,
@@ -30,6 +32,7 @@ pub struct HistoryEntryInput {
     pub context: String,
     pub duration_ms: u64,
     pub status: HistoryStatus,
+    pub operation_kind: HistoryOperationKind,
     pub affected_rows: u64,
     pub received_rows: u64,
     pub error_category: Option<ErrorCategory>,
@@ -41,6 +44,14 @@ pub enum HistoryStatus {
     Succeeded,
     Failed,
     Cancelled,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HistoryOperationKind {
+    #[default]
+    Query,
+    Explain,
 }
 
 impl HistoryEntry {
@@ -56,6 +67,7 @@ impl HistoryEntry {
             context: input.context,
             duration_ms: input.duration_ms,
             status: input.status,
+            operation_kind: input.operation_kind,
             affected_rows: input.affected_rows,
             received_rows: input.received_rows,
             error_category: input.error_category,
@@ -108,6 +120,7 @@ mod tests {
             context: "main".to_owned(),
             duration_ms: 5,
             status: HistoryStatus::Succeeded,
+            operation_kind: HistoryOperationKind::Query,
             affected_rows: 0,
             received_rows: 1,
             error_category: None,
@@ -119,5 +132,35 @@ mod tests {
         assert!(!object.contains_key("password"));
         assert!(!object.contains_key("driver_detail"));
         assert!(!object.contains_key("staged_edits"));
+        assert!(!object.contains_key("raw_payload"));
+    }
+
+    #[test]
+    fn missing_operation_kind_defaults_to_query() {
+        let json = r#"{"id":"00000000-0000-4000-8000-000000000001","sql":"select 1","timestamp_ms":10,"profile_id":null,"profile_label":"fixture","engine":"SQLite","context":"main","duration_ms":1,"status":"succeeded","affected_rows":0,"received_rows":1,"error_category":null}"#;
+        let entry: HistoryEntry = serde_json::from_str(json).unwrap();
+        assert_eq!(entry.operation_kind, HistoryOperationKind::Query);
+    }
+
+    #[test]
+    fn explain_history_contains_only_sql_and_outcome_metadata() {
+        let entry = HistoryEntry::new(HistoryEntryInput {
+            sql: "select * from fixture".to_owned(),
+            timestamp_ms: 11,
+            profile_id: ProfileId::new(),
+            profile_label: "fixture".to_owned(),
+            engine: "MariaDB 11.4.12".to_owned(),
+            context: "fixture".to_owned(),
+            duration_ms: 7,
+            status: HistoryStatus::Succeeded,
+            operation_kind: HistoryOperationKind::Explain,
+            affected_rows: 0,
+            received_rows: 0,
+            error_category: None,
+        });
+        let json = serde_json::to_string(&entry).unwrap();
+        assert!(json.contains("\"operation_kind\":\"explain\""));
+        assert!(!json.contains("raw_payload"));
+        assert!(!json.contains("nodes"));
     }
 }

@@ -125,6 +125,7 @@ function connection(profileId) {
       metadata: true,
       streaming: true,
       cancellation: true,
+      explain: true,
       transactions: true,
       multiple_results: true,
       safe_table_mutations: true
@@ -237,6 +238,67 @@ async function emitOneRowResult(executionId) {
       statements_completed: 1,
       received_rows: 1,
       duration_ms: 16,
+      transaction: { automatic: true, certainty: 'clean' }
+    })
+  );
+}
+
+async function emitMultipleResults(executionId) {
+  await emit(
+    'query_execution',
+    event('started', { execution_id: executionId })
+  );
+  const resultSets = [
+    {
+      id: `${executionId}-first`,
+      statementIndex: 0,
+      column: 'first_result',
+      value: 'fractions'
+    },
+    {
+      id: `${executionId}-second`,
+      statementIndex: 1,
+      column: 'second_result',
+      value: 'armors'
+    }
+  ];
+  for (const result of resultSets) {
+    await emit(
+      'query_execution',
+      event('batch', {
+        execution_id: executionId,
+        result_set_id: result.id,
+        sequence: 0,
+        statement_index: result.statementIndex,
+        columns: [
+          { name: result.column, declared_type: 'TEXT', nullable: false }
+        ],
+        rows: [{ values: [taggedValue('text', result.value)] }],
+        received_rows: 1,
+        retained_bytes: result.value.length
+      })
+    );
+    await emit(
+      'query_execution',
+      event('result_terminal', {
+        execution_id: executionId,
+        result_set_id: result.id,
+        sequence: 1,
+        statement_index: result.statementIndex,
+        received_rows: 1,
+        retained_bytes: result.value.length,
+        terminal_state: 'completed',
+        duration_ms: 8 + result.statementIndex
+      })
+    );
+  }
+  await emit(
+    'query_execution',
+    event('finished', {
+      execution_id: executionId,
+      statements_completed: 2,
+      received_rows: 2,
+      duration_ms: 17,
       transaction: { automatic: true, certainty: 'clean' }
     })
   );
@@ -377,6 +439,97 @@ async function emitFailedResult(executionId) {
       transaction: { automatic: true, certainty: 'clean' }
     })
   );
+}
+
+async function emitExplainPlan(executionId, duplicateTerminal = false) {
+  const base = {
+    execution_id: executionId,
+    profile_id: 'emissary',
+    tab_id: 'fractions-query',
+    session_id: 'session-fractions-query',
+    statement_start: 0,
+    statement_end: 50,
+    duration_ms: null,
+    plan: null,
+    error: null,
+    error_category: null,
+    retryable: null,
+    cancel_confirmed: null
+  };
+  await emit('query_explain', {
+    ...base,
+    event_type: 'started',
+    sequence: 0
+  });
+  const rawPayload = JSON.stringify(
+    [
+      { id: 2, parent: 0, auxiliary: 0, detail: 'SCAN fractions' },
+      {
+        id: 7,
+        parent: 2,
+        auxiliary: 0,
+        detail: 'SEARCH armors USING INDEX armors_fraction_idx (fraction_id=?)'
+      }
+    ],
+    null,
+    2
+  );
+  const completed = {
+    ...base,
+    event_type: 'completed',
+    sequence: 1,
+    duration_ms: 9,
+    plan: {
+      engine: 'SQLite',
+      exact_version: '3.51.3',
+      context: 'main',
+      raw_format: 'sqlite_query_plan_rows',
+      raw_payload: rawPayload,
+      normalization_status: 'normalized',
+      warnings: [
+        'SQLite documents EXPLAIN QUERY PLAN output as unstable; Raw preserves the native rows QueryNot received.'
+      ],
+      nodes: [
+        {
+          id: 0,
+          parent_id: null,
+          depth: 0,
+          operation: 'SCAN',
+          relation: 'fractions',
+          alias: null,
+          access_type: null,
+          join_type: null,
+          index: null,
+          estimated_rows: null,
+          startup_cost: null,
+          total_cost: null,
+          width: null,
+          condition: null,
+          detail: 'SCAN fractions'
+        },
+        {
+          id: 1,
+          parent_id: 0,
+          depth: 1,
+          operation: 'SEARCH',
+          relation: 'armors',
+          alias: null,
+          access_type: null,
+          join_type: null,
+          index: 'armors_fraction_idx',
+          estimated_rows: '4',
+          startup_cost: null,
+          total_cost: null,
+          width: null,
+          condition: 'fraction_id=?',
+          detail:
+            'SEARCH armors USING INDEX armors_fraction_idx (fraction_id=?)'
+        }
+      ]
+    }
+  };
+  await emit('query_explain', completed);
+  if (duplicateTerminal) await emit('query_explain', completed);
 }
 
 function taggedValue(valueType, text) {
@@ -585,13 +738,15 @@ mockIPC(
           const executionId = `layout-execution-${executionCount}`;
           const emitter = request.sql.includes('QUERYNOT_ROWLESS_STATE')
             ? emitRowlessResult
-            : request.sql.includes('QUERYNOT_EMPTY_STATE')
-              ? emitEmptyResult
-              : request.sql.includes('QUERYNOT_FAILED_STATE')
-                ? emitFailedResult
-                : request.sql.includes('QUERYNOT_PAUSED_STATE')
-                  ? emitPausedResult
-                  : emitOneRowResult;
+            : request.sql.includes('QUERYNOT_MULTIPLE_RESULTS_STATE')
+              ? emitMultipleResults
+              : request.sql.includes('QUERYNOT_EMPTY_STATE')
+                ? emitEmptyResult
+                : request.sql.includes('QUERYNOT_FAILED_STATE')
+                  ? emitFailedResult
+                  : request.sql.includes('QUERYNOT_PAUSED_STATE')
+                    ? emitPausedResult
+                    : emitOneRowResult;
           if (emitter === emitPausedResult) pausedExecutionId = executionId;
           setTimeout(() => void emitter(executionId), 0);
           return {
@@ -600,6 +755,23 @@ mockIPC(
             fingerprint: null,
             safety_flags: [],
             message: 'Execution started.'
+          };
+        }
+      case 'start_explain':
+        executionCount += 1;
+        {
+          const executionId = `layout-explain-${executionCount}`;
+          setTimeout(
+            () =>
+              void emitExplainPlan(
+                executionId,
+                request.sql.includes('QUERYNOT_EXPLAIN_SEQUENCE_STATE')
+              ),
+            0
+          );
+          return {
+            execution_id: executionId,
+            message: 'Estimated planning started.'
           };
         }
       case 'ack_result_batch':
@@ -631,6 +803,7 @@ mockIPC(
               context: 'main',
               duration_ms: 16,
               status: 'completed',
+              operation_kind: 'query',
               affected_rows: 0,
               received_rows: 1,
               error_category: null

@@ -12,8 +12,8 @@ use querynot_core::table::{
 };
 use querynot_core::vault::ConnectionSecrets;
 use querynot_core::{
-    AdapterSession, CompatibilityStatus, DatabaseFamily, ExecutionId, FixtureManifest,
-    FixtureTarget, TaggedValue,
+    AdapterSession, CompatibilityStatus, DatabaseFamily, ExecutionId, ExplainRunOutcome,
+    FixtureManifest, FixtureTarget, TaggedValue,
 };
 use secrecy::ExposeSecret;
 use serde::Serialize;
@@ -50,6 +50,8 @@ struct AdapterConformanceReport {
     implicit_ddl_commit_reconciled: bool,
     cancellation_confirmed: bool,
     session_usable_after_cancel: bool,
+    estimated_explain_scan_and_index: bool,
+    estimated_explain_non_mutating: bool,
     system_trust_rejected_private_ca: bool,
     client_certificate_required_and_verified: Option<bool>,
     table_editing: TableConformanceReport,
@@ -469,6 +471,7 @@ async fn check_querynot_adapter(
         && info.capabilities.metadata
         && info.capabilities.streaming
         && info.capabilities.cancellation
+        && info.capabilities.explain
         && info.capabilities.transactions
         && info.capabilities.multiple_results
         && !info.read_only;
@@ -616,6 +619,73 @@ async fn check_querynot_adapter(
         )
     })?;
 
+    let scan_plan = session
+        .explain(
+            "SELECT text_value FROM querynot_fixture.typed_fixture WHERE text_value = 'explain scan missing'",
+            &info.identity.product,
+        )
+        .await;
+    let index_plan = session
+        .explain(
+            "SELECT sequence_number FROM querynot_fixture.stream_fixture WHERE sequence_number = 512",
+            &info.identity.product,
+        )
+        .await;
+    let estimated_explain_scan_and_index = match (scan_plan, index_plan) {
+        (ExplainRunOutcome::Completed(scan), ExplainRunOutcome::Completed(indexed)) => {
+            let scan_fact = scan.nodes.iter().any(|node| {
+                node.operation
+                    .as_deref()
+                    .is_some_and(|operation| operation.to_ascii_lowercase().contains("scan"))
+                    || node.access_type.as_deref().is_some_and(|access| {
+                        matches!(access.to_ascii_uppercase().as_str(), "ALL" | "INDEX")
+                    })
+            });
+            let index_fact = indexed.nodes.iter().any(|node| {
+                node.index.is_some()
+                    || node.access_type.as_deref().is_some_and(|access| {
+                        matches!(
+                            access.to_ascii_uppercase().as_str(),
+                            "CONST" | "EQ_REF" | "REF" | "RANGE" | "SYSTEM"
+                        )
+                    })
+            });
+            scan.normalization_status == "normalized"
+                && indexed.normalization_status == "normalized"
+                && scan_fact
+                && index_fact
+        }
+        _ => false,
+    };
+
+    let transaction_before_explain = session.transaction_state().await;
+    let estimated_explain_non_mutating = match session
+        .explain(
+            "INSERT INTO querynot_fixture.transaction_fixture(value_text) VALUES ('explain must not execute')",
+            &info.identity.product,
+        )
+        .await
+    {
+        ExplainRunOutcome::Completed(plan) => {
+            let count = run_adapter_execution(
+                &session,
+                "SELECT COUNT(*) FROM querynot_fixture.transaction_fixture WHERE value_text = 'explain must not execute'",
+                10,
+            )
+            .await
+            .map_err(|error| format!("{} adapter explain verification: {error}", target.id))?;
+            let unchanged = count.rows.first().and_then(|row| row.first()).is_some_and(
+                |value| matches!(value, TaggedValue::SignedInteger(value) | TaggedValue::UnsignedInteger(value) if value == "0"),
+            );
+            !plan.raw_payload.is_empty()
+                && (plan.normalization_status == "normalized"
+                    || plan.normalization_status == "raw_only")
+                && transaction_before_explain == session.transaction_state().await
+                && unchanged
+        }
+        ExplainRunOutcome::Cancelled { .. } | ExplainRunOutcome::Failed(_) => false,
+    };
+
     let table_editing = check_table_editing(&session)
         .await
         .map_err(|error| format!("{} adapter table editing: {error}", target.id))?;
@@ -640,6 +710,8 @@ async fn check_querynot_adapter(
         implicit_ddl_commit_reconciled,
         cancellation_confirmed,
         session_usable_after_cancel: usable.finished,
+        estimated_explain_scan_and_index,
+        estimated_explain_non_mutating,
         system_trust_rejected_private_ca,
         client_certificate_required_and_verified,
         table_editing,
@@ -656,6 +728,8 @@ async fn check_querynot_adapter(
         || !report.implicit_ddl_commit_reconciled
         || !report.cancellation_confirmed
         || !report.session_usable_after_cancel
+        || !report.estimated_explain_scan_and_index
+        || !report.estimated_explain_non_mutating
         || !report.system_trust_rejected_private_ca
         || report.client_certificate_required_and_verified == Some(false)
         || !report.table_editing.deterministic_keyset_paging

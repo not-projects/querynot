@@ -373,6 +373,40 @@ function buildMatrix() {
       planned_test_ids:
         'PLANNED-* entries reserve coverage and must be replaced by executable IDs before verification'
     },
+    post_release_extensions: [
+      {
+        id: 'ESTIMATED-EXPLAIN',
+        status: 'implemented',
+        requirement_ids: [
+          'EXE-8',
+          'EXE-9',
+          'RES-8',
+          'RES-10',
+          'HIS-2',
+          'HIS-3'
+        ],
+        automated_test_ids: [
+          'AUTO-EXPLAIN-TARGETING',
+          'AUTO-EXPLAIN-DML-NON-MUTATION',
+          'AUTO-EXPLAIN-NORMALIZATION',
+          'AUTO-EXPLAIN-RAW-BOUNDARY',
+          'AUTO-EXPLAIN-HISTORY-COMPATIBILITY',
+          'AUTO-EXPLAIN-UI-LAYOUT',
+          'AUTO-EXPLAIN-CONFORMANCE'
+        ],
+        supported_matrix_entries: [
+          'sqlite',
+          'mysql-5.7.44',
+          'mysql-8.0',
+          'mysql-8.4-lts',
+          'mariadb-10.11-lts',
+          'mariadb-11.4-lts',
+          'postgresql-18-preview'
+        ],
+        evidence_state:
+          'Current automated gates are authoritative for this post-release extension; retained release evidence remains scoped to the immutable initial-release requirements.'
+      }
+    ],
     records
   };
 }

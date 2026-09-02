@@ -153,6 +153,10 @@
       "request": "StartExecutionRequest",
       "response": "ExecutionStartResponse"
     },
+    "start_explain": {
+      "request": "StartExplainRequest",
+      "response": "ExplainStartResponse"
+    },
     "ack_result_batch": {
       "request": "ResultBatchControlRequest",
       "response": "FileActionResponse"
@@ -232,6 +236,7 @@
   },
   "events": {
     "query_execution": "ExecutionEventView",
+    "query_explain": "ExplainEventView",
     "querynot_open_files": "PendingSqlFilesSignal",
     "update_download_progress": "UpdateDownloadProgressView"
   },
@@ -468,6 +473,7 @@
       "context": "string",
       "duration_ms": "u64",
       "status": "string",
+      "operation_kind": "string",
       "affected_rows": "u64",
       "received_rows": "u64",
       "error_category": "string?"
@@ -599,6 +605,7 @@
       "metadata": "bool",
       "streaming": "bool",
       "cancellation": "bool",
+      "explain": "bool",
       "transactions": "bool",
       "multiple_results": "bool",
       "safe_table_mutations": "bool"
@@ -722,6 +729,62 @@
       "cursor": "u32",
       "run_all": "bool",
       "approval_fingerprint": "string?"
+    },
+    "StartExplainRequest": {
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "sql": "string",
+      "selection_start": "u32?",
+      "selection_end": "u32?",
+      "cursor": "u32"
+    },
+    "ExplainStartResponse": {
+      "execution_id": "string",
+      "message": "string"
+    },
+    "ExplainPlanNodeView": {
+      "id": "u32",
+      "parent_id": "u32?",
+      "depth": "u32",
+      "operation": "string?",
+      "relation": "string?",
+      "alias": "string?",
+      "access_type": "string?",
+      "join_type": "string?",
+      "index": "string?",
+      "estimated_rows": "string?",
+      "startup_cost": "string?",
+      "total_cost": "string?",
+      "width": "string?",
+      "condition": "string?",
+      "detail": "string?"
+    },
+    "ExplainPlanView": {
+      "engine": "string",
+      "exact_version": "string",
+      "context": "string",
+      "raw_format": "string",
+      "raw_payload": "string",
+      "normalization_status": "string",
+      "warnings": "string[]",
+      "nodes": "ExplainPlanNodeView[]"
+    },
+    "ExplainEventView": {
+      "event_type": "string",
+      "execution_id": "string",
+      "profile_id": "string",
+      "tab_id": "string",
+      "session_id": "string",
+      "sequence": "u64",
+      "statement_start": "u32?",
+      "statement_end": "u32?",
+      "duration_ms": "u64?",
+      "plan": "ExplainPlanView?",
+      "error": "string?",
+      "error_category": "string?",
+      "retryable": "bool?",
+      "cancel_confirmed": "bool?"
     },
     "SafetyFlagView": {
       "statement_index": "u32",

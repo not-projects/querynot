@@ -50,6 +50,7 @@ pub struct AdapterCapabilities {
     pub metadata: bool,
     pub streaming: bool,
     pub cancellation: bool,
+    pub explain: bool,
     pub transactions: bool,
     pub multiple_results: bool,
     pub safe_table_mutations: bool,
@@ -254,6 +255,14 @@ impl AdapterSession {
                     .execute(execution_id, plan, tranche_rows, controls, events)
                     .await;
             }
+        }
+    }
+
+    pub async fn explain(&self, sql: &str, product: &str) -> crate::explain::ExplainRunOutcome {
+        match self {
+            Self::Sqlite(session) => session.explain(sql).await,
+            Self::MySql(session) => session.explain(sql, product).await,
+            Self::Postgres(session) => session.explain(sql).await,
         }
     }
 }

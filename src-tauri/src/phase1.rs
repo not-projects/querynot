@@ -1941,6 +1941,11 @@ fn history_to_view(entry: HistoryEntry) -> HistoryEntryView {
             HistoryStatus::Cancelled => "cancelled",
         }
         .to_owned(),
+        operation_kind: match entry.operation_kind {
+            querynot_core::history::HistoryOperationKind::Query => "query",
+            querynot_core::history::HistoryOperationKind::Explain => "explain",
+        }
+        .to_owned(),
         affected_rows: entry.affected_rows,
         received_rows: entry.received_rows,
         error_category: entry.error_category.map(error_category_name),

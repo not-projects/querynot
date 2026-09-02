@@ -805,6 +805,10 @@ Exit: all functional requirements and acceptance criteria 1–11 and 16–19 pas
 
 Exit: all 20 revised acceptance criteria pass, the release-blocking evidence bundle is complete, every nonblocking post-release check is explicit, and there is no unsupported platform claim.
 
+### Implemented post-release extension: Estimated Explain
+
+Estimated Explain extends EXE-8, EXE-9, RES-8, RES-10, HIS-2, and HIS-3 without changing the immutable initial-release acceptance count. It targets exactly one selected or caret statement, rejects already-prefixed `EXPLAIN` and `ANALYZE`, uses only the adapter's non-executing estimated-plan form on the tab session, and shares operation serialization, cancellation, cleanup, and result replacement. The native response retains at most 4 MiB of raw output and normalizes at most 1,000 parent-before-child factual nodes across 64 levels; unrecognized or over-complex structures remain successful Raw-only plans, while oversized raw output fails. Tree and Raw remain text-only and provide no tuning recommendation. History records Query versus Explain outcome metadata, defaults older entries to Query, never stores plan payloads, and reopens SQL without generating a plan. PostgreSQL participation remains inside its existing development preview.
+
 ### Phase 6 — Initial release
 
 - Publish the exact reviewed Windows NSIS artifact and checksum only after the Phase 5 gate.
@@ -823,7 +827,6 @@ Roadmap items are directional and do not constitute shipped promises.
 
 ### 16.2 Advanced developer workflow
 
-- Query plans and engine-specific `EXPLAIN` visualization.
 - Richer data editing, bulk import/export, and controlled full-result export.
 - Additional SQL file/workspace organization and customizable shortcuts.
 - Connection-profile import after a dedicated secret-handling design.

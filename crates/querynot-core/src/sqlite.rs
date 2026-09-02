@@ -1,6 +1,7 @@
 use crate::adapter::{
     AdapterCapabilities, AdapterConnectionInfo, CompatibilityStatus, DatabaseFamily, ServerIdentity,
 };
+use crate::explain::{ExplainRunOutcome, SqliteExplainRow, normalize_sqlite};
 use crate::result::{
     MAX_BATCH_BYTES, MAX_BATCH_ROWS, MAX_RETAINED_BYTES, MAX_RETAINED_ROWS, PAUSED_CURSOR_LIFETIME,
     ResultBatch, ResultColumn, ResultTerminal, ResultTerminalState, tagged_value_size,
@@ -424,6 +425,50 @@ impl SqliteSession {
             .map_err(map_sqlite_execution_error)?;
         set_transaction_certainty(&self.transaction, TransactionCertainty::Clean);
         Ok(session_transaction_state(self))
+    }
+
+    pub async fn explain(&self, sql: &str) -> ExplainRunOutcome {
+        let cancel = Arc::new(AtomicBool::new(true));
+        if let Ok(mut active) = self.active_cancel.lock() {
+            *active = Some(Arc::clone(&cancel));
+        }
+        let mut connection = self.connection.lock().await;
+        let progress = Arc::clone(&cancel);
+        if let Ok(mut handle) = connection.lock_handle().await {
+            handle.set_progress_handler(1_000, move || progress.load(Ordering::Acquire));
+        }
+        let statement = format!("EXPLAIN QUERY PLAN {sql}");
+        let rows = sqlx::query(AssertSqlSafe(statement.as_str()))
+            .fetch_all(&mut *connection)
+            .await;
+        cleanup_progress(&mut connection).await;
+        clear_active_cancel(&self.active_cancel);
+        if !cancel.load(Ordering::Acquire) {
+            return ExplainRunOutcome::Cancelled { confirmed: true };
+        }
+        let rows = match rows {
+            Ok(rows) => rows,
+            Err(error) => return ExplainRunOutcome::Failed(map_sqlite_execution_error(error)),
+        };
+        let mut plan_rows = Vec::with_capacity(rows.len());
+        for row in rows {
+            let parsed = (|| {
+                Ok(SqliteExplainRow {
+                    id: row.try_get(0).map_err(map_sqlite_execution_error)?,
+                    parent: row.try_get(1).map_err(map_sqlite_execution_error)?,
+                    auxiliary: row.try_get(2).map_err(map_sqlite_execution_error)?,
+                    detail: row.try_get(3).map_err(map_sqlite_execution_error)?,
+                })
+            })();
+            match parsed {
+                Ok(row) => plan_rows.push(row),
+                Err(error) => return ExplainRunOutcome::Failed(error),
+            }
+        }
+        match normalize_sqlite(plan_rows) {
+            Ok(output) => ExplainRunOutcome::Completed(output),
+            Err(error) => ExplainRunOutcome::Failed(error),
+        }
     }
 
     pub async fn execute(
@@ -1086,6 +1131,7 @@ async fn connection_info(
             metadata: true,
             streaming: true,
             cancellation: true,
+            explain: true,
             transactions: true,
             multiple_results: true,
             safe_table_mutations: !read_only,
@@ -1502,6 +1548,55 @@ mod tests {
             offset: 0,
             page_size: 25,
         }
+    }
+
+    #[tokio::test]
+    async fn estimated_dml_plan_does_not_mutate_data_or_transaction_state() {
+        let (_directory, path) = fixture().await;
+        let session = SqliteSession::open(&path, false).await.unwrap();
+        {
+            let mut connection = session.connection.lock().await;
+            connection
+                .execute("INSERT INTO parent(label) VALUES ('unchanged')")
+                .await
+                .unwrap();
+        }
+        let before = session.transaction_state().await;
+        let outcome = session
+            .explain("UPDATE parent SET label = 'changed' WHERE id = 1")
+            .await;
+        let ExplainRunOutcome::Completed(plan) = outcome else {
+            panic!("expected a completed estimated plan");
+        };
+        assert!(!plan.raw_payload.is_empty());
+        let ExplainRunOutcome::Completed(scan) = session.explain("SELECT label FROM parent").await
+        else {
+            panic!("expected a completed scan plan");
+        };
+        let ExplainRunOutcome::Completed(indexed) = session
+            .explain("SELECT label FROM parent WHERE id = 1")
+            .await
+        else {
+            panic!("expected a completed indexed plan");
+        };
+        assert!(
+            scan.nodes
+                .iter()
+                .any(|node| node.operation.as_deref() == Some("SCAN"))
+        );
+        assert!(
+            indexed
+                .nodes
+                .iter()
+                .any(|node| node.operation.as_deref() == Some("SEARCH"))
+        );
+        assert_eq!(session.transaction_state().await, before);
+        let mut connection = session.connection.lock().await;
+        let label: String = sqlx::query_scalar("SELECT label FROM parent WHERE id = 1")
+            .fetch_one(&mut *connection)
+            .await
+            .unwrap();
+        assert_eq!(label, "unchanged");
     }
 
     #[tokio::test]

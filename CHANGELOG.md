@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-09-02
+
+### Added
+
+- Added estimated Explain for the selected or caret statement on SQLite, MySQL, MariaDB, and the PostgreSQL development preview, with capability-driven native planning, shared per-tab cancellation, bounded Tree/Raw views, and lossless raw copy.
+- Added explicit Query/Explain history metadata while keeping plan payloads out of local history and defaulting older entries to Query.
+
+### Changed
+
+- Unified multiple-result-set navigation with Explain's compact underlined view switch, including roving keyboard focus with arrow, Home, and End keys.
+
+### Security
+
+- Excluded runtime `EXPLAIN ANALYZE`, rejected already-prefixed Explain/Analyze input and multi-statement selections, limited raw plan retention to 4 MiB and normalization to 1,000 nodes/64 levels, and kept database plan text in text-only rendering.
+
 ## [0.1.14] - 2026-08-31
 
 ### Added

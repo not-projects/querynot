@@ -163,6 +163,26 @@ const emptyResultScreenshotPath = resolve(
   'artifacts',
   'ui-layout-results-empty.png'
 );
+const multipleResultsScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-multiple.png'
+);
+const compactMultipleResultsScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-results-multiple-720.png'
+);
+const explainTreeScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-tree.png'
+);
+const explainRawScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-raw-720.png'
+);
 const compactWorkbenchScreenshotPath = resolve(
   root,
   'artifacts',
@@ -1024,6 +1044,9 @@ try {
     viewport: { width: 1280, height: 800 },
     reducedMotion: 'reduce'
   });
+  await workbenchPage
+    .context()
+    .grantPermissions(['clipboard-read', 'clipboard-write']);
   await workbenchPage.goto(
     `http://127.0.0.1:${address.port}/scripts/fixtures/workbench-layout.html`,
     { waitUntil: 'networkidle' }
@@ -1847,7 +1870,19 @@ try {
   await workbenchPage.getByRole('tab', { name: /fractions query/i }).click();
   await workbenchPage.locator('.cm-content').click();
   await workbenchPage.locator('.cm-content').press('Control+Enter');
-  await workbenchPage.locator('.grid-row').waitFor();
+  try {
+    await workbenchPage.locator('.grid-row').waitFor({ timeout: 10_000 });
+  } catch {
+    const executionDiagnostic = await workbenchPage.evaluate(() => ({
+      status: document.querySelector('footer')?.textContent?.trim() ?? '',
+      results:
+        document.querySelector('#query-results')?.textContent?.trim() ?? '',
+      commands: window.__QUERYNOT_FIXTURE_COMMANDS__.slice(-8)
+    }));
+    throw new Error(
+      `initial result did not render (${JSON.stringify(executionDiagnostic)})`
+    );
+  }
 
   const populatedWorkbench = await workbenchPage.evaluate(() => {
     const rect = (selector) => {
@@ -2884,7 +2919,8 @@ try {
   );
   assert(historyOverlay.search_focused, 'History did not focus search on open');
   assert(
-    historyOverlay.heading_context === 'Queries saved on this device' &&
+    historyOverlay.heading_context ===
+      'Queries and Explain outcomes saved on this device' &&
       historyOverlay.entry_profile === 'Emissary' &&
       historyOverlay.entry_status === 'Completed' &&
       historyOverlay.entry_sql_white_space === 'pre-wrap' &&
@@ -3246,6 +3282,326 @@ try {
     `zero-row result state is incomplete (${JSON.stringify(emptyResultState)})`
   );
   await workbenchPage.screenshot({ path: emptyResultScreenshotPath });
+
+  await runStateQuery(
+    "SELECT 'QUERYNOT_MULTIPLE_RESULTS_STATE'; SELECT 'second';"
+  );
+  const resultSetTabs = workbenchPage.getByRole('tablist', {
+    name: 'Result sets'
+  });
+  await resultSetTabs.getByRole('tab', { name: 'Statement 2' }).waitFor();
+  const statementOneTab = resultSetTabs.getByRole('tab', {
+    name: 'Statement 1'
+  });
+  const statementTwoTab = resultSetTabs.getByRole('tab', {
+    name: 'Statement 2'
+  });
+  await statementTwoTab.focus();
+  await statementTwoTab.press('Home');
+  assert(
+    (await statementOneTab.getAttribute('aria-selected')) === 'true' &&
+      (await statementOneTab.evaluate(
+        (element) => document.activeElement === element
+      )) &&
+      (await workbenchPage
+        .getByRole('columnheader', { name: 'first_result' })
+        .count()) === 1,
+    'multi-result Home key did not select and focus the first result set'
+  );
+  await statementOneTab.press('End');
+  assert(
+    (await statementTwoTab.getAttribute('aria-selected')) === 'true' &&
+      (await statementTwoTab.evaluate(
+        (element) => document.activeElement === element
+      )) &&
+      (await workbenchPage
+        .getByRole('columnheader', { name: 'second_result' })
+        .count()) === 1,
+    'multi-result End key did not select and focus the last result set'
+  );
+  await statementTwoTab.press('ArrowLeft');
+  assert(
+    (await statementOneTab.getAttribute('aria-selected')) === 'true' &&
+      (await statementOneTab.evaluate(
+        (element) => document.activeElement === element
+      )),
+    'multi-result ArrowLeft did not select and focus the previous result set'
+  );
+  await statementOneTab.press('ArrowRight');
+  assert(
+    (await statementTwoTab.getAttribute('aria-selected')) === 'true' &&
+      (await statementTwoTab.evaluate(
+        (element) => document.activeElement === element
+      )),
+    'multi-result ArrowRight did not select and focus the next result set'
+  );
+  const multipleResultState = await resultSetTabs.evaluate((tablist) => {
+    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    const selected = tabs.find(
+      (tab) => tab.getAttribute('aria-selected') === 'true'
+    );
+    return {
+      labels: tabs.map((tab) => tab.textContent?.trim() ?? ''),
+      selected: selected?.textContent?.trim() ?? '',
+      gap: getComputedStyle(tablist).gap,
+      selected_border: selected
+        ? getComputedStyle(selected).borderBottomWidth
+        : '',
+      selected_side_border: selected
+        ? `${getComputedStyle(selected).borderLeftWidth} ${getComputedStyle(selected).borderRightWidth}`
+        : '',
+      group_border: getComputedStyle(tablist).borderBottomWidth,
+      tab_indexes: tabs.map((tab) => tab.getAttribute('tabindex'))
+    };
+  });
+  assert(
+    JSON.stringify(multipleResultState.labels) ===
+      JSON.stringify(['Statement 1', 'Statement 2']) &&
+      multipleResultState.selected === 'Statement 2' &&
+      multipleResultState.gap === '0px' &&
+      multipleResultState.selected_border === '2px' &&
+      multipleResultState.selected_side_border === '0px 0px' &&
+      multipleResultState.group_border === '1px' &&
+      JSON.stringify(multipleResultState.tab_indexes) ===
+        JSON.stringify(['-1', '0']),
+    `multiple results did not adopt the view-switch contract (${JSON.stringify(multipleResultState)})`
+  );
+  await workbenchPage.locator('#results-heading').click();
+  await workbenchPage.screenshot({ path: multipleResultsScreenshotPath });
+  await workbenchPage.setViewportSize({ width: 720, height: 720 });
+  const compactMultipleResults = await resultSetTabs.evaluate((tablist) => ({
+    document_scroll_width: document.documentElement.scrollWidth,
+    viewport_width: window.innerWidth,
+    tablist_scroll_width: tablist.scrollWidth,
+    tablist_client_width: tablist.clientWidth,
+    result_panel_right:
+      document.querySelector('#query-results')?.getBoundingClientRect().right ??
+      0
+  }));
+  assert(
+    compactMultipleResults.document_scroll_width <=
+      compactMultipleResults.viewport_width &&
+      compactMultipleResults.tablist_client_width > 0 &&
+      compactMultipleResults.result_panel_right <=
+        compactMultipleResults.viewport_width + 1,
+    `compact multiple-result switch escaped the viewport (${JSON.stringify(compactMultipleResults)})`
+  );
+  await workbenchPage.screenshot({
+    path: compactMultipleResultsScreenshotPath
+  });
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+  populatedWorkbench.multiple_results = {
+    switch: multipleResultState,
+    compact: compactMultipleResults
+  };
+
+  await workbenchContent.click();
+  await workbenchContent.press('Control+a');
+  await workbenchContent.press('Backspace');
+  await workbenchContent.pressSequentially(
+    'SELECT fractions.id FROM fractions JOIN armors ON armors.fraction_id = fractions.id;',
+    { delay: 1 }
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Explain', exact: true })
+    .click();
+  await workbenchPage
+    .getByRole('heading', { name: 'Query plan', exact: true })
+    .waitFor();
+  const planTree = workbenchPage.getByRole('tree', {
+    name: 'Estimated query plan nodes'
+  });
+  await planTree.getByText('armors', { exact: true }).waitFor();
+  const explainTreeState = await workbenchPage.evaluate(() => ({
+    tree_selected:
+      document
+        .querySelector('.plan-tabs [role="tab"]')
+        ?.getAttribute('aria-selected') === 'true',
+    node_count: document.querySelectorAll('.plan-tree [role="treeitem"]')
+      .length,
+    heading: document.querySelector('#results-heading')?.textContent?.trim(),
+    result_sets: document.querySelectorAll('.result-set').length,
+    fidelity_note:
+      document.querySelector('.plan-notes')?.textContent?.trim() ?? '',
+    fidelity_note_height:
+      document.querySelector('.plan-notes')?.getBoundingClientRect().height ??
+      0,
+    selected_tab_border: getComputedStyle(
+      document.querySelector('.plan-tabs [aria-selected="true"]')
+    ).borderBottomWidth,
+    tab_group_border: getComputedStyle(document.querySelector('.plan-tabs'))
+      .borderTopWidth
+  }));
+  assert(
+    explainTreeState.tree_selected &&
+      explainTreeState.node_count === 2 &&
+      explainTreeState.heading === 'Query plan' &&
+      explainTreeState.result_sets === 0 &&
+      explainTreeState.fidelity_note.includes(
+        'Raw keeps the exact engine output'
+      ) &&
+      explainTreeState.fidelity_note_height <= 24 &&
+      explainTreeState.selected_tab_border === '2px' &&
+      explainTreeState.tab_group_border === '0px',
+    `normalized Explain tree is incomplete (${JSON.stringify(explainTreeState)})`
+  );
+  const firstPlanNode = planTree.getByRole('treeitem').first();
+  await firstPlanNode.focus();
+  await firstPlanNode.press('ArrowDown');
+  assert(
+    await planTree
+      .getByRole('treeitem')
+      .nth(1)
+      .evaluate((node) => node.matches(':focus')),
+    'Explain tree ArrowDown did not move focus to the next factual node'
+  );
+  const treeTab = workbenchPage.getByRole('tab', {
+    name: 'Tree',
+    exact: true
+  });
+  await treeTab.focus();
+  await treeTab.press('End');
+  const rawTab = workbenchPage.getByRole('tab', { name: 'Raw', exact: true });
+  assert(
+    (await rawTab.getAttribute('aria-selected')) === 'true',
+    'Explain tab End key did not select Raw'
+  );
+  await rawTab.press('Home');
+  assert(
+    (await treeTab.getAttribute('aria-selected')) === 'true',
+    'Explain tab Home key did not return to Tree'
+  );
+  const explainThemes = await workbenchPage.evaluate(() => {
+    const shell = document.querySelector('.app-shell');
+    const node = document.querySelector('.plan-node');
+    const raw = document.querySelector('.plan-tree');
+    if (!(shell instanceof HTMLElement) || !node || !raw)
+      throw new Error('Explain theme surface is incomplete');
+    const observations = [];
+    for (const theme of ['light', 'dark', 'forest']) {
+      shell.dataset.theme = theme;
+      const nodeStyle = getComputedStyle(node);
+      const rawStyle = getComputedStyle(raw);
+      observations.push({
+        theme,
+        color: nodeStyle.color,
+        background: rawStyle.backgroundColor,
+        border: rawStyle.borderColor
+      });
+    }
+    shell.dataset.theme = 'dark';
+    return observations;
+  });
+  assert(
+    explainThemes.every(
+      (theme) =>
+        theme.color !== theme.background &&
+        theme.border !== theme.background &&
+        theme.color !== 'rgba(0, 0, 0, 0)'
+    ),
+    `Explain surfaces do not inherit every theme (${JSON.stringify(explainThemes)})`
+  );
+  await workbenchPage.screenshot({ path: explainTreeScreenshotPath });
+  await workbenchPage.getByRole('tab', { name: 'Raw', exact: true }).click();
+  const rawPlan = workbenchPage.getByRole('textbox', {
+    name: 'Raw estimated query plan'
+  });
+  const displayedRawPlan = await rawPlan.inputValue();
+  const expectedRawPlan = JSON.stringify(
+    [
+      { id: 2, parent: 0, auxiliary: 0, detail: 'SCAN fractions' },
+      {
+        id: 7,
+        parent: 2,
+        auxiliary: 0,
+        detail: 'SEARCH armors USING INDEX armors_fraction_idx (fraction_id=?)'
+      }
+    ],
+    null,
+    2
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Copy raw', exact: true })
+    .click();
+  const copiedRawPlan = await workbenchPage.evaluate(() =>
+    navigator.clipboard.readText()
+  );
+  assert(
+    copiedRawPlan === expectedRawPlan &&
+      displayedRawPlan !== expectedRawPlan &&
+      JSON.stringify(JSON.parse(displayedRawPlan)) ===
+        JSON.stringify(JSON.parse(expectedRawPlan)),
+    'Raw Explain copy did not preserve the retained payload exactly'
+  );
+  await workbenchPage.setViewportSize({ width: 720, height: 720 });
+  const compactExplain = await workbenchPage.evaluate(() => ({
+    document_scroll_width: document.documentElement.scrollWidth,
+    viewport_width: window.innerWidth,
+    explain_visible:
+      document
+        .querySelector('.toolbar-execution')
+        ?.textContent?.includes('Explain') ?? false,
+    raw_scroll_width: document.querySelector('.plan-raw')?.scrollWidth ?? 0,
+    raw_client_width: document.querySelector('.plan-raw')?.clientWidth ?? 0
+  }));
+  assert(
+    compactExplain.document_scroll_width <= compactExplain.viewport_width &&
+      compactExplain.explain_visible &&
+      compactExplain.raw_scroll_width >= compactExplain.raw_client_width,
+    `compact Explain layout is incomplete (${JSON.stringify(compactExplain)})`
+  );
+  await workbenchPage.screenshot({ path: explainRawScreenshotPath });
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+  populatedWorkbench.estimated_explain = {
+    tree: explainTreeState,
+    themes: explainThemes,
+    compact_raw: compactExplain,
+    raw_copy_exact: copiedRawPlan === expectedRawPlan
+  };
+
+  await workbenchContent.click();
+  await workbenchContent.press('Control+a');
+  await workbenchContent.press('Backspace');
+  await workbenchContent.pressSequentially(
+    "SELECT 'QUERYNOT_EXPLAIN_SEQUENCE_STATE';",
+    { delay: 1 }
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Explain', exact: true })
+    .click();
+  await workbenchPage
+    .locator('.results-context strong')
+    .getByText('Failed', { exact: true })
+    .waitFor();
+  await workbenchPage.waitForFunction(() =>
+    window.__QUERYNOT_FIXTURE_COMMANDS__.some(
+      ({ command, request }) =>
+        command === 'cancel_execution' &&
+        String(request.execution_id).startsWith('layout-explain-')
+    )
+  );
+  const rejectedExplainEvent = await workbenchPage.evaluate(() => ({
+    message: document
+      .querySelector('.result-error-message')
+      ?.textContent?.trim(),
+    plan_visible: document.querySelector('.plan-shell') !== null,
+    cancellation_requested: window.__QUERYNOT_FIXTURE_COMMANDS__.some(
+      ({ command, request }) =>
+        command === 'cancel_execution' &&
+        String(request.execution_id).startsWith('layout-explain-')
+    )
+  }));
+  assert(
+    rejectedExplainEvent.message?.includes(
+      'duplicate, late, unknown, or out-of-order'
+    ) &&
+      !rejectedExplainEvent.plan_visible &&
+      rejectedExplainEvent.cancellation_requested,
+    `duplicate Explain terminal event was not rejected and cleaned up (${JSON.stringify(rejectedExplainEvent)})`
+  );
+  populatedWorkbench.estimated_explain.sequence_rejection =
+    rejectedExplainEvent;
+
   await runStateQuery("SELECT 'QUERYNOT_PAUSED_STATE';");
   await workbenchPage
     .locator('.results-context strong.pending')
@@ -3447,6 +3803,10 @@ try {
       'artifacts/ui-layout-results-failed.png',
       'artifacts/ui-layout-results-rejected.png',
       'artifacts/ui-layout-results-empty.png',
+      'artifacts/ui-layout-results-multiple.png',
+      'artifacts/ui-layout-results-multiple-720.png',
+      'artifacts/ui-layout-explain-tree.png',
+      'artifacts/ui-layout-explain-raw-720.png',
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
       'artifacts/ui-layout-file-menu.png',

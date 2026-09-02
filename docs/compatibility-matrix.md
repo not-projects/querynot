@@ -41,6 +41,10 @@ The live `0.1.14` packages contain the compiled PostgreSQL adapter as a developm
 
 The existing five-server feasibility and conformance harness remains MySQL/MariaDB-only and explicitly rejects PostgreSQL targets rather than producing misleading evidence.
 
+## Estimated Explain in the 0.1.15 candidate source
+
+Current `master` is prepared as QueryNot 0.1.15 and exposes estimated Explain through one capability-driven adapter contract. SQLite uses `EXPLAIN QUERY PLAN`; the five MySQL/MariaDB lines use `EXPLAIN FORMAT=JSON`; PostgreSQL uses `EXPLAIN (FORMAT JSON)` only inside the development preview. The Phase 3/4 five-server harness checks real scan and indexed JSON plans and verifies that explaining a data-changing statement does not mutate fixture data. Candidate CI remains the authoritative exact-commit gate. This source-level extension does not rewrite the retained `0.1.14` release evidence or add PostgreSQL to the live matrix; its dedicated PostgreSQL conformance row remains pending.
+
 The retained Phase 4 reports cover the full Phase 3 contract plus deterministic keyset paging, labelled read-only fallbacks in the local planner, bound hostile structured filters, typed validation, insert/update/delete, generated-value refresh, optimistic conflicts, and atomic rollback. Positive system-trust validation against a publicly trusted target and native Windows trust-store behavior remain post-release owner observations; fixture automation intentionally never contacts a non-fixture database.
 
 ## Current live signed 0.1.14 release

@@ -10,6 +10,9 @@
     ConnectionInfoView,
     DiagnosticsPreviewView,
     ExecutionEventView,
+    ExplainEventView,
+    ExplainPlanView,
+    ExplainStartResponse,
     ExecutionStartResponse,
     FilePickerResponse,
     HistoryEntryView,
@@ -24,6 +27,7 @@
     SessionView,
     SettingsView,
     StartExecutionRequest,
+    StartExplainRequest,
     TableColumnView,
     TableFilterView,
     TablePageView,
@@ -37,6 +41,7 @@
   } from './lib/components/ActionMenu.svelte';
   import ConnectionList from './lib/components/ConnectionList.svelte';
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
+  import ExplainPlan from './lib/components/ExplainPlan.svelte';
   import Icon from './lib/components/Icon.svelte';
   import ResultGrid from './lib/components/ResultGrid.svelte';
   import SchemaObjectDetail from './lib/components/SchemaObjectDetail.svelte';
@@ -233,6 +238,8 @@
   >();
   let executions = $state<Record<string, ExecutionUi>>({});
   let results = $state<Record<string, ResultUi[]>>({});
+  let explainPlans = $state<Record<string, ExplainPlanView>>({});
+  let explainPlanViews = $state<Record<string, 'tree' | 'raw'>>({});
   let selectedResultIds = $state<Record<string, string>>({});
   let schemaNamespaces = $state<Record<string, SchemaNamespaceView[]>>({});
   let schemaObjects = $state<Record<string, SchemaObjectView[]>>({});
@@ -332,8 +339,14 @@
   );
   const activeExecutionError = $derived(
     activeExecution?.error
-      ? executionErrorPresentation(activeExecution.error)
+      ? executionErrorPresentation(
+          activeExecution.error,
+          activeExecution.operationKind ?? 'query'
+        )
       : null
+  );
+  const activeExplainPlan = $derived(
+    activeTab ? (explainPlans[activeTab.id] ?? null) : null
   );
   const activeResults = $derived(
     activeTab ? (results[activeTab.id] ?? []) : []
@@ -347,11 +360,18 @@
   );
   const queryResultsVisible = $derived(
     Boolean(
-      activeTab?.kind === 'query' && (activeResults.length || activeExecution)
+      activeTab?.kind === 'query' &&
+      (activeResults.length || activeExecution || activeExplainPlan)
     )
   );
   const emptyResultsState = $derived.by(() => {
-    if (!queryResultsVisible || activeVisibleResult || activeExecution?.error)
+    if (
+      !queryResultsVisible ||
+      activeVisibleResult ||
+      activeExplainPlan ||
+      activeExecution?.error ||
+      activeExecution?.operationKind === 'explain'
+    )
       return null;
     if (!activeExecution) return null;
     if (activeExecution.state === 'queued') {
@@ -1012,6 +1032,7 @@
     let disposed = false;
     let unlisten: UnlistenFn | undefined;
     let unlistenExecution: UnlistenFn | undefined;
+    let unlistenExplain: UnlistenFn | undefined;
     let unlistenOpenFiles: UnlistenFn | undefined;
     const elapsedTimer = window.setInterval(() => {
       nowMs = Date.now();
@@ -1025,6 +1046,12 @@
           unlistenExecution = removeListener;
           void bootstrap();
         }
+      });
+      void listen<ExplainEventView>('query_explain', (event) => {
+        enqueueExplainEvent(event.payload);
+      }).then((removeListener) => {
+        if (disposed) removeListener();
+        else unlistenExplain = removeListener;
       });
       void listen<PendingSqlFilesSignal>('querynot_open_files', (event) => {
         if (event.payload.queued) void requestPendingSqlFileDrain();
@@ -1048,6 +1075,7 @@
       disposed = true;
       unlisten?.();
       unlistenExecution?.();
+      unlistenExplain?.();
       unlistenOpenFiles?.();
       updater.dispose();
       window.clearInterval(elapsedTimer);
@@ -1058,6 +1086,14 @@
   function enqueueExecutionEvent(event: ExecutionEventView) {
     executionEventQueue = executionEventQueue
       .then(() => handleExecutionEvent(event))
+      .catch((error) => {
+        statusMessage = safeErrorMessage(error);
+      });
+  }
+
+  function enqueueExplainEvent(event: ExplainEventView) {
+    executionEventQueue = executionEventQueue
+      .then(() => handleExplainEvent(event))
       .catch((error) => {
         statusMessage = safeErrorMessage(error);
       });
@@ -1151,6 +1187,8 @@
     if (restoredActiveTab) rememberActiveTab(restoredActiveTab);
     executions = {};
     results = {};
+    explainPlans = {};
+    explainPlanViews = {};
     selectedResultIds = {};
     tableTabs = {};
     tableTabViews = {};
@@ -1230,7 +1268,11 @@
     };
   }
 
-  function recordQueryStartFailure(tabId: string, error: unknown) {
+  function recordQueryStartFailure(
+    tabId: string,
+    error: unknown,
+    operationKind: 'query' | 'explain' = 'query'
+  ) {
     const failedAt = Date.now();
     const executionError = queryExecutionError(error);
     executions[tabId] = {
@@ -1241,9 +1283,13 @@
       completedAt: failedAt,
       statementsCompleted: 0,
       receivedRows: 0,
-      error: executionError
+      error: executionError,
+      operationKind,
+      eventSequence: -1
     };
     results[tabId] = [];
+    delete explainPlans[tabId];
+    delete explainPlanViews[tabId];
     delete selectedResultIds[tabId];
     statusMessage = executionError.message;
   }
@@ -1255,6 +1301,8 @@
     delete sessions[tabId];
     if (!preserveExecution) delete executions[tabId];
     delete results[tabId];
+    delete explainPlans[tabId];
+    delete explainPlanViews[tabId];
     delete selectedResultIds[tabId];
     const table = tableTabs[tabId];
     if (table) {
@@ -1277,6 +1325,8 @@
     delete sessions[tabId];
     delete executions[tabId];
     delete results[tabId];
+    delete explainPlans[tabId];
+    delete explainPlanViews[tabId];
     delete selectedResultIds[tabId];
     const table = tableTabs[tabId];
     if (table) {
@@ -2100,6 +2150,8 @@
           delete schemaObjectErrors[tabId];
           delete schemaObjectLoading[tabId];
           delete results[tabId];
+          delete explainPlans[tabId];
+          delete explainPlanViews[tabId];
           delete selectedResultIds[tabId];
           delete executions[tabId];
         }
@@ -3108,6 +3160,61 @@
     await startExecutionRequest(request);
   }
 
+  async function explainEditorStatement() {
+    if (!activeTab || !activeProfile || !activeSession || !hasNativeRuntime()) {
+      statusMessage =
+        'Connect this profile-bound tab before generating an estimated plan.';
+      return;
+    }
+    const selection = editorApi?.selection();
+    const sql = activeTab.sql;
+    const request: StartExplainRequest = {
+      profile_id: activeProfile.id,
+      tab_id: activeTab.id,
+      session_id: activeSession.session_id,
+      sql,
+      selection_start:
+        selection && selection.start !== selection.end
+          ? utf8Offset(sql, selection.start)
+          : null,
+      selection_end:
+        selection && selection.start !== selection.end
+          ? utf8Offset(sql, selection.end)
+          : null,
+      cursor: utf8Offset(sql, selection?.cursor ?? 0)
+    };
+    await runAction(async () => {
+      let response: ExplainStartResponse;
+      try {
+        response = await invokeCommand('start_explain', request);
+      } catch (error) {
+        recordQueryStartFailure(request.tab_id, error, 'explain');
+        return;
+      }
+      const targetTab = workspace.tabs.find((tab) => tab.id === request.tab_id);
+      if (!targetTab) return;
+      if (executions[targetTab.id]?.id !== response.execution_id) {
+        executions[targetTab.id] = {
+          id: response.execution_id,
+          tabId: targetTab.id,
+          state: 'queued',
+          startedAt: Date.now(),
+          completedAt: null,
+          statementsCompleted: 0,
+          receivedRows: 0,
+          error: null,
+          operationKind: 'explain',
+          eventSequence: -1
+        };
+        results[targetTab.id] = [];
+        delete selectedResultIds[targetTab.id];
+        delete explainPlans[targetTab.id];
+        explainPlanViews[targetTab.id] = 'tree';
+        statusMessage = response.message;
+      }
+    });
+  }
+
   async function startExecutionRequest(request: StartExecutionRequest) {
     if (!hasNativeRuntime()) return;
     await runAction(async () => {
@@ -3138,9 +3245,12 @@
           completedAt: null,
           statementsCompleted: 0,
           receivedRows: 0,
-          error: null
+          error: null,
+          operationKind: 'query'
         };
       }
+      delete explainPlans[targetTab.id];
+      delete explainPlanViews[targetTab.id];
       results[targetTab.id] = (results[targetTab.id] ?? []).filter(
         (result) => result.executionId === response.execution_id
       );
@@ -3184,10 +3294,13 @@
         completedAt: null,
         statementsCompleted: 0,
         receivedRows: 0,
-        error: null
+        error: null,
+        operationKind: 'query'
       };
       executions[event.tab_id] = execution;
     }
+    if ((execution.operationKind ?? 'query') !== 'query') return;
+    delete explainPlans[event.tab_id];
     if (event.event_type === 'batch' && event.result_set_id) {
       const tabResults = results[event.tab_id] ?? [];
       let result = tabResults.find(
@@ -3315,11 +3428,98 @@
     }
   }
 
+  async function handleExplainEvent(event: ExplainEventView) {
+    const tab = workspace.tabs.find(
+      (candidate) => candidate.id === event.tab_id
+    );
+    if (!tab) return;
+    let execution = executions[event.tab_id];
+    if (!execution || execution.id !== event.execution_id) {
+      if (event.event_type !== 'started' || event.sequence !== 0) return;
+      execution = {
+        id: event.execution_id,
+        tabId: event.tab_id,
+        state: 'queued',
+        startedAt: Date.now(),
+        completedAt: null,
+        statementsCompleted: 0,
+        receivedRows: 0,
+        error: null,
+        operationKind: 'explain',
+        eventSequence: -1
+      };
+      executions[event.tab_id] = execution;
+    }
+    if (execution.operationKind !== 'explain') return;
+    const expectedSequence = (execution.eventSequence ?? -1) + 1;
+    if (event.sequence !== expectedSequence) {
+      delete explainPlans[event.tab_id];
+      delete explainPlanViews[event.tab_id];
+      rejectExecutionEvent(execution, event.execution_id);
+      return;
+    }
+    execution.eventSequence = event.sequence;
+    results[event.tab_id] = [];
+    delete selectedResultIds[event.tab_id];
+
+    if (event.event_type === 'started') {
+      if (event.sequence !== 0) {
+        delete explainPlans[event.tab_id];
+        delete explainPlanViews[event.tab_id];
+        rejectExecutionEvent(execution, event.execution_id);
+        return;
+      }
+      delete explainPlans[event.tab_id];
+      setExecutionState(execution, 'running');
+      statusMessage = 'Preparing an estimated query plan…';
+    } else if (event.event_type === 'completed' && event.plan) {
+      setExecutionState(execution, 'succeeded');
+      explainPlans[event.tab_id] = event.plan;
+      explainPlanViews[event.tab_id] = event.plan.nodes.length ? 'tree' : 'raw';
+      statusMessage =
+        event.plan.normalization_status === 'normalized'
+          ? 'Estimated plan is ready for review.'
+          : 'Estimated plan is available as Raw because its structure was not normalized.';
+    } else if (event.event_type === 'failed') {
+      setExecutionState(execution, 'failed');
+      delete explainPlans[event.tab_id];
+      execution.error = {
+        message:
+          event.error ?? 'The database could not generate an estimated plan.',
+        category: event.error_category,
+        detail: null,
+        retryable: event.retryable === true,
+        statementIndex: null,
+        statementStart: event.statement_start,
+        statementEnd: event.statement_end
+      };
+      if (event.error_category === 'connectivity')
+        retainTableStagingAfterConnectionLoss(event.tab_id, true);
+      statusMessage = execution.error.message;
+    } else if (event.event_type === 'cancelled') {
+      finishExecutionCancellation(execution);
+      delete explainPlans[event.tab_id];
+      statusMessage = event.cancel_confirmed
+        ? 'The database confirmed estimated-plan cancellation; the session remains available.'
+        : 'Estimated planning stopped; separate server confirmation was unavailable.';
+    } else {
+      delete explainPlans[event.tab_id];
+      delete explainPlanViews[event.tab_id];
+      rejectExecutionEvent(execution, event.execution_id);
+    }
+  }
+
+  async function copyRawExplainPlan() {
+    if (!activeExplainPlan) return;
+    await navigator.clipboard?.writeText(activeExplainPlan.raw_payload);
+    statusMessage = 'Copied the lossless raw plan payload.';
+  }
+
   function rejectExecutionEvent(execution: ExecutionUi, executionId: string) {
     setExecutionState(execution, 'failed');
     execution.error = {
       message:
-        'A duplicate, late, unknown, or out-of-order result event was rejected.',
+        'A duplicate, late, unknown, or out-of-order database-operation event was rejected.',
       category: 'internal',
       detail: null,
       retryable: false,
@@ -3539,6 +3739,8 @@
       }
       delete executions[tabId];
       delete results[tabId];
+      delete explainPlans[tabId];
+      delete explainPlanViews[tabId];
       delete selectedResultIds[tabId];
       delete tableTabs[tabId];
       delete tableTabViews[tabId];
@@ -3904,6 +4106,33 @@
     else if (itemId === 'save') void saveActiveSqlFile(false);
     else if (itemId === 'save-as') void saveActiveSqlFile(true);
     else if (itemId === 'review-disk') void reviewActiveSqlFile();
+  }
+
+  async function handleResultTabKeydown(
+    event: KeyboardEvent,
+    resultId: string
+  ) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tabId = activeTab?.id;
+    const current = activeResults.findIndex((result) => result.id === resultId);
+    const tablist = (event.currentTarget as HTMLElement).closest<HTMLElement>(
+      '[role="tablist"]'
+    );
+    if (!tabId || current < 0 || !tablist) return;
+    event.preventDefault();
+    const next =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? activeResults.length - 1
+          : event.key === 'ArrowLeft'
+            ? (current - 1 + activeResults.length) % activeResults.length
+            : (current + 1) % activeResults.length;
+    const nextResult = activeResults[next];
+    if (!nextResult) return;
+    selectedResultIds[tabId] = nextResult.id;
+    await tick();
+    tablist.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus();
   }
 
   function setResultsPercent(value: number, announce = false) {
@@ -4623,6 +4852,20 @@
                   >
                   <button
                     type="button"
+                    class="explain-action"
+                    title="Generate an estimated plan for the selection or caret statement"
+                    disabled={Boolean(
+                      (activeExecution &&
+                        ['queued', 'running', 'paused', 'cancelling'].includes(
+                          activeExecution.state
+                        )) ||
+                      !activeConnection?.capabilities.explain
+                    )}
+                    onclick={() => void explainEditorStatement()}
+                    ><Icon name="view" size={13} />Explain</button
+                  >
+                  <button
+                    type="button"
                     class="cancel-action"
                     disabled={!activeExecution ||
                       !['queued', 'running', 'paused', 'cancelling'].includes(
@@ -4738,7 +4981,12 @@
             >
               <div class="editor-heading-row">
                 <div>
-                  <h2 id="results-heading">Results</h2>
+                  <h2 id="results-heading">
+                    {activeExecution?.operationKind === 'explain' ||
+                    activeExplainPlan
+                      ? 'Query plan'
+                      : 'Results'}
+                  </h2>
                 </div>
                 <span class="results-context" aria-live="polite">
                   {#if activeExecution}
@@ -4749,11 +4997,22 @@
                       >{executionStateLabel(activeExecution.state)}</strong
                     >
                   {/if}
-                  <span>
-                    {activeResults.length} result {activeResults.length === 1
-                      ? 'set'
-                      : 'sets'}
-                  </span>
+                  {#if activeExecution?.operationKind === 'explain' || activeExplainPlan}
+                    <span>
+                      {activeExplainPlan
+                        ? activeExplainPlan.normalization_status ===
+                          'normalized'
+                          ? `${activeExplainPlan.nodes.length} plan ${activeExplainPlan.nodes.length === 1 ? 'node' : 'nodes'}`
+                          : 'Raw-only plan'
+                        : 'Estimated plan'}
+                    </span>
+                  {:else}
+                    <span>
+                      {activeResults.length} result {activeResults.length === 1
+                        ? 'set'
+                        : 'sets'}
+                    </span>
+                  {/if}
                   {#if activeExecution}
                     <span>{executionElapsedMs(activeExecution, nowMs)} ms</span>
                   {/if}
@@ -4806,9 +5065,40 @@
                   <p>{emptyResultsState.detail}</p>
                 </div>
               {/if}
+              {#if activeExecution?.operationKind === 'explain' && !activeExplainPlan && !activeExecutionError}
+                <div class="result-state" role="status" aria-live="polite">
+                  <p class="eyebrow">
+                    {activeExecution.state === 'cancelled'
+                      ? 'Estimated plan cancelled'
+                      : 'Non-executing database plan'}
+                  </p>
+                  <h3>
+                    {activeExecution.state === 'cancelled'
+                      ? 'Planning stopped'
+                      : activeExecution.state === 'cancelling'
+                        ? 'Cancelling Explain'
+                        : 'Preparing query plan'}
+                  </h3>
+                  <p>
+                    {activeExecution.state === 'cancelled'
+                      ? 'No plan payload was retained. The dedicated tab session remains available.'
+                      : 'QueryNot is asking the active engine for estimates only; the source statement is not being executed.'}
+                  </p>
+                </div>
+              {/if}
+              {#if activeExplainPlan}
+                <ExplainPlan
+                  plan={activeExplainPlan}
+                  view={explainPlanViews[activeTab?.id ?? ''] ??
+                    (activeExplainPlan.nodes.length ? 'tree' : 'raw')}
+                  onviewchange={(view) =>
+                    activeTab && (explainPlanViews[activeTab.id] = view)}
+                  oncopyraw={() => void copyRawExplainPlan()}
+                />
+              {/if}
               {#if activeResults.length > 1}
                 <div
-                  class="result-tabs"
+                  class="result-tabs view-switch"
                   role="tablist"
                   aria-label="Result sets"
                 >
@@ -4817,6 +5107,9 @@
                       type="button"
                       role="tab"
                       aria-selected={activeVisibleResult?.id === result.id}
+                      tabindex={activeVisibleResult?.id === result.id ? 0 : -1}
+                      onkeydown={(event) =>
+                        void handleResultTabKeydown(event, result.id)}
                       onclick={() =>
                         activeTab &&
                         (selectedResultIds[activeTab.id] = result.id)}

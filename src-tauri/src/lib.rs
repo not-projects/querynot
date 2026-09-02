@@ -126,6 +126,7 @@ pub fn run() {
             phase2::change_tab_context,
             phase2::format_sql,
             phase2::start_execution,
+            phase2::start_explain,
             phase2::ack_result_batch,
             phase2::load_more_results,
             phase2::discard_result,

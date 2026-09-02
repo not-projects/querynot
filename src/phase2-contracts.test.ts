@@ -6,7 +6,11 @@ import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import ResultGrid from './lib/components/ResultGrid.svelte';
+import ExplainPlan from './lib/components/ExplainPlan.svelte';
+import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
 import type {
+  ExplainPlanView,
+  HistoryEntryView,
   ResultColumnView,
   ResultRowView
 } from './lib/generated/contracts';
@@ -21,7 +25,7 @@ afterEach(async () => {
 });
 
 describe('Phase 2 SQLite boundaries', () => {
-  it('exposes only typed native connection, session, execution, result-control, transaction, schema, and export commands', () => {
+  it('exposes only typed native connection, session, execution, explain, result-control, transaction, schema, and export commands', () => {
     const contract = JSON.parse(read('contracts/querynot.v1.json')) as {
       commands: Record<string, unknown>;
       events: Record<string, unknown>;
@@ -34,6 +38,7 @@ describe('Phase 2 SQLite boundaries', () => {
       'open_tab_session',
       'load_schema_objects',
       'start_execution',
+      'start_explain',
       'ack_result_batch',
       'load_more_results',
       'cancel_execution',
@@ -45,12 +50,93 @@ describe('Phase 2 SQLite boundaries', () => {
     }
     expect(contract.events).toEqual({
       query_execution: 'ExecutionEventView',
+      query_explain: 'ExplainEventView',
       querynot_open_files: 'PendingSqlFilesSignal',
       update_download_progress: 'UpdateDownloadProgressView'
     });
     expect(commands).not.toContain('read_file');
     expect(commands).not.toContain('write_file');
     expect(commands).not.toContain('execute_sql');
+  });
+
+  it('renders unknown explain output as text-only Raw with Tree unavailable', () => {
+    const plan: ExplainPlanView = {
+      engine: 'MariaDB',
+      exact_version: '11.4.12',
+      context: 'fixture',
+      raw_format: 'json',
+      raw_payload: '{"hostile":"<img src=x onerror=alert(1)>"}',
+      normalization_status: 'raw_only',
+      warnings: ['The engine plan shape was not recognized.'],
+      nodes: []
+    };
+    mounted = mount(ExplainPlan, {
+      target: document.body,
+      props: {
+        plan,
+        view: 'raw',
+        onviewchange: () => undefined,
+        oncopyraw: () => undefined
+      }
+    });
+    flushSync();
+    const raw = document.querySelector<HTMLTextAreaElement>('.plan-raw');
+    expect(raw?.value).toBe('{"hostile":"<img src=x onerror=alert(1)>"}');
+    expect(document.querySelector('img')).toBeNull();
+    expect(
+      document.querySelector<HTMLButtonElement>('[role="tab"]')?.disabled
+    ).toBe(true);
+    expect(
+      document
+        .querySelectorAll('[role="tab"]')
+        .item(1)
+        .getAttribute('aria-selected')
+    ).toBe('true');
+  });
+
+  it('labels Explain history outcomes without treating plans as stored rows', () => {
+    const entries = ['succeeded', 'failed', 'cancelled'].map(
+      (status, index): HistoryEntryView => ({
+        id: `history-${index}`,
+        sql: `select ${index + 1}`,
+        timestamp_ms: 1_700_000_000_000 + index,
+        profile_id: 'profile-1',
+        profile_label: 'Fixture',
+        engine: 'SQLite 3.51.3',
+        context: 'main',
+        duration_ms: index + 1,
+        status,
+        operation_kind: 'explain',
+        affected_rows: 0,
+        received_rows: 0,
+        error_category: status === 'failed' ? 'syntax' : null
+      })
+    );
+    let reopenedSql = '';
+    mounted = mount(HistoryDrawer, {
+      target: document.body,
+      props: {
+        entries,
+        search: '',
+        warning: null,
+        clearConfirmation: false,
+        onsearchchange: () => undefined,
+        onsearch: () => undefined,
+        onreopen: (entry) => (reopenedSql = entry.sql),
+        ondelete: () => undefined,
+        onrequestclear: () => undefined,
+        onkeep: () => undefined,
+        onclear: () => undefined,
+        onclose: () => undefined
+      }
+    });
+    flushSync();
+    expect(document.querySelectorAll('.history-operation')).toHaveLength(3);
+    expect(document.body.textContent).toContain('Plan generated');
+    expect(document.body.textContent?.match(/No plan stored/g)).toHaveLength(2);
+    expect(document.body.textContent).not.toContain('0 rows');
+    document.querySelector<HTMLButtonElement>('.history-main')?.click();
+    expect(reopenedSql).toBe('select 1');
   });
 
   it('retains hard native bounds, acknowledgement backpressure, ownership checks, and atomic exports', () => {

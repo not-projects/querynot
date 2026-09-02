@@ -268,6 +268,7 @@ export interface HistoryEntryView {
   context: string;
   duration_ms: number;
   status: string;
+  operation_kind: string;
   affected_rows: number;
   received_rows: number;
   error_category: string | null;
@@ -419,6 +420,7 @@ export interface AdapterCapabilitiesView {
   metadata: boolean;
   streaming: boolean;
   cancellation: boolean;
+  explain: boolean;
   transactions: boolean;
   multiple_results: boolean;
   safe_table_mutations: boolean;
@@ -561,6 +563,67 @@ export interface StartExecutionRequest {
   cursor: number;
   run_all: boolean;
   approval_fingerprint: string | null;
+}
+
+export interface StartExplainRequest {
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  sql: string;
+  selection_start: number | null;
+  selection_end: number | null;
+  cursor: number;
+}
+
+export interface ExplainStartResponse {
+  execution_id: string;
+  message: string;
+}
+
+export interface ExplainPlanNodeView {
+  id: number;
+  parent_id: number | null;
+  depth: number;
+  operation: string | null;
+  relation: string | null;
+  alias: string | null;
+  access_type: string | null;
+  join_type: string | null;
+  index: string | null;
+  estimated_rows: string | null;
+  startup_cost: string | null;
+  total_cost: string | null;
+  width: string | null;
+  condition: string | null;
+  detail: string | null;
+}
+
+export interface ExplainPlanView {
+  engine: string;
+  exact_version: string;
+  context: string;
+  raw_format: string;
+  raw_payload: string;
+  normalization_status: string;
+  warnings: string[];
+  nodes: ExplainPlanNodeView[];
+}
+
+export interface ExplainEventView {
+  event_type: string;
+  execution_id: string;
+  profile_id: string;
+  tab_id: string;
+  session_id: string;
+  sequence: number;
+  statement_start: number | null;
+  statement_end: number | null;
+  duration_ms: number | null;
+  plan: ExplainPlanView | null;
+  error: string | null;
+  error_category: string | null;
+  retryable: boolean | null;
+  cancel_confirmed: boolean | null;
 }
 
 export interface SafetyFlagView {
@@ -760,6 +823,10 @@ export interface QueryNotCommands {
     request: StartExecutionRequest;
     response: ExecutionStartResponse;
   };
+  start_explain: {
+    request: StartExplainRequest;
+    response: ExplainStartResponse;
+  };
   ack_result_batch: {
     request: ResultBatchControlRequest;
     response: FileActionResponse;
@@ -831,6 +898,7 @@ export interface QueryNotCommands {
 
 export interface QueryNotEvents {
   query_execution: ExecutionEventView;
+  query_explain: ExplainEventView;
   querynot_open_files: PendingSqlFilesSignal;
   update_download_progress: UpdateDownloadProgressView;
 }

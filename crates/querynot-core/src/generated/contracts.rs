@@ -306,6 +306,7 @@ pub struct HistoryEntryView {
     pub context: String,
     pub duration_ms: u64,
     pub status: String,
+    pub operation_kind: String,
     pub affected_rows: u64,
     pub received_rows: u64,
     pub error_category: Option<String>,
@@ -477,6 +478,7 @@ pub struct AdapterCapabilitiesView {
     pub metadata: bool,
     pub streaming: bool,
     pub cancellation: bool,
+    pub explain: bool,
     pub transactions: bool,
     pub multiple_results: bool,
     pub safe_table_mutations: bool,
@@ -638,6 +640,72 @@ pub struct StartExecutionRequest {
     pub cursor: u32,
     pub run_all: bool,
     pub approval_fingerprint: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct StartExplainRequest {
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub sql: String,
+    pub selection_start: Option<u32>,
+    pub selection_end: Option<u32>,
+    pub cursor: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExplainStartResponse {
+    pub execution_id: String,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExplainPlanNodeView {
+    pub id: u32,
+    pub parent_id: Option<u32>,
+    pub depth: u32,
+    pub operation: Option<String>,
+    pub relation: Option<String>,
+    pub alias: Option<String>,
+    pub access_type: Option<String>,
+    pub join_type: Option<String>,
+    pub index: Option<String>,
+    pub estimated_rows: Option<String>,
+    pub startup_cost: Option<String>,
+    pub total_cost: Option<String>,
+    pub width: Option<String>,
+    pub condition: Option<String>,
+    pub detail: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExplainPlanView {
+    pub engine: String,
+    pub exact_version: String,
+    pub context: String,
+    pub raw_format: String,
+    pub raw_payload: String,
+    pub normalization_status: String,
+    pub warnings: Vec<String>,
+    pub nodes: Vec<ExplainPlanNodeView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ExplainEventView {
+    pub event_type: String,
+    pub execution_id: String,
+    pub profile_id: String,
+    pub tab_id: String,
+    pub session_id: String,
+    pub sequence: u64,
+    pub statement_start: Option<u32>,
+    pub statement_end: Option<u32>,
+    pub duration_ms: Option<u64>,
+    pub plan: Option<ExplainPlanView>,
+    pub error: Option<String>,
+    pub error_category: Option<String>,
+    pub retryable: Option<bool>,
+    pub cancel_confirmed: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

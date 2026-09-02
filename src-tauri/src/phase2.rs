@@ -1,8 +1,11 @@
 use crate::phase1::{AppRuntimeState, available_store, lock, parse_id};
 use base64::Engine;
+use querynot_core::explain::{ExplainOutput, ExplainRunOutcome, target_explain_statement};
 use querynot_core::export::{ExportFormat, ExportOptions, NoExportFault, write_received_rows};
 use querynot_core::generated::contracts::*;
-use querynot_core::history::{HistoryEntry, HistoryEntryInput, HistoryStatus};
+use querynot_core::history::{
+    HistoryEntry, HistoryEntryInput, HistoryOperationKind, HistoryStatus,
+};
 use querynot_core::result::{MAX_RETAINED_ROWS, ResultRegistry, RetainedResult};
 use querynot_core::sql::{
     SafetyReason, SqlDialect, execution_is_provably_read_only, plan_execution_for_dialect,
@@ -88,6 +91,7 @@ struct HistoryCapture {
     engine: String,
     context: String,
     started_at: Instant,
+    operation_kind: HistoryOperationKind,
 }
 
 #[derive(Clone)]
@@ -107,6 +111,24 @@ struct ExecutionBridgeContext {
     lifecycle_epoch: u64,
     owner: ResultOwner,
     history_capture: Option<HistoryCapture>,
+}
+
+struct ExplainRunContext {
+    app: AppHandle,
+    runtime: Phase2Runtime,
+    ownership: Arc<Mutex<querynot_core::ownership::OwnershipRegistry>>,
+    window_id: querynot_core::WindowId,
+    lifecycle_epoch: u64,
+    owner: ResultOwner,
+    session: AdapterSession,
+    product: String,
+    exact_version: String,
+    context: String,
+    target_sql: String,
+    target_start: u32,
+    target_end: u32,
+    history_capture: Option<HistoryCapture>,
+    control_receiver: mpsc::Receiver<ExecutionControl>,
 }
 
 #[derive(Clone, Default)]
@@ -1116,6 +1138,7 @@ pub(crate) async fn start_execution(
             ),
             context: resource.context.clone(),
             started_at: Instant::now(),
+            operation_kind: HistoryOperationKind::Query,
         })
     } else {
         None
@@ -1182,6 +1205,132 @@ pub(crate) async fn start_execution(
 }
 
 #[tauri::command]
+pub(crate) async fn start_explain(
+    app: AppHandle,
+    state: State<'_, AppRuntimeState>,
+    request: StartExplainRequest,
+) -> Result<ExplainStartResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    let tab_id = parse_id::<TabId>(&request.tab_id)?;
+    let session_id = parse_id::<NativeSessionId>(&request.session_id)?;
+    lock(&state.ownership)?.authorize_session(state.window_id, profile_id, tab_id, session_id)?;
+    if lock(&state.phase2.executions)?
+        .values()
+        .any(|execution| execution.session_id == session_id)
+    {
+        return Err(QueryNotError::database(
+            ErrorCategory::Transaction,
+            "This tab already has an active operation.",
+            false,
+        ));
+    }
+    let resource = session_resource(&state, profile_id, tab_id, session_id)?;
+    let connected = connected_profile(&state, profile_id)?;
+    if !connected.info.capabilities.explain {
+        return Err(QueryNotError::database(
+            ErrorCategory::UnsupportedCapability,
+            "Estimated plans are unavailable for this adapter.",
+            false,
+        ));
+    }
+    let selection = match (request.selection_start, request.selection_end) {
+        (Some(start), Some(end)) if start != end => Some((start as usize, end as usize)),
+        (None, None) | (Some(_), Some(_)) => None,
+        _ => {
+            return Err(QueryNotError::authorization(
+                "Explain selection boundaries are incomplete.",
+            ));
+        }
+    };
+    let dialect = match connected.info.dialect.as_str() {
+        "sqlite" => SqlDialect::Sqlite,
+        "mysql" => SqlDialect::MySql,
+        "postgresql" => SqlDialect::Postgres,
+        _ => {
+            return Err(QueryNotError::internal(
+                "The adapter reported an unknown SQL dialect.",
+            ));
+        }
+    };
+    let target = target_explain_statement(
+        &request.sql,
+        selection,
+        request.cursor as usize,
+        dialect,
+        &request.profile_id,
+        &request.session_id,
+        &resource.context,
+    )?;
+    let history_capture = if lock(&state.settings)?.history_enabled {
+        state.store.clone().map(|store| HistoryCapture {
+            store,
+            warning: Arc::clone(&state.history_warning),
+            sql: target.sql.clone(),
+            timestamp_ms: unix_time_ms(),
+            profile_id,
+            profile_label: connected.profile_name.clone(),
+            engine: format!(
+                "{} {}",
+                connected.info.identity.product, connected.info.identity.exact_version
+            ),
+            context: resource.context.clone(),
+            started_at: Instant::now(),
+            operation_kind: HistoryOperationKind::Explain,
+        })
+    } else {
+        None
+    };
+    let execution_id = ExecutionId::new();
+    dispose_tab_results(&state.phase2, tab_id);
+    lock(&state.ownership)?.register_execution(
+        state.window_id,
+        profile_id,
+        tab_id,
+        session_id,
+        execution_id,
+    )?;
+    let (control_tx, control_rx) = mpsc::channel(4);
+    lock(&state.phase2.executions)?.insert(
+        execution_id,
+        ExecutionResource {
+            profile_id,
+            tab_id,
+            session_id,
+            session: resource.session.clone(),
+            controls: control_tx,
+        },
+    );
+    let lifecycle_epoch = *lock(&state.phase2.lifecycle_epoch)?;
+    tokio::spawn(run_explain(ExplainRunContext {
+        app,
+        runtime: state.phase2.clone(),
+        ownership: Arc::clone(&state.ownership),
+        window_id: state.window_id,
+        lifecycle_epoch,
+        owner: ResultOwner {
+            execution_id,
+            profile_id,
+            tab_id,
+            session_id,
+        },
+        session: resource.session,
+        product: connected.info.identity.product,
+        exact_version: connected.info.identity.exact_version,
+        context: resource.context,
+        target_sql: target.sql,
+        target_start: target.start as u32,
+        target_end: target.end as u32,
+        history_capture,
+        control_receiver: control_rx,
+    }));
+    Ok(ExplainStartResponse {
+        execution_id: execution_id.to_string(),
+        message: "Estimated planning started on this tab's dedicated native database session."
+            .to_owned(),
+    })
+}
+
+#[tauri::command]
 pub(crate) async fn ack_result_batch(
     state: State<'_, AppRuntimeState>,
     request: ResultBatchControlRequest,
@@ -1236,7 +1385,7 @@ pub(crate) async fn cancel_execution(
         completed: requested,
         cancelled: false,
         message: if requested {
-            "Cancellation was requested through SQLite's native progress handler; confirmation is pending."
+            "Cancellation was requested through the active database adapter; confirmation is pending."
         } else {
             "The execution had already reached a terminal state."
         }
@@ -1618,6 +1767,7 @@ async fn bridge_execution_events(
             context: capture.context,
             duration_ms: capture.started_at.elapsed().as_millis() as u64,
             status,
+            operation_kind: capture.operation_kind,
             affected_rows,
             received_rows,
             error_category: history_error_category,
@@ -1630,6 +1780,250 @@ async fn bridge_execution_events(
                     .to_owned(),
             );
         }
+    }
+}
+
+async fn run_explain(context: ExplainRunContext) {
+    let ExplainRunContext {
+        app,
+        runtime,
+        ownership,
+        window_id,
+        lifecycle_epoch,
+        owner,
+        session,
+        product,
+        exact_version,
+        context: database_context,
+        target_sql,
+        target_start,
+        target_end,
+        history_capture,
+        mut control_receiver,
+    } = context;
+    let started_at = Instant::now();
+    let started = ExplainEventView {
+        event_type: "started".to_owned(),
+        execution_id: owner.execution_id.to_string(),
+        profile_id: owner.profile_id.to_string(),
+        tab_id: owner.tab_id.to_string(),
+        session_id: owner.session_id.to_string(),
+        sequence: 0,
+        statement_start: Some(target_start),
+        statement_end: Some(target_end),
+        duration_ms: None,
+        plan: None,
+        error: None,
+        error_category: None,
+        retryable: None,
+        cancel_confirmed: None,
+    };
+    let _ = app.emit("query_explain", started);
+    let mut explain = Box::pin(session.explain(&target_sql, &product));
+    let outcome = loop {
+        tokio::select! {
+            biased;
+            outcome = &mut explain => break outcome,
+            control = control_receiver.recv() => match control {
+                Some(ExecutionControl::Cancel) => {
+                    session.request_cancel();
+                }
+                Some(_) => {}
+                None => {
+                    session.request_cancel();
+                    break explain.await;
+                }
+            }
+        }
+    };
+    let duration_ms = started_at.elapsed().as_millis() as u64;
+    let (event, history_status, history_error_category, connection_lost) = match outcome {
+        ExplainRunOutcome::Completed(output) => (
+            explain_terminal_event(
+                owner,
+                "completed",
+                duration_ms,
+                Some(explain_plan_view(
+                    output,
+                    &product,
+                    &exact_version,
+                    &database_context,
+                )),
+                None,
+                None,
+                None,
+                target_start,
+                target_end,
+            ),
+            HistoryStatus::Succeeded,
+            None,
+            false,
+        ),
+        ExplainRunOutcome::Cancelled { confirmed } => (
+            explain_terminal_event(
+                owner,
+                "cancelled",
+                duration_ms,
+                None,
+                None,
+                Some(ErrorCategory::Cancelled),
+                Some(confirmed),
+                target_start,
+                target_end,
+            ),
+            HistoryStatus::Cancelled,
+            Some(ErrorCategory::Cancelled),
+            false,
+        ),
+        ExplainRunOutcome::Failed(error) => {
+            let connection_lost = error.category == ErrorCategory::Connectivity;
+            let category = error.category;
+            (
+                explain_terminal_event(
+                    owner,
+                    "failed",
+                    duration_ms,
+                    None,
+                    Some(error),
+                    Some(category),
+                    None,
+                    target_start,
+                    target_end,
+                ),
+                HistoryStatus::Failed,
+                Some(category),
+                connection_lost,
+            )
+        }
+    };
+    let current_epoch = runtime
+        .lifecycle_epoch
+        .lock()
+        .ok()
+        .map(|epoch| *epoch == lifecycle_epoch)
+        .unwrap_or(false);
+    if current_epoch {
+        let _ = app.emit("query_explain", event);
+    }
+    if let Ok(mut executions) = runtime.executions.lock() {
+        executions.remove(&owner.execution_id);
+    }
+    if let Ok(mut ownership) = ownership.lock() {
+        let _ = ownership.mark_execution_terminal(
+            window_id,
+            owner.profile_id,
+            owner.tab_id,
+            owner.session_id,
+            owner.execution_id,
+        );
+        if connection_lost {
+            let _ = ownership.unregister_session(
+                window_id,
+                owner.profile_id,
+                owner.tab_id,
+                owner.session_id,
+            );
+        }
+    }
+    if connection_lost {
+        if let Ok(mut sessions) = runtime.sessions.lock() {
+            sessions.remove(&owner.session_id);
+        }
+        if let Ok(mut plans) = runtime.mutation_plans.lock() {
+            plans.retain(|_, plan| plan.session_id != owner.session_id);
+        }
+    }
+    if let Some(capture) = history_capture {
+        let entry = HistoryEntry::new(HistoryEntryInput {
+            sql: capture.sql,
+            timestamp_ms: capture.timestamp_ms,
+            profile_id: capture.profile_id,
+            profile_label: capture.profile_label,
+            engine: capture.engine,
+            context: capture.context,
+            duration_ms,
+            status: history_status,
+            operation_kind: capture.operation_kind,
+            affected_rows: 0,
+            received_rows: 0,
+            error_category: history_error_category,
+        });
+        if capture.store.save_history_entry(&entry).await.is_err()
+            && let Ok(mut warning) = capture.warning.lock()
+        {
+            *warning = Some(
+                "Query history could not be persisted. The current estimated plan remains available."
+                    .to_owned(),
+            );
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn explain_terminal_event(
+    owner: ResultOwner,
+    event_type: &str,
+    duration_ms: u64,
+    plan: Option<ExplainPlanView>,
+    error: Option<QueryNotError>,
+    category: Option<ErrorCategory>,
+    cancel_confirmed: Option<bool>,
+    target_start: u32,
+    target_end: u32,
+) -> ExplainEventView {
+    ExplainEventView {
+        event_type: event_type.to_owned(),
+        execution_id: owner.execution_id.to_string(),
+        profile_id: owner.profile_id.to_string(),
+        tab_id: owner.tab_id.to_string(),
+        session_id: owner.session_id.to_string(),
+        sequence: 1,
+        statement_start: Some(target_start),
+        statement_end: Some(target_end),
+        duration_ms: Some(duration_ms),
+        plan,
+        error: error.as_ref().map(|error| error.safe_message.clone()),
+        error_category: category.map(error_category_name).map(str::to_owned),
+        retryable: error.as_ref().map(|error| error.retryable),
+        cancel_confirmed,
+    }
+}
+
+fn explain_plan_view(
+    output: ExplainOutput,
+    engine: &str,
+    exact_version: &str,
+    context: &str,
+) -> ExplainPlanView {
+    ExplainPlanView {
+        engine: engine.to_owned(),
+        exact_version: exact_version.to_owned(),
+        context: context.to_owned(),
+        raw_format: output.raw_format,
+        raw_payload: output.raw_payload,
+        normalization_status: output.normalization_status,
+        warnings: output.warnings,
+        nodes: output
+            .nodes
+            .into_iter()
+            .map(|node| ExplainPlanNodeView {
+                id: node.id,
+                parent_id: node.parent_id,
+                depth: node.depth,
+                operation: node.operation,
+                relation: node.relation,
+                alias: node.alias,
+                access_type: node.access_type,
+                join_type: node.join_type,
+                index: node.index,
+                estimated_rows: node.estimated_rows,
+                startup_cost: node.startup_cost,
+                total_cost: node.total_cost,
+                width: node.width,
+                condition: node.condition,
+                detail: node.detail,
+            })
+            .collect(),
     }
 }
 
@@ -2352,6 +2746,7 @@ fn connection_view(
             metadata: info.capabilities.metadata,
             streaming: info.capabilities.streaming,
             cancellation: info.capabilities.cancellation,
+            explain: info.capabilities.explain,
             transactions: info.capabilities.transactions,
             multiple_results: info.capabilities.multiple_results,
             safe_table_mutations: info.capabilities.safe_table_mutations,

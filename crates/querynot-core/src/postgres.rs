@@ -1,6 +1,7 @@
 use crate::adapter::{
     AdapterCapabilities, AdapterConnectionInfo, CompatibilityStatus, DatabaseFamily, ServerIdentity,
 };
+use crate::explain::{ExplainRunOutcome, normalize_postgres};
 use crate::profile::{ConnectionProfile, ConnectionTarget, TlsMode};
 use crate::result::{
     MAX_BATCH_BYTES, MAX_BATCH_ROWS, MAX_RETAINED_BYTES, MAX_RETAINED_ROWS, PAUSED_CURSOR_LIFETIME,
@@ -432,6 +433,45 @@ impl PostgresSession {
 }
 
 impl PostgresSession {
+    pub async fn explain(&self, sql: &str) -> ExplainRunOutcome {
+        let cancel = Arc::new(AtomicBool::new(true));
+        let cancel_confirmed = Arc::new(AtomicBool::new(false));
+        if let Ok(mut active) = self.active_cancel.lock() {
+            *active = Some(Arc::clone(&cancel));
+        }
+        if let Ok(mut active) = self.active_cancel_confirmed.lock() {
+            *active = Some(Arc::clone(&cancel_confirmed));
+        }
+        let statement = format!("EXPLAIN (FORMAT JSON) {sql}");
+        let result = {
+            let mut connection = self.connection.lock().await;
+            sqlx::query_scalar::<_, sqlx::types::Json<serde_json::Value>>(AssertSqlSafe(
+                statement.as_str(),
+            ))
+            .fetch_one(&mut *connection)
+            .await
+        };
+        clear_active(&self.active_cancel);
+        clear_active(&self.active_cancel_confirmed);
+        if !cancel.load(Ordering::Acquire) {
+            return ExplainRunOutcome::Cancelled {
+                confirmed: cancel_confirmed.load(Ordering::Acquire),
+            };
+        }
+        match result {
+            Ok(raw) => match serde_json::to_string(&raw.0) {
+                Ok(payload) => match normalize_postgres(payload) {
+                    Ok(output) => ExplainRunOutcome::Completed(output),
+                    Err(error) => ExplainRunOutcome::Failed(error),
+                },
+                Err(_) => ExplainRunOutcome::Failed(QueryNotError::internal(
+                    "PostgreSQL explain output could not be encoded.",
+                )),
+            },
+            Err(error) => ExplainRunOutcome::Failed(map_postgres_execution_error(error)),
+        }
+    }
+
     pub async fn execute(
         &self,
         execution_id: ExecutionId,
@@ -1039,6 +1079,7 @@ async fn connection_info(
             metadata: true,
             streaming: true,
             cancellation: true,
+            explain: true,
             transactions: !read_only,
             multiple_results: true,
             safe_table_mutations: !read_only,
