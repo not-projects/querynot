@@ -81,7 +81,9 @@ The deep audit requires `QUERYNOT_UPDATER_PUBLIC_KEY` because it rechecks every 
 
 The public candidate and publication contract is fail closed. A missing server digest, extra asset, duplicate name, hash or byte-count mismatch, wrong tag/source, invalid signature, or stale confirmation stops publication.
 
-The current completed signed release is `v0.1.15`: candidate run [`33608972601`](https://github.com/not-projects/querynot/actions/runs/33608972601), publication run [`33610175686`](https://github.com/not-projects/querynot/actions/runs/33610175686), source commit `1aa32280aa0d825d07fd24106f28ddad389ff452`, and release [`v0.1.15`](https://github.com/not-projects/querynot/releases/tag/v0.1.15). Routine exact-candidate, updater-signature, draft/public GitHub asset-metadata, and bounded endpoint-smoke gates passed; the optional full-package public deep audit was intentionally not run.
+The current completed signed release is `v0.1.16`: candidate run [`33817779635`](https://github.com/not-projects/querynot/actions/runs/33817779635), publication run [`33818918035`](https://github.com/not-projects/querynot/actions/runs/33818918035), source commit `c5a6cf917a00dfe4e1243fc197276f7c5aa7c212`, and release [`v0.1.16`](https://github.com/not-projects/querynot/releases/tag/v0.1.16). Routine exact-candidate, updater-signature, draft/public GitHub asset-metadata, and bounded endpoint-smoke gates passed; the optional full-package public deep audit was intentionally not run.
+
+The previous `v0.1.15` release used candidate run [`33608972601`](https://github.com/not-projects/querynot/actions/runs/33608972601), publication run [`33610175686`](https://github.com/not-projects/querynot/actions/runs/33610175686), and source commit `1aa32280aa0d825d07fd24106f28ddad389ff452`.
 
 The previous `v0.1.14` release used candidate run [`33398703729`](https://github.com/not-projects/querynot/actions/runs/33398703729), publication run [`33400362354`](https://github.com/not-projects/querynot/actions/runs/33400362354), and source commit `b2537fd0cb19a18d4fec49f59e99b79ed3b462f1`.
 
