@@ -59,7 +59,7 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(commands).not.toContain('execute_sql');
   });
 
-  it('renders unknown explain output as text-only Raw with Tree unavailable', () => {
+  it('renders unknown explain output as text-only Raw with Graph and Tree unavailable', () => {
     const plan: ExplainPlanView = {
       engine: 'MariaDB',
       exact_version: '11.4.12',
@@ -75,6 +75,7 @@ describe('Phase 2 SQLite boundaries', () => {
       props: {
         plan,
         view: 'raw',
+        hotspotEstimatesEnabled: false,
         onviewchange: () => undefined,
         oncopyraw: () => undefined
       }
@@ -89,7 +90,7 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(
       document
         .querySelectorAll('[role="tab"]')
-        .item(1)
+        .item(2)
         .getAttribute('aria-selected')
     ).toBe('true');
   });

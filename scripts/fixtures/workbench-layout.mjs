@@ -5,7 +5,7 @@ import { mount } from 'svelte';
 import App from '../../src/App.svelte';
 import '../../src/styles/app.css';
 
-const settings = {
+let settings = {
   theme: 'dark',
   ui_scale_percent: 100,
   editor_word_wrap: false,
@@ -16,6 +16,7 @@ const settings = {
   table_page_rows: 200,
   table_font_family: 'monospace',
   table_font_size_px: 13,
+  plan_hotspot_estimates_enabled: false,
   history_enabled: true,
   history_retention_days: 90,
   session_restoration_enabled: true,
@@ -447,7 +448,13 @@ async function emitFailedResult(executionId) {
   );
 }
 
-async function emitExplainPlan(executionId, duplicateTerminal = false) {
+async function emitExplainPlan(
+  executionId,
+  duplicateTerminal = false,
+  hotspot = false,
+  dense = false,
+  rawOnly = false
+) {
   const base = {
     execution_id: executionId,
     profile_id: 'emissary',
@@ -467,6 +474,135 @@ async function emitExplainPlan(executionId, duplicateTerminal = false) {
     event_type: 'started',
     sequence: 0
   });
+  if (rawOnly) {
+    await emit('query_explain', {
+      ...base,
+      event_type: 'completed',
+      sequence: 1,
+      duration_ms: 3,
+      plan: {
+        engine: 'MariaDB',
+        exact_version: '11.4.12',
+        context: 'fixture',
+        raw_format: 'json',
+        raw_payload: '{"query_block":{"unrecognized_fixture":true}}',
+        normalization_status: 'raw_only',
+        warnings: ['The engine plan shape was not recognized.'],
+        nodes: []
+      }
+    });
+    return;
+  }
+
+  if (dense) {
+    await emit('query_explain', {
+      ...base,
+      event_type: 'completed',
+      sequence: 1,
+      duration_ms: 8,
+      plan: {
+        engine: 'PostgreSQL',
+        exact_version: '18.6',
+        context: 'public',
+        raw_format: 'json',
+        raw_payload: '[{"Plan":{"Node Type":"Dense fixture"}}]',
+        normalization_status: 'normalized',
+        warnings: [],
+        nodes: Array.from({ length: 251 }, (_, id) => ({
+          id,
+          parent_id: id === 0 ? null : 0,
+          depth: id === 0 ? 0 : 1,
+          operation: id === 0 ? 'Append' : `Fixture scan ${id}`,
+          relation: id === 0 ? null : `fixture_${id}`,
+          alias: null,
+          access_type: null,
+          join_type: null,
+          index: null,
+          estimated_rows: String(id + 1),
+          startup_cost: null,
+          total_cost: null,
+          width: null,
+          condition: null,
+          detail: null
+        }))
+      }
+    });
+    return;
+  }
+
+  if (hotspot) {
+    const hotspotCompleted = {
+      ...base,
+      event_type: 'completed',
+      sequence: 1,
+      duration_ms: 7,
+      plan: {
+        engine: 'PostgreSQL',
+        exact_version: '18.6',
+        context: 'public',
+        raw_format: 'json',
+        raw_payload: JSON.stringify([{ Plan: { 'Node Type': 'Nested Loop' } }]),
+        normalization_status: 'normalized',
+        warnings: [],
+        nodes: [
+          {
+            id: 0,
+            parent_id: null,
+            depth: 0,
+            operation: 'Nested Loop',
+            relation: null,
+            alias: null,
+            access_type: null,
+            join_type: 'Inner',
+            index: null,
+            estimated_rows: '250',
+            startup_cost: '0.84',
+            total_cost: '100.25',
+            width: '48',
+            condition: null,
+            detail: 'Nested Loop'
+          },
+          {
+            id: 1,
+            parent_id: 0,
+            depth: 1,
+            operation: 'Index Scan',
+            relation: 'fractions',
+            alias: 'f',
+            access_type: null,
+            join_type: null,
+            index: 'fractions_pkey',
+            estimated_rows: '4',
+            startup_cost: '0.42',
+            total_cost: '5.10',
+            width: '16',
+            condition: 'id > 0',
+            detail: 'Index Scan using fractions_pkey'
+          },
+          {
+            id: 2,
+            parent_id: 0,
+            depth: 1,
+            operation: 'Seq Scan',
+            relation: 'armors',
+            alias: 'a',
+            access_type: null,
+            join_type: null,
+            index: null,
+            estimated_rows: '900',
+            startup_cost: '0.00',
+            total_cost: '75.75',
+            width: '32',
+            condition: 'fraction_id IS NOT NULL',
+            detail: 'Seq Scan on armors'
+          }
+        ]
+      }
+    };
+    await emit('query_explain', hotspotCompleted);
+    return;
+  }
+
   const rawPayload = JSON.stringify(
     [
       { id: 2, parent: 0, auxiliary: 0, detail: 'SCAN fractions' },
@@ -572,6 +708,11 @@ mockIPC(
             }
           }
         };
+      case 'save_settings':
+        settings = structuredClone(request);
+        return structuredClone(settings);
+      case 'reset_settings':
+        return structuredClone(settings);
       case 'take_pending_sql_files':
         return { files: [] };
       case 'check_for_updates':
@@ -774,7 +915,10 @@ mockIPC(
             () =>
               void emitExplainPlan(
                 executionId,
-                request.sql.includes('QUERYNOT_EXPLAIN_SEQUENCE_STATE')
+                request.sql.includes('QUERYNOT_EXPLAIN_SEQUENCE_STATE'),
+                request.sql.includes('QUERYNOT_HOTSPOT_STATE'),
+                request.sql.includes('QUERYNOT_DENSE_PLAN_STATE'),
+                request.sql.includes('QUERYNOT_RAW_ONLY_STATE')
               ),
             0
           );

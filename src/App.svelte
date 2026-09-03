@@ -42,6 +42,7 @@
   import ConnectionList from './lib/components/ConnectionList.svelte';
   import HistoryDrawer from './lib/components/HistoryDrawer.svelte';
   import ExplainPlan from './lib/components/ExplainPlan.svelte';
+  import ExplainInfoPopover from './lib/components/ExplainInfoPopover.svelte';
   import Icon from './lib/components/Icon.svelte';
   import ResultGrid from './lib/components/ResultGrid.svelte';
   import SchemaObjectDetail from './lib/components/SchemaObjectDetail.svelte';
@@ -51,6 +52,7 @@
     type EditorRunRequest,
     type SqlEditorApi
   } from './lib/components/SqlEditor.svelte';
+  import { EXPLAIN_GRAPH_NODE_LIMIT } from './lib/explain-visualization';
   import { hasNativeRuntime, invokeCommand } from './lib/native';
   import { updater } from './lib/updater.svelte';
   import {
@@ -151,6 +153,7 @@
     table_page_rows: 200,
     table_font_family: 'monospace',
     table_font_size_px: 13,
+    plan_hotspot_estimates_enabled: false,
     history_enabled: true,
     history_retention_days: 90,
     session_restoration_enabled: true,
@@ -239,7 +242,7 @@
   let executions = $state<Record<string, ExecutionUi>>({});
   let results = $state<Record<string, ResultUi[]>>({});
   let explainPlans = $state<Record<string, ExplainPlanView>>({});
-  let explainPlanViews = $state<Record<string, 'tree' | 'raw'>>({});
+  let explainPlanViews = $state<Record<string, 'graph' | 'tree' | 'raw'>>({});
   let selectedResultIds = $state<Record<string, string>>({});
   let schemaNamespaces = $state<Record<string, SchemaNamespaceView[]>>({});
   let schemaObjects = $state<Record<string, SchemaObjectView[]>>({});
@@ -3209,7 +3212,7 @@
         results[targetTab.id] = [];
         delete selectedResultIds[targetTab.id];
         delete explainPlans[targetTab.id];
-        explainPlanViews[targetTab.id] = 'tree';
+        explainPlanViews[targetTab.id] = 'graph';
         statusMessage = response.message;
       }
     });
@@ -3475,7 +3478,12 @@
     } else if (event.event_type === 'completed' && event.plan) {
       setExecutionState(execution, 'succeeded');
       explainPlans[event.tab_id] = event.plan;
-      explainPlanViews[event.tab_id] = event.plan.nodes.length ? 'tree' : 'raw';
+      explainPlanViews[event.tab_id] =
+        event.plan.nodes.length === 0
+          ? 'raw'
+          : event.plan.nodes.length > EXPLAIN_GRAPH_NODE_LIMIT
+            ? 'tree'
+            : 'graph';
       statusMessage =
         event.plan.normalization_status === 'normalized'
           ? 'Estimated plan is ready for review.'
@@ -3916,10 +3924,15 @@
     });
   }
 
-  function openSettings() {
+  async function openSettings(focusHotspotEstimate = false) {
     settingsDialogScalePercent = settings.ui_scale_percent;
     settingsDraft = structuredClone($state.snapshot(settings));
-    void openModal('settings');
+    await openModal('settings');
+    if (focusHotspotEstimate) {
+      dialogElement
+        ?.querySelector<HTMLElement>('#settings-plan-hotspot-estimates')
+        ?.focus();
+    }
   }
 
   async function loadHistory() {
@@ -4274,7 +4287,7 @@
       document.getElementById('query-results')?.focus();
     } else if (primaryModifier && event.key === ',') {
       event.preventDefault();
-      openSettings();
+      void openSettings();
     } else if (primaryModifier && event.key.toLowerCase() === 'n') {
       event.preventDefault();
       void createOfflineTab(activeProfile?.id ?? null);
@@ -4370,7 +4383,11 @@
         <Icon name="history" size={14} />
         History
       </button>
-      <button type="button" class="quiet topbar-control" onclick={openSettings}>
+      <button
+        type="button"
+        class="quiet topbar-control"
+        onclick={() => void openSettings()}
+      >
         <Icon name="settings" size={14} />
         Settings
         {#if updater.availableUpdate}
@@ -4864,6 +4881,10 @@
                     onclick={() => void explainEditorStatement()}
                     ><Icon name="view" size={13} />Explain</button
                   >
+                  <ExplainInfoPopover
+                    hotspotEstimatesEnabled={settings.plan_hotspot_estimates_enabled}
+                    onopensettings={() => void openSettings(true)}
+                  />
                   <button
                     type="button"
                     class="cancel-action"
@@ -5090,7 +5111,13 @@
                 <ExplainPlan
                   plan={activeExplainPlan}
                   view={explainPlanViews[activeTab?.id ?? ''] ??
-                    (activeExplainPlan.nodes.length ? 'tree' : 'raw')}
+                    (activeExplainPlan.nodes.length === 0
+                      ? 'raw'
+                      : activeExplainPlan.nodes.length >
+                          EXPLAIN_GRAPH_NODE_LIMIT
+                        ? 'tree'
+                        : 'graph')}
+                  hotspotEstimatesEnabled={settings.plan_hotspot_estimates_enabled}
                   onviewchange={(view) =>
                     activeTab && (explainPlanViews[activeTab.id] = view)}
                   oncopyraw={() => void copyRawExplainPlan()}
@@ -5169,7 +5196,7 @@
                 >Choose Server or File, then configure one exact target.</span
               >
             </button>
-            <button type="button" onclick={openSettings}>
+            <button type="button" onclick={() => void openSettings()}>
               <strong>Settings</strong>
               <span
                 >Review appearance, retention, logging, and diagnostics.</span
@@ -5946,6 +5973,22 @@
                       step="1"
                       bind:value={settingsDraft.table_font_size_px}
                     />
+                  </label>
+                  <label class="check-row hotspot-setting">
+                    <input
+                      id="settings-plan-hotspot-estimates"
+                      type="checkbox"
+                      bind:checked={
+                        settingsDraft.plan_hotspot_estimates_enabled
+                      }
+                    />
+                    <span>
+                      Experimental plan hotspot estimates
+                      <small
+                        >Ranks reported cost or rows within subsequent Explain
+                        plans only.</small
+                      >
+                    </span>
                   </label>
                 </section>
               </div>

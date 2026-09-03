@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-09-04
+
+### Added
+
+- Added a dependency-free Graph-first Explain view with structural keyboard navigation, bounded zoom, complete node inspection, and explicit Tree fallback above 250 normalized nodes.
+- Added off-by-default experimental local hotspot estimates, textual relative bands, metric coverage, top reported estimates, and an Explain information popover linked to the focused setting.
+
+### Changed
+
+- Kept relative plan emphasis theme-safe and neutral-to-amber without red/green scoring, tuning recommendations, or elapsed-time prediction.
+
 ### Fixed
 
 - Kept MySQL compatibility warnings and header controls inside the window while a connection is still opening at constrained widths and high UI scales.

@@ -1455,6 +1455,7 @@ fn settings_to_view(settings: &AppSettings) -> SettingsView {
         }
         .to_owned(),
         table_font_size_px: settings.table_font_size_px,
+        plan_hotspot_estimates_enabled: settings.plan_hotspot_estimates_enabled,
         history_enabled: settings.history_enabled,
         history_retention_days: settings.history_retention_days,
         session_restoration_enabled: settings.session_restoration_enabled,
@@ -1493,6 +1494,7 @@ fn settings_from_view(view: SettingsView) -> Result<AppSettings, QueryNotError> 
         table_page_rows: view.table_page_rows,
         table_font_family,
         table_font_size_px: view.table_font_size_px,
+        plan_hotspot_estimates_enabled: view.plan_hotspot_estimates_enabled,
         history_enabled: view.history_enabled,
         history_retention_days: view.history_retention_days,
         session_restoration_enabled: view.session_restoration_enabled,

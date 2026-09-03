@@ -33,6 +33,7 @@ pub struct AppSettings {
     pub table_page_rows: u32,
     pub table_font_family: TableFontPreference,
     pub table_font_size_px: u8,
+    pub plan_hotspot_estimates_enabled: bool,
     pub history_enabled: bool,
     pub history_retention_days: u16,
     pub session_restoration_enabled: bool,
@@ -55,6 +56,7 @@ impl Default for AppSettings {
             table_page_rows: 200,
             table_font_family: TableFontPreference::Monospace,
             table_font_size_px: 13,
+            plan_hotspot_estimates_enabled: false,
             history_enabled: true,
             history_retention_days: 90,
             session_restoration_enabled: true,
@@ -147,6 +149,7 @@ mod tests {
         assert_eq!(settings.table_page_rows, 200);
         assert_eq!(settings.table_font_family, TableFontPreference::Monospace);
         assert_eq!(settings.table_font_size_px, 13);
+        assert!(!settings.plan_hotspot_estimates_enabled);
         assert_eq!(settings.history_retention_days, 90);
         assert_eq!(settings.operational_log_max_bytes, 5 * 1024 * 1024);
         assert_eq!(settings.operational_log_retention_days, 7);
@@ -165,7 +168,7 @@ mod tests {
     }
 
     #[test]
-    fn released_settings_gain_table_typography_defaults_on_load() {
+    fn released_settings_gain_table_typography_and_hotspot_defaults_on_load() {
         let released = serde_json::json!({
             "theme": "system",
             "ui_scale_percent": 100,
@@ -187,6 +190,7 @@ mod tests {
 
         assert_eq!(settings.table_font_family, TableFontPreference::Monospace);
         assert_eq!(settings.table_font_size_px, 13);
+        assert!(!settings.plan_hotspot_estimates_enabled);
         settings.validate().unwrap();
     }
 }

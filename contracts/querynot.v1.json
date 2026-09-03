@@ -348,6 +348,7 @@
       "table_page_rows": "u32",
       "table_font_family": "string",
       "table_font_size_px": "u8",
+      "plan_hotspot_estimates_enabled": "bool",
       "history_enabled": "bool",
       "history_retention_days": "u16",
       "session_restoration_enabled": "bool",

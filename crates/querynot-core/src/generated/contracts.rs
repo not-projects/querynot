@@ -139,6 +139,7 @@ pub struct SettingsView {
     pub table_page_rows: u32,
     pub table_font_family: String,
     pub table_font_size_px: u8,
+    pub plan_hotspot_estimates_enabled: bool,
     pub history_enabled: bool,
     pub history_retention_days: u16,
     pub session_restoration_enabled: bool,

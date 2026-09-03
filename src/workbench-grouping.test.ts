@@ -81,6 +81,7 @@ function defaultSettings() {
     table_page_rows: 200,
     table_font_family: 'monospace',
     table_font_size_px: 13,
+    plan_hotspot_estimates_enabled: false,
     history_enabled: true,
     history_retention_days: 90,
     session_restoration_enabled: true,

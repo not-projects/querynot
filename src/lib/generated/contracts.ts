@@ -122,6 +122,7 @@ export interface SettingsView {
   table_page_rows: number;
   table_font_family: string;
   table_font_size_px: number;
+  plan_hotspot_estimates_enabled: boolean;
   history_enabled: boolean;
   history_retention_days: number;
   session_restoration_enabled: boolean;

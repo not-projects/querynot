@@ -45,6 +45,10 @@ The existing five-server feasibility and conformance harness remains MySQL/Maria
 
 The live QueryNot 0.1.15 release exposes estimated Explain through one capability-driven adapter contract. SQLite uses `EXPLAIN QUERY PLAN`; the five MySQL/MariaDB lines use `EXPLAIN FORMAT=JSON`; PostgreSQL uses `EXPLAIN (FORMAT JSON)` only inside the development preview. The passing candidate's five-server harness checked real scan and indexed JSON plans and verified that explaining a data-changing statement does not mutate fixture data. This release does not add PostgreSQL to the live support matrix; its dedicated PostgreSQL conformance row remains pending.
 
+## Graph-first Explain in the 0.1.16 candidate source
+
+Current `master` is prepared as QueryNot 0.1.16 and extends normalized Explain plans with a dependency-free Graph through 250 nodes, complete Tree and Raw fallbacks, and off-by-default local hotspot estimates derived from sufficiently covered planner cost or row values. The graph, selection, zoom, inspector state, and rankings remain on-device and ephemeral. Relative bands use textual neutral-to-amber emphasis without query-quality scoring, tuning advice, runtime analysis, or elapsed-time prediction. Candidate CI is the authoritative exact-commit gate; this source-level extension does not rewrite the retained 0.1.15 release evidence or add PostgreSQL to the live support matrix.
+
 The retained Phase 4 reports cover the full Phase 3 contract plus deterministic keyset paging, labelled read-only fallbacks in the local planner, bound hostile structured filters, typed validation, insert/update/delete, generated-value refresh, optimistic conflicts, and atomic rollback. Positive system-trust validation against a publicly trusted target and native Windows trust-store behavior remain post-release owner observations; fixture automation intentionally never contacts a non-fixture database.
 
 ## Current live signed 0.1.15 release

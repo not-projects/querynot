@@ -2,7 +2,7 @@
   "schema_version": 1,
   "source": "docs/product-requirements.md",
   "source_commit": "9c5b5948cacccfe80a80dfe6720e5f95903e3d64",
-  "source_sha256": "d79728647a409f1f623f8c6a2620179bc0a0a5b19f2abe17bffb16b9b3d17bc1",
+  "source_sha256": "f543f8545c4cecfd94e96f20bb138af256d9db231261f8a5a0e505e00bf2779d",
   "conventions": {
     "statuses": [
       "planned",
@@ -34,6 +34,9 @@
         "AUTO-EXPLAIN-RAW-BOUNDARY",
         "AUTO-EXPLAIN-HISTORY-COMPATIBILITY",
         "AUTO-EXPLAIN-UI-LAYOUT",
+        "AUTO-EXPLAIN-GRAPH-LAYOUT",
+        "AUTO-EXPLAIN-HOTSPOT-ESTIMATES",
+        "AUTO-EXPLAIN-INFO-SETTINGS",
         "AUTO-EXPLAIN-CONFORMANCE"
       ],
       "supported_matrix_entries": [

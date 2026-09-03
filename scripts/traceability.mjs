@@ -392,6 +392,9 @@ function buildMatrix() {
           'AUTO-EXPLAIN-RAW-BOUNDARY',
           'AUTO-EXPLAIN-HISTORY-COMPATIBILITY',
           'AUTO-EXPLAIN-UI-LAYOUT',
+          'AUTO-EXPLAIN-GRAPH-LAYOUT',
+          'AUTO-EXPLAIN-HOTSPOT-ESTIMATES',
+          'AUTO-EXPLAIN-INFO-SETTINGS',
           'AUTO-EXPLAIN-CONFORMANCE'
         ],
         supported_matrix_entries: [

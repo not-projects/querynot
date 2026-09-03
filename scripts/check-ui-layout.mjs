@@ -173,6 +173,41 @@ const compactMultipleResultsScreenshotPath = resolve(
   'artifacts',
   'ui-layout-results-multiple-720.png'
 );
+const explainGraphScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-graph.png'
+);
+const explainGraphCompactScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-graph-720.png'
+);
+const explainHotspotScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-hotspots.png'
+);
+const explainInfoScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-info.png'
+);
+const compactExplainInfoScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-info-720.png'
+);
+const highScaleExplainInfoScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-explain-info-150.png'
+);
+const hotspotSettingsScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-settings-hotspots.png'
+);
 const explainTreeScreenshotPath = resolve(
   root,
   'artifacts',
@@ -1048,6 +1083,14 @@ try {
   const workbenchPage = await browser.newPage({
     viewport: { width: 1280, height: 800 },
     reducedMotion: 'reduce'
+  });
+  const workbenchConsoleErrors = [];
+  const workbenchPageErrors = [];
+  workbenchPage.on('console', (message) => {
+    if (message.type() === 'error') workbenchConsoleErrors.push(message.text());
+  });
+  workbenchPage.on('pageerror', (error) => {
+    workbenchPageErrors.push(error.message);
   });
   await workbenchPage
     .context()
@@ -3400,6 +3443,137 @@ try {
     compact: compactMultipleResults
   };
 
+  const explainInfoTrigger = workbenchPage.getByRole('button', {
+    name: 'About Explain and hotspot estimates'
+  });
+  await explainInfoTrigger.click();
+  const explainInfoDialog = workbenchPage.getByRole('dialog', {
+    name: 'Explain and hotspot estimates'
+  });
+  await explainInfoDialog.waitFor();
+  const explainInfoLayout = await explainInfoDialog.evaluate((panel) => {
+    const rect = panel.getBoundingClientRect();
+    const active = document.activeElement;
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight,
+      first_action_focused:
+        active instanceof HTMLButtonElement && panel.contains(active),
+      document_scroll_width: document.documentElement.scrollWidth
+    };
+  });
+  assert(
+    explainInfoLayout.left >= 6 &&
+      explainInfoLayout.top >= 6 &&
+      explainInfoLayout.right <= explainInfoLayout.viewport_width - 6 &&
+      explainInfoLayout.bottom <= explainInfoLayout.viewport_height - 6 &&
+      explainInfoLayout.first_action_focused &&
+      explainInfoLayout.document_scroll_width <=
+        explainInfoLayout.viewport_width,
+    'Explain information popover escaped or lost focus (' +
+      JSON.stringify(explainInfoLayout) +
+      ')'
+  );
+  await workbenchPage.screenshot({ path: explainInfoScreenshotPath });
+  const explainInfoText =
+    (await explainInfoDialog.textContent())?.replace(/\s+/g, ' ') ?? '';
+  assert(
+    explainInfoText.includes('without executing the source statement') &&
+      explainInfoText.includes('cannot predict elapsed time'),
+    `Explain information omitted its execution or prediction boundary (${explainInfoText})`
+  );
+  await explainInfoDialog
+    .getByRole('button', { name: 'Open hotspot settings' })
+    .click();
+  const hotspotSetting = workbenchPage.locator(
+    '#settings-plan-hotspot-estimates'
+  );
+  await hotspotSetting.waitFor();
+  assert(
+    await hotspotSetting.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'Explain information did not focus the hotspot setting'
+  );
+  const hotspotSettingsLayout = await hotspotSetting.evaluate((element) => {
+    const row = element.closest('label');
+    const scroll = element.closest('.settings-scroll');
+    if (!row || !scroll)
+      throw new Error('Hotspot setting layout is incomplete');
+    const rowRect = row.getBoundingClientRect();
+    const scrollRect = scroll.getBoundingClientRect();
+    return {
+      focused: document.activeElement === element,
+      row_top: rowRect.top,
+      row_bottom: rowRect.bottom,
+      scroll_top: scrollRect.top,
+      scroll_bottom: scrollRect.bottom,
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth
+    };
+  });
+  assert(
+    hotspotSettingsLayout.focused &&
+      hotspotSettingsLayout.row_top >= hotspotSettingsLayout.scroll_top - 1 &&
+      hotspotSettingsLayout.row_bottom <=
+        hotspotSettingsLayout.scroll_bottom + 1 &&
+      hotspotSettingsLayout.document_scroll_width <=
+        hotspotSettingsLayout.viewport_width,
+    'focused hotspot setting is clipped (' +
+      JSON.stringify(hotspotSettingsLayout) +
+      ')'
+  );
+  await workbenchPage.screenshot({ path: hotspotSettingsScreenshotPath });
+  await hotspotSetting.check();
+  await workbenchPage.getByRole('button', { name: 'Save settings' }).click();
+  await workbenchPage
+    .locator('.settings-dialog')
+    .waitFor({ state: 'detached' });
+  assert(
+    await explainInfoTrigger.evaluate(
+      (element) => document.activeElement === element
+    ),
+    'closing hotspot Settings did not return focus to the Explain information button'
+  );
+
+  await workbenchPage.setViewportSize({ width: 720, height: 720 });
+  await explainInfoTrigger.click();
+  await explainInfoDialog.waitFor();
+  const compactExplainInfoLayout = await explainInfoDialog.evaluate((panel) => {
+    const rect = panel.getBoundingClientRect();
+    return {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight,
+      document_scroll_width: document.documentElement.scrollWidth
+    };
+  });
+  assert(
+    compactExplainInfoLayout.left >= 6 &&
+      compactExplainInfoLayout.top >= 6 &&
+      compactExplainInfoLayout.right <=
+        compactExplainInfoLayout.viewport_width - 6 &&
+      compactExplainInfoLayout.bottom <=
+        compactExplainInfoLayout.viewport_height - 6 &&
+      compactExplainInfoLayout.document_scroll_width <=
+        compactExplainInfoLayout.viewport_width,
+    'compact Explain information popover escaped the viewport (' +
+      JSON.stringify(compactExplainInfoLayout) +
+      ')'
+  );
+  await workbenchPage.screenshot({ path: compactExplainInfoScreenshotPath });
+  await explainInfoDialog
+    .getByRole('button', { name: 'Close Explain information' })
+    .click();
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+
   await workbenchContent.click();
   await workbenchContent.press('Control+a');
   await workbenchContent.press('Backspace');
@@ -3413,85 +3587,134 @@ try {
   await workbenchPage
     .getByRole('heading', { name: 'Query plan', exact: true })
     .waitFor();
-  const planTree = workbenchPage.getByRole('tree', {
+  const planGraph = workbenchPage.getByRole('tree', {
     name: 'Estimated query plan nodes'
   });
-  await planTree.getByText('armors', { exact: true }).waitFor();
-  const explainTreeState = await workbenchPage.evaluate(() => ({
-    tree_selected:
+  await planGraph.getByText('armors', { exact: true }).waitFor();
+  const explainGraphState = await workbenchPage.evaluate(() => ({
+    graph_selected:
       document
         .querySelector('.plan-tabs [role="tab"]')
         ?.getAttribute('aria-selected') === 'true',
-    node_count: document.querySelectorAll('.plan-tree [role="treeitem"]')
-      .length,
+    node_count: document.querySelectorAll('.graph-node').length,
+    edge_count: document.querySelectorAll('.graph-edges path').length,
     heading: document.querySelector('#results-heading')?.textContent?.trim(),
     result_sets: document.querySelectorAll('.result-set').length,
     fidelity_note:
       document.querySelector('.plan-notes')?.textContent?.trim() ?? '',
-    fidelity_note_height:
-      document.querySelector('.plan-notes')?.getBoundingClientRect().height ??
-      0,
+    relative_estimate:
+      document
+        .querySelector('.hotspot-summary')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim() ?? '',
     selected_tab_border: getComputedStyle(
       document.querySelector('.plan-tabs [aria-selected="true"]')
     ).borderBottomWidth,
     tab_group_border: getComputedStyle(document.querySelector('.plan-tabs'))
-      .borderTopWidth
+      .borderTopWidth,
+    zoom_toolbar_border: getComputedStyle(
+      document.querySelector('.graph-toolbar')
+    ).borderBottomWidth,
+    zoom_label_gap: (() => {
+      const label = document.querySelector('.graph-toolbar > span');
+      const controls = document.querySelector('.graph-toolbar > div');
+      if (!label || !controls) return -1;
+      return (
+        controls.getBoundingClientRect().left -
+        label.getBoundingClientRect().right
+      );
+    })(),
+    relative_estimate_ranked:
+      document
+        .querySelector('.hotspot-summary')
+        ?.classList.contains('ranked') ?? false
   }));
   assert(
-    explainTreeState.tree_selected &&
-      explainTreeState.node_count === 2 &&
-      explainTreeState.heading === 'Query plan' &&
-      explainTreeState.result_sets === 0 &&
-      explainTreeState.fidelity_note.includes(
+    explainGraphState.graph_selected &&
+      explainGraphState.node_count === 2 &&
+      explainGraphState.edge_count === 1 &&
+      explainGraphState.heading === 'Query plan' &&
+      explainGraphState.result_sets === 0 &&
+      explainGraphState.fidelity_note.includes(
         'Raw keeps the exact engine output'
       ) &&
-      explainTreeState.fidelity_note_height <= 24 &&
-      explainTreeState.selected_tab_border === '2px' &&
-      explainTreeState.tab_group_border === '0px',
-    `normalized Explain tree is incomplete (${JSON.stringify(explainTreeState)})`
+      explainGraphState.relative_estimate.includes(
+        'Relative estimate unavailable'
+      ) &&
+      explainGraphState.selected_tab_border === '2px' &&
+      explainGraphState.tab_group_border === '0px' &&
+      explainGraphState.zoom_toolbar_border === '0px' &&
+      explainGraphState.zoom_label_gap >= 8 &&
+      !explainGraphState.relative_estimate_ranked,
+    `normalized Explain graph is incomplete (${JSON.stringify(explainGraphState)})`
   );
-  const firstPlanNode = planTree.getByRole('treeitem').first();
+
+  const firstPlanNode = planGraph.getByRole('treeitem').first();
   await firstPlanNode.focus();
   await firstPlanNode.press('ArrowDown');
   assert(
-    await planTree
+    await planGraph
       .getByRole('treeitem')
       .nth(1)
       .evaluate((node) => node.matches(':focus')),
-    'Explain tree ArrowDown did not move focus to the next factual node'
+    'Explain graph ArrowDown did not move focus to the first child'
   );
+  const inspectorText =
+    (await workbenchPage.locator('.node-inspector').textContent())?.replace(
+      /\s+/g,
+      ' '
+    ) ?? '';
+  assert(
+    ['Node ID', 'Parent ID', 'Estimated rows', 'Condition', 'Detail'].every(
+      (field) => inspectorText.includes(field)
+    ) && inspectorText.includes('fraction_id=?'),
+    `Explain node inspector omitted normalized fields (${inspectorText})`
+  );
+
+  const graphTab = workbenchPage.getByRole('tab', {
+    name: 'Graph',
+    exact: true
+  });
   const treeTab = workbenchPage.getByRole('tab', {
     name: 'Tree',
     exact: true
   });
-  await treeTab.focus();
-  await treeTab.press('End');
   const rawTab = workbenchPage.getByRole('tab', { name: 'Raw', exact: true });
+  await graphTab.focus();
+  await graphTab.press('ArrowRight');
+  assert(
+    (await treeTab.getAttribute('aria-selected')) === 'true',
+    'Explain tab ArrowRight did not select Tree'
+  );
+  await workbenchPage.screenshot({ path: explainTreeScreenshotPath });
+  await treeTab.press('End');
   assert(
     (await rawTab.getAttribute('aria-selected')) === 'true',
     'Explain tab End key did not select Raw'
   );
   await rawTab.press('Home');
   assert(
-    (await treeTab.getAttribute('aria-selected')) === 'true',
-    'Explain tab Home key did not return to Tree'
+    (await graphTab.getAttribute('aria-selected')) === 'true',
+    'Explain tab Home key did not return to Graph'
   );
+
   const explainThemes = await workbenchPage.evaluate(() => {
     const shell = document.querySelector('.app-shell');
-    const node = document.querySelector('.plan-node');
-    const raw = document.querySelector('.plan-tree');
-    if (!(shell instanceof HTMLElement) || !node || !raw)
-      throw new Error('Explain theme surface is incomplete');
+    const node = document.querySelector('.graph-node');
+    const surface = document.querySelector('.plan-graph-view');
+    if (!(shell instanceof HTMLElement) || !node || !surface)
+      throw new Error('Explain graph theme surface is incomplete');
     const observations = [];
-    for (const theme of ['light', 'dark', 'forest']) {
+    for (const theme of ['system', 'light', 'dark', 'forest']) {
       shell.dataset.theme = theme;
       const nodeStyle = getComputedStyle(node);
-      const rawStyle = getComputedStyle(raw);
+      const surfaceStyle = getComputedStyle(surface);
       observations.push({
         theme,
         color: nodeStyle.color,
-        background: rawStyle.backgroundColor,
-        border: rawStyle.borderColor
+        background: nodeStyle.backgroundColor,
+        surface_background: surfaceStyle.backgroundColor,
+        border: nodeStyle.borderColor
       });
     }
     shell.dataset.theme = 'dark';
@@ -3504,10 +3727,64 @@ try {
         theme.border !== theme.background &&
         theme.color !== 'rgba(0, 0, 0, 0)'
     ),
-    `Explain surfaces do not inherit every theme (${JSON.stringify(explainThemes)})`
+    `Explain graph does not inherit every theme (${JSON.stringify(explainThemes)})`
   );
-  await workbenchPage.screenshot({ path: explainTreeScreenshotPath });
-  await workbenchPage.getByRole('tab', { name: 'Raw', exact: true }).click();
+  await workbenchPage.screenshot({ path: explainGraphScreenshotPath });
+
+  await planGraph.getByRole('treeitem').first().focus();
+  for (let step = 0; step < 5; step += 1) {
+    await workbenchPage.getByRole('button', { name: 'Zoom in' }).click();
+  }
+  assert(
+    (await workbenchPage
+      .getByRole('button', { name: 'Reset zoom' })
+      .textContent()) === '150%',
+    'Explain graph zoom did not stop at 150%'
+  );
+  await workbenchPage.setViewportSize({ width: 720, height: 720 });
+  const compactGraph = await workbenchPage.evaluate(() => {
+    const graph = document.querySelector('.graph-scroll');
+    const inspector = document.querySelector('.node-inspector');
+    const panel = document.querySelector('.plan-graph-view');
+    const toolbar = document.querySelector('.graph-toolbar');
+    const zoomLabel = document.querySelector('.graph-toolbar > span');
+    const zoomControls = document.querySelector('.graph-toolbar > div');
+    return {
+      document_scroll_width: document.documentElement.scrollWidth,
+      viewport_width: window.innerWidth,
+      graph_scroll_width: graph?.scrollWidth ?? 0,
+      graph_client_width: graph?.clientWidth ?? 0,
+      panel_right: panel?.getBoundingClientRect().right ?? 0,
+      inspector_present: Boolean(inspector),
+      inspector_display: inspector
+        ? getComputedStyle(inspector).display
+        : 'missing',
+      inspector_height: inspector?.getBoundingClientRect().height ?? 0,
+      inspector_width: inspector?.getBoundingClientRect().width ?? 0,
+      zoom_toolbar_border: toolbar
+        ? getComputedStyle(toolbar).borderBottomWidth
+        : 'missing',
+      zoom_label_gap:
+        zoomLabel && zoomControls
+          ? zoomControls.getBoundingClientRect().left -
+            zoomLabel.getBoundingClientRect().right
+          : -1
+    };
+  });
+  assert(
+    compactGraph.document_scroll_width <= compactGraph.viewport_width &&
+      compactGraph.graph_scroll_width >= compactGraph.graph_client_width &&
+      compactGraph.panel_right <= compactGraph.viewport_width + 1 &&
+      compactGraph.inspector_width > 0 &&
+      compactGraph.zoom_toolbar_border === '0px' &&
+      compactGraph.zoom_label_gap >= 8,
+    `compact Explain graph escaped its viewport (${JSON.stringify(compactGraph)})`
+  );
+  await workbenchPage.screenshot({ path: explainGraphCompactScreenshotPath });
+  await workbenchPage.getByRole('button', { name: 'Reset zoom' }).click();
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+
+  await rawTab.click();
   const rawPlan = workbenchPage.getByRole('textbox', {
     name: 'Raw estimated query plan'
   });
@@ -3553,15 +3830,292 @@ try {
     compactExplain.document_scroll_width <= compactExplain.viewport_width &&
       compactExplain.explain_visible &&
       compactExplain.raw_scroll_width >= compactExplain.raw_client_width,
-    `compact Explain layout is incomplete (${JSON.stringify(compactExplain)})`
+    `compact Explain Raw layout is incomplete (${JSON.stringify(compactExplain)})`
   );
   await workbenchPage.screenshot({ path: explainRawScreenshotPath });
   await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+
+  await workbenchContent.click();
+  await workbenchContent.press('Control+a');
+  await workbenchContent.press('Backspace');
+  await workbenchContent.pressSequentially("SELECT 'QUERYNOT_HOTSPOT_STATE';", {
+    delay: 1
+  });
+  await workbenchPage
+    .getByRole('button', { name: 'Explain', exact: true })
+    .click();
+  await workbenchPage
+    .locator('.hotspot-summary')
+    .getByText('Total cost · 3 of 3 nodes', { exact: true })
+    .waitFor();
+  const hotspotPlanGraph = workbenchPage.getByRole('tree', {
+    name: 'Estimated query plan nodes'
+  });
+  const firstHotspotChild = hotspotPlanGraph.locator('[data-plan-node-id="1"]');
+  await firstHotspotChild.focus();
+  await firstHotspotChild.press('ArrowRight');
+  assert(
+    await hotspotPlanGraph
+      .locator('[data-plan-node-id="2"]')
+      .evaluate((node) => node.matches(':focus')),
+    'Explain graph ArrowRight did not move to the adjacent sibling'
+  );
+  await hotspotPlanGraph.locator('[data-plan-node-id="0"]').focus();
+  const hotspotState = await workbenchPage.evaluate(() => {
+    const shell = document.querySelector('.app-shell');
+    const inspector = document.querySelector('.node-inspector');
+    const highest = document.querySelector('.hotspot-highest');
+    if (!(shell instanceof HTMLElement) || !inspector || !highest)
+      throw new Error('hotspot Explain state is incomplete');
+    const themes = [];
+    for (const theme of ['system', 'light', 'dark', 'forest']) {
+      shell.dataset.theme = theme;
+      const lower = getComputedStyle(
+        document.querySelector('.graph-node[data-hotspot-band="lower"]')
+      );
+      const upper = getComputedStyle(
+        document.querySelector('.graph-node[data-hotspot-band="upper"]')
+      );
+      themes.push({
+        theme,
+        lower_background: lower.backgroundColor,
+        upper_background: upper.backgroundColor,
+        upper_border: upper.borderColor
+      });
+    }
+    shell.dataset.theme = 'dark';
+    return {
+      lower_count: document.querySelectorAll(
+        '.graph-node[data-hotspot-band="lower"]'
+      ).length,
+      middle_count: document.querySelectorAll(
+        '.graph-node[data-hotspot-band="middle"]'
+      ).length,
+      upper_count: document.querySelectorAll(
+        '.graph-node[data-hotspot-band="upper"]'
+      ).length,
+      highest_text: highest.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+      inspector_text: inspector.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+      summary_ranked:
+        document
+          .querySelector('.hotspot-summary')
+          ?.classList.contains('ranked') ?? false,
+      themes
+    };
+  });
+  assert(
+    hotspotState.lower_count === 1 &&
+      hotspotState.middle_count === 1 &&
+      hotspotState.upper_count === 1 &&
+      hotspotState.highest_text.includes('Nested Loop') &&
+      hotspotState.highest_text.includes('100.25') &&
+      hotspotState.inspector_text.includes('Upper quartile') &&
+      hotspotState.inspector_text.includes('Total cost: 100.25') &&
+      hotspotState.summary_ranked &&
+      hotspotState.themes.every(
+        (theme) =>
+          theme.lower_background !== theme.upper_background &&
+          theme.upper_border !== theme.upper_background
+      ),
+    `textual or theme-safe hotspot evidence is incomplete (${JSON.stringify(hotspotState)})`
+  );
+  await workbenchPage.screenshot({ path: explainHotspotScreenshotPath });
+
+  await workbenchPage.emulateMedia({ forcedColors: 'active' });
+  await hotspotPlanGraph.locator('[data-plan-node-id="0"]').focus();
+  const hotspotForcedColors = await workbenchPage.evaluate(() => {
+    const node = document.activeElement;
+    const band = node?.querySelector('.graph-band');
+    return {
+      active: matchMedia('(forced-colors: active)').matches,
+      outline: node ? getComputedStyle(node).outlineStyle : '',
+      outline_width: node ? getComputedStyle(node).outlineWidth : '',
+      band_text: band?.textContent?.trim() ?? '',
+      band_decoration: band ? getComputedStyle(band).textDecorationLine : ''
+    };
+  });
+  assert(
+    hotspotForcedColors.active &&
+      hotspotForcedColors.outline !== 'none' &&
+      Number.parseFloat(hotspotForcedColors.outline_width) >= 2 &&
+      hotspotForcedColors.band_text === 'Upper quartile' &&
+      hotspotForcedColors.band_decoration.includes('underline'),
+    `forced-colors hotspot meaning or focus is incomplete (${JSON.stringify(hotspotForcedColors)})`
+  );
+  await workbenchPage.emulateMedia({ forcedColors: 'none' });
+
+  await workbenchPage.getByRole('button', { name: 'Settings' }).first().click();
+  await workbenchPage
+    .locator('.settings-dialog input[type="range"]')
+    .first()
+    .evaluate((element) => {
+      element.value = '150';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  await workbenchPage.getByRole('button', { name: 'Save settings' }).click();
+  await workbenchPage
+    .locator('.settings-dialog')
+    .waitFor({ state: 'detached' });
+  const highScaleGraph = await workbenchPage.evaluate(() => ({
+    transform: getComputedStyle(document.querySelector('.app-shell')).transform,
+    document_scroll_width: document.documentElement.scrollWidth,
+    viewport_width: window.innerWidth,
+    graph_right:
+      document.querySelector('.plan-graph-view')?.getBoundingClientRect()
+        .right ?? 0,
+    zoom_label_gap: (() => {
+      const label = document.querySelector('.graph-toolbar > span');
+      const controls = document.querySelector('.graph-toolbar > div');
+      if (!label || !controls) return -1;
+      return (
+        controls.getBoundingClientRect().left -
+        label.getBoundingClientRect().right
+      );
+    })()
+  }));
+  assert(
+    highScaleGraph.transform.startsWith('matrix(1.5') &&
+      highScaleGraph.document_scroll_width <= highScaleGraph.viewport_width &&
+      highScaleGraph.graph_right <= highScaleGraph.viewport_width + 1 &&
+      highScaleGraph.zoom_label_gap >= 8,
+    `150% Explain graph escaped its viewport (${JSON.stringify(highScaleGraph)})`
+  );
+  await explainInfoTrigger.click();
+  await explainInfoDialog.waitFor();
+  const highScaleExplainInfoLayout = await explainInfoDialog.evaluate(
+    (panel) => {
+      const rect = panel.getBoundingClientRect();
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        viewport_width: window.innerWidth,
+        viewport_height: window.innerHeight,
+        focused: panel.contains(document.activeElement)
+      };
+    }
+  );
+  assert(
+    highScaleExplainInfoLayout.left >= 6 &&
+      highScaleExplainInfoLayout.top >= 6 &&
+      highScaleExplainInfoLayout.right <=
+        highScaleExplainInfoLayout.viewport_width - 6 &&
+      highScaleExplainInfoLayout.bottom <=
+        highScaleExplainInfoLayout.viewport_height - 6 &&
+      highScaleExplainInfoLayout.focused,
+    '150% Explain information popover escaped or lost focus (' +
+      JSON.stringify(highScaleExplainInfoLayout) +
+      ')'
+  );
+  await workbenchPage.screenshot({ path: highScaleExplainInfoScreenshotPath });
+  await explainInfoDialog
+    .getByRole('button', { name: 'Close Explain information' })
+    .click();
+  await workbenchPage.getByRole('button', { name: 'Settings' }).first().click();
+  await workbenchPage
+    .locator('.settings-dialog input[type="range"]')
+    .first()
+    .evaluate((element) => {
+      element.value = '100';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  await workbenchPage.getByRole('button', { name: 'Save settings' }).click();
+  await workbenchPage
+    .locator('.settings-dialog')
+    .waitFor({ state: 'detached' });
+
+  await workbenchContent.click();
+  await workbenchContent.press('Control+a');
+  await workbenchContent.press('Backspace');
+  await workbenchContent.pressSequentially(
+    "SELECT 'QUERYNOT_DENSE_PLAN_STATE';",
+    { delay: 1 }
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Explain', exact: true })
+    .click();
+  await workbenchPage.getByText('251 nodes', { exact: true }).waitFor();
+  const densePlanFallback = await workbenchPage.evaluate(() => {
+    const tabs = Array.from(
+      document.querySelectorAll('.plan-tabs [role="tab"]')
+    );
+    return {
+      graph_disabled: tabs[0]?.matches(':disabled') ?? false,
+      tree_selected: tabs[1]?.getAttribute('aria-selected') === 'true',
+      fallback:
+        document
+          .querySelector('.graph-unavailable')
+          ?.textContent?.replace(/\s+/g, ' ')
+          .trim() ?? '',
+      tree_nodes: document.querySelectorAll('.plan-tree [role="treeitem"]')
+        .length
+    };
+  });
+  assert(
+    densePlanFallback.graph_disabled &&
+      densePlanFallback.tree_selected &&
+      densePlanFallback.tree_nodes === 251 &&
+      densePlanFallback.fallback.includes(
+        'Tree and Raw retain the complete plan'
+      ),
+    `dense Explain did not fall back completely (${JSON.stringify(densePlanFallback)})`
+  );
+
+  await workbenchContent.click();
+  await workbenchContent.press('Control+a');
+  await workbenchContent.press('Backspace');
+  await workbenchContent.pressSequentially(
+    "SELECT 'QUERYNOT_RAW_ONLY_STATE';",
+    { delay: 1 }
+  );
+  await workbenchPage
+    .getByRole('button', { name: 'Explain', exact: true })
+    .click();
+  await workbenchPage
+    .getByRole('textbox', { name: 'Raw estimated query plan' })
+    .waitFor();
+  const rawOnlyFallback = await workbenchPage.evaluate(() => {
+    const tabs = Array.from(
+      document.querySelectorAll('.plan-tabs [role="tab"]')
+    );
+    return {
+      graph_disabled: tabs[0]?.matches(':disabled') ?? false,
+      tree_disabled: tabs[1]?.matches(':disabled') ?? false,
+      raw_selected: tabs[2]?.getAttribute('aria-selected') === 'true'
+    };
+  });
+  assert(
+    rawOnlyFallback.graph_disabled &&
+      rawOnlyFallback.tree_disabled &&
+      rawOnlyFallback.raw_selected,
+    `raw-only Explain did not select its complete fallback (${JSON.stringify(rawOnlyFallback)})`
+  );
+
+  assert(
+    workbenchConsoleErrors.length === 0 && workbenchPageErrors.length === 0,
+    'workbench browser errors were reported (' +
+      JSON.stringify({ workbenchConsoleErrors, workbenchPageErrors }) +
+      ')'
+  );
+
   populatedWorkbench.estimated_explain = {
-    tree: explainTreeState,
+    info: {
+      wide: explainInfoLayout,
+      compact: compactExplainInfoLayout,
+      high_scale: highScaleExplainInfoLayout,
+      hotspot_settings: hotspotSettingsLayout
+    },
+    graph: explainGraphState,
     themes: explainThemes,
+    compact_graph: compactGraph,
     compact_raw: compactExplain,
-    raw_copy_exact: copiedRawPlan === expectedRawPlan
+    raw_copy_exact: copiedRawPlan === expectedRawPlan,
+    hotspot: hotspotState,
+    hotspot_forced_colors: hotspotForcedColors,
+    high_scale_graph: highScaleGraph,
+    dense_fallback: densePlanFallback,
+    raw_only_fallback: rawOnlyFallback
   };
 
   await workbenchContent.click();
@@ -3893,7 +4447,9 @@ try {
       'artifacts/ui-layout-results-empty.png',
       'artifacts/ui-layout-results-multiple.png',
       'artifacts/ui-layout-results-multiple-720.png',
-      'artifacts/ui-layout-explain-tree.png',
+      'artifacts/ui-layout-explain-graph.png',
+      'artifacts/ui-layout-explain-graph-720.png',
+      'artifacts/ui-layout-explain-hotspots.png',
       'artifacts/ui-layout-explain-raw-720.png',
       'artifacts/ui-layout-workbench-720.png',
       'artifacts/ui-layout-header.png',
