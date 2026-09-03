@@ -74,17 +74,17 @@
       "id": "libncurses5",
       "kind": "runtime_package",
       "format": "deb",
-      "file": "libncurses5_6.3-2ubuntu0.2_amd64.deb",
-      "url": "https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.2_amd64.deb",
-      "sha256": "91d18fcc4165a40d27e8181eb282bcaf89c2a5e6c6dc182b37df33827407361c"
+      "file": "libncurses5_6.3-2ubuntu0.3_amd64.deb",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.3_amd64.deb",
+      "sha256": "58da01991712c6856af0658dc5e9cb533c1a6854ab950055ade185e35bc9c276"
     },
     {
       "id": "libtinfo5",
       "kind": "runtime_package",
       "format": "deb",
-      "file": "libtinfo5_6.3-2ubuntu0.2_amd64.deb",
-      "url": "https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb",
-      "sha256": "b9bb64e716a7d9de05b1b33992763142ca81bcae3a7f8ce7e29fa3c6fd32f1e8"
+      "file": "libtinfo5_6.3-2ubuntu0.3_amd64.deb",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.3_amd64.deb",
+      "sha256": "4df4288404108f1a156d014e8764a064e977e34e6d44931ab60451694c03c90d"
     }
   ]
 }
