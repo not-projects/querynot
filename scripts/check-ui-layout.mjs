@@ -209,6 +209,11 @@ const compatibilityWarningScreenshotPath = resolve(
   'artifacts',
   'ui-layout-compatibility-warning.png'
 );
+const connectingCompatibilityWarningScreenshotPath = resolve(
+  root,
+  'artifacts',
+  'ui-layout-compatibility-warning-connecting-720-200.png'
+);
 const widths = [2048, 1280, 960, 720];
 const themes = ['system', 'light', 'dark', 'forest'];
 
@@ -3706,6 +3711,87 @@ try {
   await compatibilityWarning
     .getByText(/outside this release’s fully supported matrix/)
     .waitFor();
+  await workbenchPage.setViewportSize({ width: 720, height: 800 });
+  await workbenchPage.evaluate(() => {
+    document.querySelector('.app-shell')?.style.setProperty('--ui-scale', '2');
+  });
+  const connectingCompatibilityWarningState = await workbenchPage.evaluate(
+    () => {
+      const app = document.querySelector('.app-shell');
+      const banner = document.querySelector('.compatibility-warning');
+      const copy = document.querySelector('.compatibility-warning-copy');
+      const close = document.querySelector('.compatibility-warning-close');
+      const topbar = document.querySelector('.topbar');
+      const settings = Array.from(
+        document.querySelectorAll('.topbar-actions button')
+      ).find((element) => element.textContent?.includes('Settings'));
+      const action = document.querySelector(
+        '[data-profile-id="long-profile"] .connection-action'
+      );
+      const state = document.querySelector(
+        '[data-profile-id="long-profile"] .connection-state'
+      );
+      if (
+        !app ||
+        !banner ||
+        !copy ||
+        !close ||
+        !topbar ||
+        !settings ||
+        !action ||
+        !state
+      ) {
+        throw new Error('connecting compatibility warning is incomplete');
+      }
+      return {
+        app: app.getBoundingClientRect().toJSON(),
+        banner: banner.getBoundingClientRect().toJSON(),
+        copy: copy.getBoundingClientRect().toJSON(),
+        close: close.getBoundingClientRect().toJSON(),
+        topbar: topbar.getBoundingClientRect().toJSON(),
+        settings: settings.getBoundingClientRect().toJSON(),
+        action: action.textContent?.trim() ?? '',
+        state: state.textContent?.trim() ?? '',
+        copy_scroll_width: copy.scrollWidth,
+        copy_client_width: copy.clientWidth,
+        document_scroll_width: document.documentElement.scrollWidth,
+        viewport_width: window.innerWidth
+      };
+    }
+  );
+  await workbenchPage.screenshot({
+    path: connectingCompatibilityWarningScreenshotPath
+  });
+  assert(
+    connectingCompatibilityWarningState.state === 'Connecting' &&
+      connectingCompatibilityWarningState.action === 'Cancel',
+    `compatibility warning was not captured during connection (${JSON.stringify(connectingCompatibilityWarningState)})`
+  );
+  assert(
+    connectingCompatibilityWarningState.banner.right <=
+      connectingCompatibilityWarningState.app.right + 1 &&
+      connectingCompatibilityWarningState.close.right <=
+        connectingCompatibilityWarningState.app.right + 1 &&
+      connectingCompatibilityWarningState.topbar.right <=
+        connectingCompatibilityWarningState.app.right + 1 &&
+      connectingCompatibilityWarningState.settings.right <=
+        connectingCompatibilityWarningState.app.right + 1 &&
+      connectingCompatibilityWarningState.copy_scroll_width <=
+        connectingCompatibilityWarningState.copy_client_width &&
+      connectingCompatibilityWarningState.document_scroll_width <=
+        connectingCompatibilityWarningState.viewport_width,
+    `connecting compatibility warning overflows at 200% scale (${JSON.stringify(connectingCompatibilityWarningState)})`
+  );
+  await workbenchPage.evaluate(() =>
+    window.__QUERYNOT_RELEASE_REPORTING_CONNECTION_SETUP__()
+  );
+  await workbenchPage.setViewportSize({ width: 1280, height: 800 });
+  await reportingRow
+    .getByRole('button', { name: 'Disconnect', exact: true })
+    .waitFor();
+  await workbenchPage.evaluate(() => {
+    document.querySelector('.app-shell')?.style.setProperty('--ui-scale', '1');
+  });
   const compatibilityWarningState = await compatibilityWarning.evaluate(
     (element) => ({
       heading: element.querySelector('strong')?.textContent?.trim() ?? '',
@@ -3751,6 +3837,8 @@ try {
     'dismissing the compatibility warning changed the active connection'
   );
   populatedWorkbench.compatibility_warning = compatibilityWarningState;
+  populatedWorkbench.connecting_compatibility_warning_720_200_percent =
+    connectingCompatibilityWarningState;
   await workbenchPage.close();
 
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -3813,6 +3901,7 @@ try {
       'artifacts/ui-layout-file-menu-720.png',
       'artifacts/ui-layout-forced-colors.png',
       'artifacts/ui-layout-compatibility-warning.png',
+      'artifacts/ui-layout-compatibility-warning-connecting-720-200.png',
       'artifacts/ui-layout-schema-150.png',
       'artifacts/ui-layout-history.png',
       'artifacts/ui-layout-sidebar.png',

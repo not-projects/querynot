@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Kept MySQL compatibility warnings and header controls inside the window while a connection is still opening at constrained widths and high UI scales.
+
 ## [0.1.15] - 2026-09-02
 
 ### Added

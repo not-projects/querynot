@@ -83,6 +83,12 @@ const completionWarmupGate = new Promise((resolve) => {
   releaseCompletionWarmup = resolve;
 });
 window.__QUERYNOT_RELEASE_COMPLETION_WARMUP__ = () => releaseCompletionWarmup();
+let releaseReportingConnectionSetup;
+const reportingConnectionSetupGate = new Promise((resolve) => {
+  releaseReportingConnectionSetup = resolve;
+});
+window.__QUERYNOT_RELEASE_REPORTING_CONNECTION_SETUP__ = () =>
+  releaseReportingConnectionSetup();
 
 function queryTab(id, title, profileId, profileLabel, position) {
   return {
@@ -588,6 +594,9 @@ mockIPC(
       case 'connect_profile':
         return connection(request.profile_id);
       case 'load_schema_namespaces':
+        if (request.profile_id === 'long-profile') {
+          await reportingConnectionSetupGate;
+        }
         return {
           profile_id: request.profile_id,
           namespaces: [

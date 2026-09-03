@@ -95,6 +95,7 @@ button:disabled {
   height: calc(100vh / var(--ui-scale));
   min-height: calc(100vh / var(--ui-scale));
   max-height: calc(100vh / var(--ui-scale));
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   background: var(--surface);
   transform: scale(var(--ui-scale));
@@ -188,6 +189,7 @@ footer,
 .topbar {
   grid-row: 1;
   min-height: 64px;
+  flex-wrap: wrap;
   justify-content: space-between;
   padding: 8px 18px;
   border-bottom: 1px solid var(--divider);
@@ -279,6 +281,7 @@ button:hover:not(:disabled) {
 .recovery-banner {
   grid-row: 2;
   display: flex;
+  min-width: 0;
   min-height: 42px;
   align-items: center;
   gap: 12px;
@@ -301,6 +304,11 @@ button:hover:not(:disabled) {
   align-items: baseline;
   gap: 12px;
   line-height: 1.4;
+}
+
+.compatibility-warning-copy > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .compatibility-warning-close {
