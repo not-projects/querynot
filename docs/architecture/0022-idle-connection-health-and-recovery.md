@@ -1,6 +1,6 @@
 # ADR 0022: Idle connection health and explicit recovery boundaries
 
-- Status: Implemented in the unreleased development source
+- Status: Implemented in the 0.1.17 development source
 - Date: 2026-11-06
 - Extends: ADR 0003, ADR 0004, ADR 0006, and ADR 0013
 

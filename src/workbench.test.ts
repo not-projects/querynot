@@ -150,7 +150,7 @@ describe('Phase 1 workbench', () => {
     expect(dialog?.textContent).toContain('History retention');
     expect(dialog?.textContent).toContain('Restore drafts and tabs offline');
     expect(dialog?.textContent).toContain('Signed application updates');
-    expect(dialog?.textContent).toContain('Installed version 0.1.16');
+    expect(dialog?.textContent).toContain('Installed version 0.1.17');
     expect(dialog?.textContent).toContain(
       'Update checks are available in installed desktop builds.'
     );
