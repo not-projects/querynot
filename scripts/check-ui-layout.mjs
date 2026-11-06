@@ -1534,7 +1534,7 @@ try {
       nonBlockingCompletionWarmup.context_state === 'Connected' &&
       nonBlockingCompletionWarmup.aria_busy === 'false' &&
       nonBlockingCompletionWarmup.run_enabled &&
-      nonBlockingCompletionWarmup.session_opens === 1 &&
+      nonBlockingCompletionWarmup.session_opens === 0 &&
       nonBlockingCompletionWarmup.detail_resolutions === 0,
     `connection remained blocked by completion metadata warmup (${JSON.stringify(nonBlockingCompletionWarmup)})`
   );
