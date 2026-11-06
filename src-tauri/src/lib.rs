@@ -3,6 +3,7 @@
 mod phase1;
 mod phase2;
 mod updates;
+mod window_state;
 
 use querynot_core::generated::contracts::{ApplicationStatusResponse, CONTRACT_VERSION};
 use tauri::Manager;
@@ -41,6 +42,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| {
+            window_state::on_event(window, event);
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 let state = window.state::<phase1::AppRuntimeState>();
                 state.cleanup_window();
@@ -51,6 +53,7 @@ pub fn run() {
                 app.handle().clone(),
             ))?;
             app.manage(state);
+            window_state::initialize(app.handle())?;
             let maintenance_app = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let mut interval = tokio::time::interval(std::time::Duration::from_secs(60 * 60));

@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Remember the desktop window’s normal bounds and maximized state across restarts, adjusting restored bounds to available monitor work areas.
 - Added Test connection to Add and Edit connection, using the current form values for a temporary native probe that closes without saving or connecting.
 
 ### Fixed
