@@ -92,6 +92,10 @@ describe('Phase 1 workbench', () => {
         ?.open
     ).toBe(false);
     expect(button('Save connection').disabled).toBe(false);
+    expect(button('Test connection').type).toBe('button');
+    expect(button('Test connection').disabled).toBe(false);
+    expect(button('Test connection').classList.contains('quiet')).toBe(true);
+    expect(button('Test connection').closest('.profile-footer')).not.toBeNull();
 
     const vaultChoice = dialog?.querySelector<HTMLInputElement>(
       'input[value="vault"]'
@@ -113,6 +117,7 @@ describe('Phase 1 workbench', () => {
       fileDialogText.indexOf('Profile details')
     );
     expect(button('Save connection').disabled).toBe(true);
+    expect(button('Test connection').disabled).toBe(true);
   });
 
   it('renders an accessible settings dialog with all documented local defaults', async () => {

@@ -58,6 +58,14 @@ export interface UpdateProfileRequest {
   profile: ProfileInput;
 }
 
+export interface TestDraftConnectionRequest {
+  profile_id: string | null;
+  profile: ProfileInput;
+  use_saved_credentials: boolean;
+  database_password: string;
+  client_key_passphrase: string;
+}
+
 export interface ProfileIdRequest {
   profile_id: string;
 }
@@ -789,6 +797,10 @@ export interface QueryNotCommands {
   pick_tls_client_key_file: { request: null; response: FilePickerResponse };
   test_profile_connection: {
     request: ProfileIdRequest;
+    response: ConnectionInfoView;
+  };
+  test_draft_connection: {
+    request: TestDraftConnectionRequest;
     response: ConnectionInfoView;
   };
   connect_profile: { request: ProfileIdRequest; response: ConnectionInfoView };

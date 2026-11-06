@@ -45,6 +45,19 @@ macro_rules! opaque_id {
 opaque_id!(WindowId);
 opaque_id!(ProfileId);
 opaque_id!(TabId);
+
+impl ProfileId {
+    #[must_use]
+    pub const fn nil() -> Self {
+        Self(Uuid::nil())
+    }
+
+    #[must_use]
+    pub const fn is_nil(&self) -> bool {
+        self.0.is_nil()
+    }
+}
+
 opaque_id!(NativeSessionId);
 opaque_id!(ExecutionId);
 opaque_id!(ResultSetId);
@@ -65,5 +78,15 @@ mod tests {
         let id = ProfileId::new();
         assert_eq!(ProfileId::from_str(&id.to_string()), Ok(id));
         assert!(ProfileId::from_str("../../not-an-id").is_err());
+    }
+
+    #[test]
+    fn nil_profile_id_is_stable_and_never_issued_by_new() {
+        assert_eq!(
+            ProfileId::nil().to_string(),
+            "00000000-0000-0000-0000-000000000000"
+        );
+        assert!(ProfileId::nil().is_nil());
+        assert!(!ProfileId::new().is_nil());
     }
 }

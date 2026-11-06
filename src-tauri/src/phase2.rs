@@ -1,4 +1,4 @@
-use crate::phase1::{AppRuntimeState, available_store, lock, parse_id};
+use crate::phase1::{AppRuntimeState, available_store, lock, parse_id, profile_from_input};
 use base64::Engine;
 use querynot_core::explain::{ExplainOutput, ExplainRunOutcome, target_explain_statement};
 use querynot_core::export::{ExportFormat, ExportOptions, NoExportFault, write_received_rows};
@@ -6,6 +6,7 @@ use querynot_core::generated::contracts::*;
 use querynot_core::history::{
     HistoryEntry, HistoryEntryInput, HistoryOperationKind, HistoryStatus,
 };
+use querynot_core::profile::ConnectionProfile;
 use querynot_core::result::{MAX_RETAINED_ROWS, ResultRegistry, RetainedResult};
 use querynot_core::sql::{
     SafetyReason, SqlDialect, execution_is_provably_read_only, plan_execution_for_dialect,
@@ -20,6 +21,7 @@ use querynot_core::table::{
     MutationPlan, SortDirection, TableDefinition, TableDialect, TableEditorKind, TableFilter,
     TablePage, TableSort, plan_mutations, quote_identifier,
 };
+use querynot_core::vault::ConnectionSecrets;
 use querynot_core::{AdapterSession, CompatibilityStatus};
 use querynot_core::{
     ErrorCategory, ExecutionId, MutationPlanId, NativeSessionId, ProfileId, QueryNotError,
@@ -266,6 +268,8 @@ impl Phase2Runtime {
     }
 }
 
+const MAX_DRAFT_SECRET_BYTES: usize = 16 * 1024;
+
 #[tauri::command]
 pub(crate) async fn test_profile_connection(
     state: State<'_, AppRuntimeState>,
@@ -275,9 +279,57 @@ pub(crate) async fn test_profile_connection(
     lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
     let profile = available_store(&state)?.profile(profile_id).await?;
     let secrets = state.connection_secrets(&profile).await?;
+    run_connection_test(&state, &profile, &secrets, profile_id).await
+}
+
+#[tauri::command]
+pub(crate) async fn test_draft_connection(
+    state: State<'_, AppRuntimeState>,
+    request: TestDraftConnectionRequest,
+) -> Result<ConnectionInfoView, QueryNotError> {
+    if request.database_password.len() > MAX_DRAFT_SECRET_BYTES
+        || request.client_key_passphrase.len() > MAX_DRAFT_SECRET_BYTES
+    {
+        return Err(QueryNotError::authorization(
+            "Each credential must not exceed 16,384 bytes.",
+        ));
+    }
+    let mut profile = match request.profile_id.as_deref() {
+        Some(profile_id) => {
+            let profile_id = parse_id::<ProfileId>(profile_id)?;
+            if profile_id.is_nil() {
+                return Err(QueryNotError::authorization(
+                    "Resource identifier is invalid.",
+                ));
+            }
+            lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+            let existing = available_store(&state)?.profile(profile_id).await?;
+            profile_from_input(&state, request.profile, Some(&existing), unix_time_ms())?
+        }
+        None => {
+            let mut profile = profile_from_input(&state, request.profile, None, unix_time_ms())?;
+            profile.id = ProfileId::nil();
+            profile
+        }
+    };
+    profile.automatic_reconnect = false;
+    let secrets = if request.use_saved_credentials && !profile.id.is_nil() {
+        state.connection_secrets(&profile).await?
+    } else {
+        ConnectionSecrets::new(request.database_password, request.client_key_passphrase)
+    };
+    run_connection_test(&state, &profile, &secrets, profile.id).await
+}
+
+async fn run_connection_test(
+    state: &State<'_, AppRuntimeState>,
+    profile: &ConnectionProfile,
+    secrets: &ConnectionSecrets,
+    attempt_id: ProfileId,
+) -> Result<ConnectionInfoView, QueryNotError> {
     let mut cancel = state
         .phase2
-        .begin_connection_attempt(profile_id, ConnectionAttemptKind::Test)?;
+        .begin_connection_attempt(attempt_id, ConnectionAttemptKind::Test)?;
     let result = tokio::select! {
         biased;
         changed = cancel.changed() => match changed {
@@ -286,12 +338,12 @@ pub(crate) async fn test_profile_connection(
         },
         result = tokio::time::timeout(
             Duration::from_secs(profile.connection_timeout_seconds.into()),
-            AdapterSession::test_connection(&profile, &secrets),
+            AdapterSession::test_connection(profile, secrets),
         ) => result.map_err(|_| connection_timeout_error(true)).and_then(|value| value),
     };
     state
         .phase2
-        .finish_connection_attempt(profile_id, ConnectionAttemptKind::Test);
+        .finish_connection_attempt(attempt_id, ConnectionAttemptKind::Test);
     let info = result?;
     Ok(connection_view(profile.id, &profile.name, &info))
 }
@@ -352,7 +404,15 @@ pub(crate) fn cancel_profile_connection(
     request: CancelConnectionRequest,
 ) -> Result<FileActionResponse, QueryNotError> {
     let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
-    lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    if profile_id.is_nil() {
+        if request.action != "test" {
+            return Err(QueryNotError::authorization(
+                "Resource identifier is invalid.",
+            ));
+        }
+    } else {
+        lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    }
     let kind = match request.action.as_str() {
         "test" => ConnectionAttemptKind::Test,
         "connect" => ConnectionAttemptKind::Connect,

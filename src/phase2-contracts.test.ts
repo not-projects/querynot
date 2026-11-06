@@ -34,6 +34,7 @@ describe('Phase 2 SQLite boundaries', () => {
 
     for (const command of [
       'test_profile_connection',
+      'test_draft_connection',
       'connect_profile',
       'open_tab_session',
       'load_schema_objects',
@@ -57,6 +58,16 @@ describe('Phase 2 SQLite boundaries', () => {
     expect(commands).not.toContain('read_file');
     expect(commands).not.toContain('write_file');
     expect(commands).not.toContain('execute_sql');
+    expect(read('src-tauri/src/lib.rs')).toContain(
+      'phase2::test_draft_connection'
+    );
+    const runtime = read('src-tauri/src/phase2.rs');
+    const draftTest = runtime
+      .split('pub(crate) async fn test_draft_connection')[1]
+      .split('#[tauri::command]')[0];
+    expect(draftTest).toContain('AdapterSession::test_connection');
+    expect(draftTest).not.toContain('save_profile');
+    expect(draftTest).not.toContain('vault.store');
   });
 
   it('renders unknown explain output as text-only Raw with Graph and Tree unavailable', () => {

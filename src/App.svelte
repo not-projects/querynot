@@ -109,6 +109,7 @@
 
   const COMPLETION_OBJECT_CACHE_LIMIT = 256;
   const COMPLETION_PRELOAD_CONCURRENCY = 4;
+  const DIALOG_CONNECTION_TEST_ID = '00000000-0000-0000-0000-000000000000';
 
   type TableUi = {
     page: TablePageView | null;
@@ -209,6 +210,10 @@
   let profileForm = $state<ProfileForm>(defaultProfileForm());
   let connectionSource = $state<'server' | 'file'>('server');
   let editingProfileId = $state<string | null>(null);
+  let profileTestFeedback = $state<{
+    status: 'idle' | 'testing' | 'succeeded' | 'failed';
+    message: string;
+  }>({ status: 'idle', message: '' });
   let selectedSqliteName = $state<string | null>(null);
   let selectedTlsCaName = $state<string | null>(null);
   let selectedTlsClientCertificateName = $state<string | null>(null);
@@ -1681,6 +1686,7 @@
     modal = null;
     profileForm.password = '';
     profileForm.client_key_passphrase = '';
+    profileTestFeedback = { status: 'idle', message: '' };
     resetConfirmation = false;
     clearLogConfirmation = false;
     await tick();
@@ -1751,6 +1757,7 @@
     selectedTlsCaName = null;
     selectedTlsClientCertificateName = null;
     selectedTlsClientKeyName = null;
+    profileTestFeedback = { status: 'idle', message: '' };
     void openModal('profile');
   }
 
@@ -1768,6 +1775,7 @@
     selectedTlsCaName = null;
     selectedTlsClientCertificateName = null;
     selectedTlsClientKeyName = null;
+    profileTestFeedback = { status: 'idle', message: '' };
   }
 
   function setServerKind(kind: 'mysql_family' | 'postgres') {
@@ -1804,6 +1812,7 @@
           'SQLite database';
       }
       selectedSqliteName = picked.display_name;
+      profileTestFeedback = { status: 'idle', message: '' };
       statusMessage = `${picked.display_name ?? 'Database file'} detected as SQLite. Save the profile to use it.`;
     });
   }
@@ -1817,10 +1826,7 @@
         const info = await invokeCommand('test_profile_connection', {
           profile_id: profile.id
         });
-        statusMessage = `${profile.name} test succeeded with ${info.engine} ${info.exact_version}${info.read_only ? ' in read-only mode' : ''}. The test resource was closed.`;
-        if (info.compatibility_warning) {
-          statusMessage += ` ${info.compatibility_warning}`;
-        }
+        statusMessage = connectionTestMessage(info);
       } finally {
         delete connectionOperations[profile.id];
       }
@@ -1958,7 +1964,103 @@
       client_key_passphrase: '',
       secret_mode: 'none'
     };
+    profileTestFeedback = { status: 'idle', message: '' };
     void openModal('profile');
+  }
+
+  function profileInputFromForm(): ProfileInput {
+    return {
+      name: profileForm.name,
+      kind: profileForm.kind,
+      file_grant_id: profileForm.file_grant_id,
+      tls_ca_grant_id: profileForm.tls_ca_grant_id,
+      tls_client_certificate_grant_id:
+        profileForm.tls_client_certificate_grant_id,
+      tls_client_key_grant_id: profileForm.tls_client_key_grant_id,
+      clear_tls_ca: profileForm.clear_tls_ca,
+      clear_tls_client_identity: profileForm.clear_tls_client_identity,
+      read_only: profileForm.read_only,
+      host: profileForm.host || null,
+      port: profileForm.port,
+      default_database: profileForm.default_database || null,
+      username: profileForm.username || null,
+      tls_mode: profileForm.tls_mode,
+      connection_timeout_seconds: profileForm.connection_timeout_seconds,
+      automatic_reconnect: profileForm.automatic_reconnect
+    };
+  }
+
+  function connectionTestMessage(info: ConnectionInfoView) {
+    let message = `${info.profile_name} test succeeded with ${info.engine} ${info.exact_version}${info.read_only ? ' in read-only mode' : ''}. The test resource was closed.`;
+    if (info.compatibility_warning) {
+      message += ` ${info.compatibility_warning}`;
+    }
+    return message;
+  }
+
+  function resetProfileTestFeedback() {
+    if (profileTestFeedback.status !== 'testing') {
+      profileTestFeedback = { status: 'idle', message: '' };
+    }
+  }
+
+  async function testDraftConnection() {
+    if (busy || profileTestFeedback.status === 'testing') return;
+    const form = dialogElement?.querySelector<HTMLFormElement>('.profile-form');
+    if (form && !form.reportValidity()) return;
+    if (!hasNativeRuntime()) {
+      profileTestFeedback = {
+        status: 'failed',
+        message: 'Connection testing is available in the desktop runtime.'
+      };
+      statusMessage = profileTestFeedback.message;
+      return;
+    }
+    const testProfileId = editingProfileId;
+    await runAction(async () => {
+      profileTestFeedback = {
+        status: 'testing',
+        message: 'Testing connection…'
+      };
+      if (testProfileId) connectionOperations[testProfileId] = 'test';
+      try {
+        statusMessage = `Testing ${profileForm.name || 'connection'}…`;
+        const useFormSecrets = profileForm.secret_mode !== 'none';
+        const info = await invokeCommand('test_draft_connection', {
+          profile_id: testProfileId,
+          profile: profileInputFromForm(),
+          use_saved_credentials: !useFormSecrets,
+          database_password: useFormSecrets ? profileForm.password : '',
+          client_key_passphrase: useFormSecrets
+            ? profileForm.client_key_passphrase
+            : ''
+        });
+        const message = connectionTestMessage(info);
+        profileTestFeedback = { status: 'succeeded', message };
+        statusMessage = message;
+      } catch (error) {
+        const message = safeErrorMessage(error);
+        profileTestFeedback = { status: 'failed', message };
+        throw error;
+      } finally {
+        profileForm.password = '';
+        profileForm.client_key_passphrase = '';
+        if (testProfileId) delete connectionOperations[testProfileId];
+      }
+    });
+  }
+
+  async function cancelDraftConnectionTest() {
+    if (profileTestFeedback.status !== 'testing' || !hasNativeRuntime()) return;
+    try {
+      const response = await invokeCommand('cancel_profile_connection', {
+        profile_id: editingProfileId ?? DIALOG_CONNECTION_TEST_ID,
+        action: 'test'
+      });
+      statusMessage = response.message;
+    } catch (error) {
+      statusMessage = safeErrorMessage(error);
+    }
   }
 
   async function submitProfile(event: SubmitEvent) {
@@ -1973,25 +2075,7 @@
       const password = profileForm.password;
       const clientKeyPassphrase = profileForm.client_key_passphrase;
       const secretMode = profileForm.secret_mode;
-      const request: ProfileInput = {
-        name: profileForm.name,
-        kind: profileForm.kind,
-        file_grant_id: profileForm.file_grant_id,
-        tls_ca_grant_id: profileForm.tls_ca_grant_id,
-        tls_client_certificate_grant_id:
-          profileForm.tls_client_certificate_grant_id,
-        tls_client_key_grant_id: profileForm.tls_client_key_grant_id,
-        clear_tls_ca: profileForm.clear_tls_ca,
-        clear_tls_client_identity: profileForm.clear_tls_client_identity,
-        read_only: profileForm.read_only,
-        host: profileForm.host || null,
-        port: profileForm.port,
-        default_database: profileForm.default_database || null,
-        username: profileForm.username || null,
-        tls_mode: profileForm.tls_mode,
-        connection_timeout_seconds: profileForm.connection_timeout_seconds,
-        automatic_reconnect: profileForm.automatic_reconnect
-      };
+      const request = profileInputFromForm();
       const saved = editingProfileId
         ? await invokeCommand('update_profile', {
             profile_id: editingProfileId,
@@ -5256,7 +5340,11 @@
       onkeydown={handleDialogKeydown}
     >
       {#if modal === 'profile'}
-        <form class="profile-form" onsubmit={submitProfile}>
+        <form
+          class="profile-form"
+          onsubmit={submitProfile}
+          oninput={resetProfileTestFeedback}
+        >
           <div class="modal-header profile-header">
             <div>
               <p class="eyebrow">
@@ -5274,7 +5362,7 @@
             {@render modalCloseButton()}
           </div>
 
-          <div class="profile-scroll">
+          <div class="profile-scroll" inert={busy}>
             <fieldset
               class="connection-source-choice"
               disabled={Boolean(editingProfileId)}
@@ -5742,10 +5830,37 @@
           </div>
 
           <div class="profile-footer">
-            <span>
-              {editingProfileId
-                ? 'Saving changes does not reconnect this profile.'
-                : 'Saving keeps this connection offline until you choose Connect.'}
+            <div class="profile-test">
+              {#if profileTestFeedback.status === 'testing'}
+                <button
+                  type="button"
+                  class="quiet profile-test-action"
+                  onclick={() => void cancelDraftConnectionTest()}
+                  >Cancel test</button
+                >
+              {:else}
+                <button
+                  type="button"
+                  class="quiet profile-test-action"
+                  disabled={busy ||
+                    (!editingProfileId &&
+                      connectionSource === 'file' &&
+                      !profileForm.file_grant_id)}
+                  onclick={() => void testDraftConnection()}
+                  >Test connection</button
+                >
+              {/if}
+            </div>
+            <span
+              class="profile-test-status"
+              data-state={profileTestFeedback.status}
+              aria-live="polite"
+            >
+              {profileTestFeedback.status === 'idle'
+                ? editingProfileId
+                  ? 'Saving changes does not reconnect this profile.'
+                  : 'Saving keeps this connection offline until you choose Connect.'
+                : profileTestFeedback.message}
             </span>
             <div class="modal-actions">
               <button type="button" class="quiet" onclick={closeModal}

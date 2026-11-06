@@ -52,10 +52,12 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     const connectionList = read('src/lib/components/ConnectionList.svelte');
 
     expect(contract).toContain('cancel_profile_connection');
+    expect(contract).toContain('test_draft_connection');
     expect(runtime).toContain('begin_connection_attempt');
     expect(runtime).toContain('connection_timeout_error');
     expect(runtime).toContain('partial native resources were closed');
     expect(app).toContain('connectionOperations');
+    expect(app).toContain('Cancel test');
     expect(connectionList).toContain('Testing connection');
     expect(connectionList).toContain('Connecting');
   });

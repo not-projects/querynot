@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Added Test connection to Add and Edit connection, using the current form values for a temporary native probe that closes without saving or connecting.
+
 ## [0.1.16] - 2026-09-04
 
 ### Added

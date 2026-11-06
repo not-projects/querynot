@@ -1474,6 +1474,28 @@ footer {
   font-size: 0.65rem;
 }
 
+.profile-test {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-items: center;
+}
+
+.profile-test-status {
+  min-width: 0;
+  flex: 1 1 auto;
+  line-height: 1.35;
+}
+
+.profile-test-status[data-state='testing'],
+.profile-test-status[data-state='succeeded'] {
+  color: var(--accent);
+}
+
+.profile-test-status[data-state='failed'] {
+  color: var(--warning);
+}
+
 .profile-footer .modal-actions,
 .settings-footer .modal-actions {
   flex: 0 0 auto;
@@ -2053,7 +2075,7 @@ footer > span:last-child {
     justify-self: start;
   }
 
-  .profile-footer > span {
+  .profile-test-status {
     display: none;
   }
 

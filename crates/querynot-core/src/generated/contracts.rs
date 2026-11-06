@@ -68,6 +68,15 @@ pub struct UpdateProfileRequest {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TestDraftConnectionRequest {
+    pub profile_id: Option<String>,
+    pub profile: ProfileInput,
+    pub use_saved_credentials: bool,
+    pub database_password: String,
+    pub client_key_passphrase: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ProfileIdRequest {
     pub profile_id: String,
 }

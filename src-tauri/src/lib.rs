@@ -109,6 +109,7 @@ pub fn run() {
             phase1::delete_history_entry,
             phase1::clear_history,
             phase2::test_profile_connection,
+            phase2::test_draft_connection,
             phase2::connect_profile,
             phase2::cancel_profile_connection,
             phase2::disconnect_profile,

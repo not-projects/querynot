@@ -1157,7 +1157,7 @@ pub(crate) async fn clear_history(
     })
 }
 
-fn profile_from_input(
+pub(crate) fn profile_from_input(
     state: &AppRuntimeState,
     input: ProfileInput,
     existing: Option<&ConnectionProfile>,

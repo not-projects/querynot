@@ -105,6 +105,10 @@
       "request": "ProfileIdRequest",
       "response": "ConnectionInfoView"
     },
+    "test_draft_connection": {
+      "request": "TestDraftConnectionRequest",
+      "response": "ConnectionInfoView"
+    },
     "connect_profile": {
       "request": "ProfileIdRequest",
       "response": "ConnectionInfoView"
@@ -290,6 +294,13 @@
     "UpdateProfileRequest": {
       "profile_id": "string",
       "profile": "ProfileInput"
+    },
+    "TestDraftConnectionRequest": {
+      "profile_id": "string?",
+      "profile": "ProfileInput",
+      "use_saved_credentials": "bool",
+      "database_password": "string",
+      "client_key_passphrase": "string"
     },
     "ProfileIdRequest": {
       "profile_id": "string"
