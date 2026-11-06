@@ -10,6 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Added Test connection to Add and Edit connection, using the current form values for a temporary native probe that closes without saving or connecting.
 
+### Fixed
+
+- Copy a focused query-result cell with Ctrl+C on Windows/Linux or Command+C on macOS, preserving its complete canonical raw value and the existing double-click action.
+
 ## [0.1.16] - 2026-09-04
 
 ### Added
