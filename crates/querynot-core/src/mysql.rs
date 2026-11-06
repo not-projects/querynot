@@ -1774,7 +1774,16 @@ fn map_mysql_connect_error(error: sqlx::Error) -> QueryNotError {
 
 fn map_mysql_execution_error(error: sqlx::Error) -> QueryNotError {
     let category = mysql_error_category(&error);
-    let safe_detail = mysql_safe_detail(&error);
+    let mut safe_detail = mysql_safe_detail(&error);
+    if let Some(database) = error.as_database_error()
+        && matches!(
+            database.code().as_deref(),
+            Some("1052" | "1054" | "1060" | "1064" | "1109" | "1146")
+        )
+    {
+        let message = crate::error::bounded_statement_diagnostic(database.message());
+        safe_detail = Some(format!("{}\n{message}", safe_detail.unwrap_or_default()));
+    }
     let mut mapped = QueryNotError::database(
         category,
         match category {
@@ -1833,7 +1842,9 @@ fn mysql_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
         return match database.code().as_deref() {
             Some("1045") => crate::ErrorCategory::Authentication,
             Some("1044" | "1142" | "1143" | "1227") => crate::ErrorCategory::Authorization,
-            Some("1064") => crate::ErrorCategory::Syntax,
+            Some("1052" | "1054" | "1060" | "1064" | "1109" | "1146") => {
+                crate::ErrorCategory::Syntax
+            }
             Some("1062" | "1216" | "1217" | "1451" | "1452") => crate::ErrorCategory::Constraint,
             Some("1205") => crate::ErrorCategory::Timeout,
             Some("1213") => crate::ErrorCategory::Transaction,

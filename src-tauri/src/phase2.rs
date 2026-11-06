@@ -2042,7 +2042,7 @@ fn explain_terminal_event(
         statement_end: Some(target_end),
         duration_ms: Some(duration_ms),
         plan,
-        error: error.as_ref().map(|error| error.safe_message.clone()),
+        error: error.as_ref().map(QueryNotError::statement_message),
         error_category: category.map(error_category_name).map(str::to_owned),
         retryable: error.as_ref().map(|error| error.retryable),
         cancel_confirmed,
@@ -2253,7 +2253,7 @@ fn execution_event_view(event: SqliteExecutionEvent) -> ExecutionEventView {
             view.statement_end = statement_end.map(|end| end as u32);
             view.error_category = Some(error_category_name(error.category).to_owned());
             view.retryable = Some(error.retryable);
-            view.error = Some(error.safe_message);
+            view.error = Some(error.statement_message());
             view.transaction = Some(transaction_view(transaction));
         }
         SqliteExecutionEvent::Cancelled {

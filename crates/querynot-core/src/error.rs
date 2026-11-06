@@ -86,8 +86,31 @@ impl QueryNotError {
         }
     }
 
+    /// Ephemeral statement feedback only; history and diagnostics retain categories.
+    #[must_use]
+    pub fn statement_message(&self) -> String {
+        match &self.safe_detail {
+            Some(detail) => format!("{}\n{detail}", self.safe_message),
+            None => self.safe_message.clone(),
+        }
+    }
+
     #[must_use]
     pub fn cancelled(message: impl Into<String>) -> Self {
         Self::database(ErrorCategory::Cancelled, message, false)
     }
+}
+
+/// Bound query diagnostics before presenting them as plain text in the workbench.
+/// Callers must select statement-syntax/name-resolution errors, never credential,
+/// transport, or constraint messages that can contain secrets or row values.
+pub(crate) fn bounded_statement_diagnostic(message: &str) -> String {
+    let mut characters = message
+        .chars()
+        .filter(|character| !character.is_control() || matches!(character, '\n' | '\t'));
+    let mut bounded: String = characters.by_ref().take(4096).collect();
+    if characters.next().is_some() {
+        bounded.push('…');
+    }
+    bounded
 }

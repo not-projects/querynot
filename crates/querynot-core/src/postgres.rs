@@ -1770,7 +1770,22 @@ fn map_postgres_connect_error(error: sqlx::Error) -> QueryNotError {
 
 fn map_postgres_execution_error(error: sqlx::Error) -> QueryNotError {
     let category = postgres_error_category(&error);
-    let safe_detail = postgres_safe_detail(&error);
+    let mut safe_detail = postgres_safe_detail(&error);
+    if let Some(database) = error.as_database_error()
+        && matches!(
+            database.code().as_deref(),
+            Some("42601" | "42702" | "42703" | "42712" | "42P01")
+        )
+    {
+        let message = crate::error::bounded_statement_diagnostic(database.message());
+        let mut detail = format!("{}\n{message}", safe_detail.unwrap_or_default());
+        if let Some(postgres) = database.try_downcast_ref::<sqlx::postgres::PgDatabaseError>()
+            && let Some(sqlx::postgres::PgErrorPosition::Original(position)) = postgres.position()
+        {
+            detail.push_str(&format!("\nStatement character {position}."));
+        }
+        safe_detail = Some(detail);
+    }
     let mut mapped = QueryNotError::database(
         category,
         match category {
@@ -1831,7 +1846,7 @@ fn postgres_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
         return match code {
             "28P01" => crate::ErrorCategory::Authentication,
             "42501" | "3D000" => crate::ErrorCategory::Authorization,
-            "42601" => crate::ErrorCategory::Syntax,
+            "42601" | "42702" | "42703" | "42712" | "42P01" => crate::ErrorCategory::Syntax,
             "57014" => crate::ErrorCategory::Cancelled,
             "25P02" | "25000" => crate::ErrorCategory::Transaction,
             code if code.starts_with("23") => crate::ErrorCategory::Constraint,
