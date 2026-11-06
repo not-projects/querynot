@@ -68,8 +68,11 @@ CI uses fail-closed documentation, frontend, and native scopes. Frontend-only ch
 
 The current live `0.1.16` support and publication envelope is Windows 11 x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/RPM, and macOS 13-or-later Intel/Apple-silicon DMGs with signed updater payloads under ADR 0016. Version 0.1.1 established the dedicated QueryNot signed update channel under ADR 0011. Native hardware, vault, accessibility, performance, dogfood, and beta observations remain follow-up evidence and must never be represented as passed until performed.
 
+The app icon is generated from `src-tauri/icons/icon.svg`: a closed cream Q, short diagonal tail, and orange query dot on the existing dark-green Not Projects tile. Keep all platform sizes aligned with this source.
+
 ## Verified Commands
 
+- `npm run tauri -- icon src-tauri/icons/icon.svg` — regenerate platform icon assets from the canonical vector, including desktop PNG, ICO, and ICNS sizes. This command converts image assets.
 - `npm install` — install the exact frontend/Tauri CLI lockfile.
 - `npm run check` — Svelte and TypeScript diagnostics.
 - `npm run test` — frontend/policy unit tests with a repository-local temporary directory.

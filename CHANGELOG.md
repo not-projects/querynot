@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Remember the desktop window’s normal bounds and maximized state across restarts, adjusting restored bounds to available monitor work areas.
 - Added Test connection to Add and Edit connection, using the current form values for a temporary native probe that closes without saving or connecting.
 
+### Changed
+
+- Refine the application icon with a closed, clearer Q and a smaller query dot, preserving the original Not Projects tile and palette across platform icon assets.
+
 ### Fixed
 
 - Remove routine version notices for supported MySQL 5.7.x and PostgreSQL 18.x connections; retain actionable transport, read-only-server, and unsupported-version feedback.
