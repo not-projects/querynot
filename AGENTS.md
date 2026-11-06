@@ -76,6 +76,7 @@ Version 0.1.17 connection recovery follows [ADR 0022](docs/architecture/0022-idl
 
 ## Verified Commands
 
+- `node scripts/fetch-release-tools.mjs` — download and verify reviewed Linux AppImage helpers into a content-addressed cache, then stage their disposable Tauri work cache without running a build or executing the helpers.
 - `npm run tauri -- icon src-tauri/icons/icon.svg` — regenerate platform icon assets from the canonical vector, including desktop PNG, ICO, and ICNS sizes. This command converts image assets.
 - `npm install` — install the exact frontend/Tauri CLI lockfile.
 - `npm run check` — Svelte and TypeScript diagnostics.

@@ -47,6 +47,39 @@ describe('Phase 5 history and current release boundary', () => {
     expect(tauri.bundle.windows.nsis.installMode).toBe('currentUser');
   });
 
+  it('pins Linux plugin scripts to commits and the continuous AppImage helper to an asset identity', () => {
+    const manifest = JSON.parse(read('fixtures/release-tool-inputs.json')) as {
+      inputs: Array<{ id: string; url: string; reviewed_identity?: string }>;
+    };
+    const scripts = manifest.inputs.filter((input) =>
+      ['linuxdeploy-plugin-gtk', 'linuxdeploy-plugin-gstreamer'].includes(
+        input.id
+      )
+    );
+    expect(scripts).toHaveLength(2);
+    for (const input of scripts) {
+      const url = new URL(input.url);
+      expect(url.protocol).toBe('https:');
+      expect(url.hostname).toBe('raw.githubusercontent.com');
+      expect(url.pathname).toMatch(
+        /^\/tauri-apps\/linuxdeploy-plugin-(?:gtk|gstreamer)\/[a-f0-9]{40}\/linuxdeploy-plugin-(?:gtk|gstreamer)\.sh$/
+      );
+    }
+    const appimage = manifest.inputs.find(
+      (input) => input.id === 'linuxdeploy-plugin-appimage-x86-64'
+    );
+    expect(appimage).toBeDefined();
+    const asset = new URL(appimage!.url);
+    expect(asset.protocol).toBe('https:');
+    expect(asset.hostname).toBe('api.github.com');
+    expect(asset.pathname).toMatch(
+      /^\/repos\/linuxdeploy\/linuxdeploy-plugin-appimage\/releases\/assets\/[1-9][0-9]*$/
+    );
+    expect(appimage!.reviewed_identity).toContain(
+      `GitHub asset ${asset.pathname.split('/').at(-1)}`
+    );
+  });
+
   it('builds and combines the PostNot-aligned desktop candidate matrix only on manual dispatch', () => {
     const workflow = read('.github/workflows/release-candidate.yml');
     const candidate = workflow.split('  release-candidate-packages:')[1];
