@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- Pinned Linux packaging helpers to reviewed commit and release-asset identities, replacing a deleted AppImage helper asset after digest review while retaining strict size and SHA-256 verification.
+
 ## [0.1.17] - 2026-11-06
 
 ### Added

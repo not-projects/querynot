@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "selected_at": "2026-09-02",
+  "selected_at": "2026-11-06",
   "inputs": [
     {
       "id": "app-run-x86-64",
@@ -21,27 +21,29 @@
     },
     {
       "id": "linuxdeploy-plugin-gtk",
-      "url": "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh",
+      "url": "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/b5eb8d05b4c0ed40107fe2158c5d8527f94568ef/linuxdeploy-plugin-gtk.sh",
       "cache_name": "linuxdeploy-plugin-gtk.sh",
       "bytes": 11648,
       "sha256": "cb379f9b0733e9ad9f8bd78f8c2fa038aef2478523bb7d4c8e64ff6a1ea3501a",
-      "executable": true
+      "executable": true,
+      "reviewed_identity": "linuxdeploy-plugin-gtk commit b5eb8d05b4c0ed40107fe2158c5d8527f94568ef; retained reviewed bytes and SHA-256"
     },
     {
       "id": "linuxdeploy-plugin-gstreamer",
-      "url": "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/master/linuxdeploy-plugin-gstreamer.sh",
+      "url": "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/2a2e67491c32995a3f279ad0ecbe77abd512b42a/linuxdeploy-plugin-gstreamer.sh",
       "cache_name": "linuxdeploy-plugin-gstreamer.sh",
       "bytes": 4857,
       "sha256": "c107b49d84edbffc6ab226ed1007e0626a4f7aa2c3a36b7782bef62351d49e94",
-      "executable": true
+      "executable": true,
+      "reviewed_identity": "linuxdeploy-plugin-gstreamer commit 2a2e67491c32995a3f279ad0ecbe77abd512b42a; retained reviewed bytes and SHA-256"
     },
     {
       "id": "linuxdeploy-plugin-appimage-x86-64",
-      "url": "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage",
+      "url": "https://api.github.com/repos/linuxdeploy/linuxdeploy-plugin-appimage/releases/assets/602435573",
       "cache_name": "linuxdeploy-plugin-appimage.AppImage",
-      "bytes": 16484856,
-      "sha256": "0441769ab38009504d2678c38cd7e526955388dd30a215b4a20afaa5471652f2",
-      "reviewed_identity": "linuxdeploy-plugin-appimage continuous commit 536b068787179ea901964bd7dabc7bf61e4941c3 GitHub asset 538914683",
+      "bytes": 16488952,
+      "sha256": "49d6a17160675a6bd1781699aae6bdf7692d98552e02a3671d2183d10547842e",
+      "reviewed_identity": "linuxdeploy-plugin-appimage commit 536b068787179ea901964bd7dabc7bf61e4941c3, 2026-10-01 upstream rebuild, GitHub asset 602435573; GitHub digest and downloaded bytes verified",
       "executable": true
     }
   ]

@@ -67,6 +67,7 @@ The public package matrix is Windows x86-64 NSIS/MSI, Linux x86-64 AppImage/DEB/
 
 - If push CI fails, fix the source and push a new commit. A candidate cannot bypass it.
 - If a candidate runner or fixture mirror fails transiently, rerun the failed jobs or dispatch the candidate again for the unchanged commit. Fixture downloads retry transient transport failures and still require the pinned checksum.
+- If a release helper fails its reviewed size or SHA-256, do not retry blindly or relax verification. Compare the upstream commit/release-asset identity, pin shell plugins to commits and binaries to retained asset IDs, and submit a reviewed input-manifest change. The new source commit needs successful exact-commit CI and a fresh candidate; a retry still uses the original source manifest.
 - If publication fails after creating a complete draft, rerun the workflow with the same inputs; it reuses that exact draft. If the draft is incomplete or mismatched, inspect it and remove only that unpublished draft before retrying. Automation never overwrites it.
 - If the post-publication endpoint smoke test fails, the release may already be public. Inspect the release and updater endpoint rather than rerunning publication blindly.
 - For an incident or periodic deep audit, download all public assets once and run the retained verifier:
@@ -80,6 +81,8 @@ npm run release:verify-update-publication -- --directory artifacts/release-audit
 The deep audit requires `QUERYNOT_UPDATER_PUBLIC_KEY` because it rechecks every updater signature. It is deliberately optional: normal publication already verifies the candidate signatures locally and GitHub's server-computed digest for every uploaded asset.
 
 The public candidate and publication contract is fail closed. A missing server digest, extra asset, duplicate name, hash or byte-count mismatch, wrong tag/source, invalid signature, or stale confirmation stops publication.
+
+Candidate run [`42259355541`](https://github.com/not-projects/querynot/actions/runs/42259355541) for the `0.1.17` source `d82138fbf7291a52b12920e6bc1418c1c41581fe` stopped its Ubuntu packaging job before compilation when the moving GTK helper URL returned 14,622 bytes instead of the reviewed 11,648. Investigation also found the continuous AppImage helper had replaced deleted asset `538914683` (16,484,856 bytes) with asset `602435573` (16,488,952 bytes), rebuilt from the same upstream commit. The remediation retains the reviewed GTK/GStreamer bytes at commit URLs and selects the replacement AppImage asset only after its GitHub-reported digest matches the independently downloaded bytes. It does not establish a completed candidate or publication.
 
 The current completed signed release is `v0.1.16`: candidate run [`33817779635`](https://github.com/not-projects/querynot/actions/runs/33817779635), publication run [`33818918035`](https://github.com/not-projects/querynot/actions/runs/33818918035), source commit `c5a6cf917a00dfe4e1243fc197276f7c5aa7c212`, and release [`v0.1.16`](https://github.com/not-projects/querynot/releases/tag/v0.1.16). Routine exact-candidate, updater-signature, draft/public GitHub asset-metadata, and bounded endpoint-smoke gates passed; the optional full-package public deep audit was intentionally not run.
 
