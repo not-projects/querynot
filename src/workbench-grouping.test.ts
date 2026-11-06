@@ -508,7 +508,16 @@ describe('Connection-scoped workbench tabs', () => {
     );
 
     click('[aria-label="New query in Primary"]');
-    await waitFor(() => commandCount(commands, 'create_offline_tab') === 1);
+    await waitFor(
+      () =>
+        document
+          .querySelector('[title="Query 1"]')
+          ?.closest('button')
+          ?.getAttribute('aria-selected') === 'true' &&
+        document.querySelector('.context-selector select:not(:disabled)') !==
+          null
+    );
+    expect(commandCount(commands, 'create_offline_tab')).toBe(1);
     expect(commandCount(commands, 'open_tab_session', 'created-1')).toBe(0);
     requestQuerySession();
     await waitFor(

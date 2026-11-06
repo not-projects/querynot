@@ -216,7 +216,7 @@ describe('Phase 5 history and current release boundary', () => {
     expect(native).not.toContain('#[cfg(target_os = "windows")]');
     expect(native).not.toContain('available only in the supported Windows');
     expect(runtime).toContain('tauri_plugin_updater::Builder::new().build()');
-    expect(cargo).toContain('tauri-plugin-updater = "=2.10.1"');
+    expect(cargo).toContain('tauri-plugin-updater = "=2.14.1"');
     expect(nativeDependencies).toContain('serde_json.workspace = true');
     expect(build).toContain('QUERYNOT_UPDATER_PUBLIC_KEY');
   });

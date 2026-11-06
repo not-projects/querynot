@@ -1905,7 +1905,6 @@
       return;
     for (const profile of profiles) {
       if (
-        profile.kind !== 'sqlite' &&
         connections[profile.id] &&
         !connectionOperations[profile.id] &&
         !pendingTabForProfile(profile.id) &&

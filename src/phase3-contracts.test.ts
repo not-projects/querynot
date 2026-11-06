@@ -29,7 +29,7 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     expect(profile).toContain('&"[REDACTED]"');
   });
 
-  it('shows query-only and legacy compatibility state persistently', () => {
+  it('retains compatibility restrictions without routine supported-version notices', () => {
     const app = read('src/App.svelte');
     const mysql = read('crates/querynot-core/src/mysql.rs');
 
@@ -40,7 +40,7 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     expect(mysql).toContain(
       'mysql_version_line(exact_version) == Some((5, 7))'
     );
-    expect(mysql).toContain(
+    expect(mysql).not.toContain(
       'write-enabled under the MySQL 5.7 compatibility line'
     );
   });

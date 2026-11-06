@@ -27,6 +27,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Preserved SQL editor focus and its caret or selection when running with Ctrl+Enter or Command+Enter, while keeping the SQL read-only during execution.
 - Enabled copying a focused query-result cell with Ctrl+C on Windows/Linux or Command+C on macOS, preserving its complete canonical raw value and the existing double-click action.
 
+### Security
+
+- Updated stable Tauri and the pinned updater to replace vulnerable ZIP extraction dependencies; refreshed Rustls/WebPKI, Tokio, constant-time utilities, and yanked transitive versions.
+- Updated Vite, Vitest, and affected frontend transitives while retaining the existing npm high-severity and native dependency gates. Removed obsolete rust-unic advisory exceptions and documented only the stable Linux D-Bus stack's informational maintenance notices.
+
 ## [0.1.16] - 2026-09-04
 
 ### Added
