@@ -145,6 +145,23 @@ impl PostgresSession {
         true
     }
 
+    pub async fn ping_if_idle(&self) -> Result<bool, QueryNotError> {
+        let Ok(mut connection) = self.connection.try_lock() else {
+            return Ok(false);
+        };
+        tokio::time::timeout(Duration::from_secs(3), connection.ping())
+            .await
+            .map_err(|_| {
+                QueryNotError::database(
+                    crate::ErrorCategory::Connectivity,
+                    "PostgreSQL connection health checking timed out.",
+                    true,
+                )
+            })?
+            .map_err(map_postgres_execution_error)?;
+        Ok(true)
+    }
+
     pub async fn connection_info(
         &self,
         profile: &ConnectionProfile,
@@ -1037,15 +1054,11 @@ async fn connection_info(
     let context: Option<String> = row.try_get(3).map_err(map_postgres_execution_error)?;
     let server_read_only: bool = row.try_get(4).map_err(map_postgres_execution_error)?;
     validate_metadata(&database)?;
-    let (compatibility_status, exact_fixture) = classify_compatibility(&exact_version);
+    let (compatibility_status, _) = classify_compatibility(&exact_version);
     let mut warnings = Vec::new();
     if compatibility_status == CompatibilityStatus::QueryOnly {
         warnings.push(format!(
             "PostgreSQL {exact_version} is outside the tested PostgreSQL 18.x compatibility line; possible writes are disabled."
-        ));
-    } else if !exact_fixture {
-        warnings.push(format!(
-            "PostgreSQL {exact_version} is write-enabled under the PostgreSQL 18.x compatibility line; {EXACT_POSTGRES_FIXTURE} remains the exact conformance baseline."
         ));
     }
     if server_read_only {
@@ -1770,7 +1783,22 @@ fn map_postgres_connect_error(error: sqlx::Error) -> QueryNotError {
 
 fn map_postgres_execution_error(error: sqlx::Error) -> QueryNotError {
     let category = postgres_error_category(&error);
-    let safe_detail = postgres_safe_detail(&error);
+    let mut safe_detail = postgres_safe_detail(&error);
+    if let Some(database) = error.as_database_error()
+        && matches!(
+            database.code().as_deref(),
+            Some("42601" | "42702" | "42703" | "42712" | "42P01")
+        )
+    {
+        let message = crate::error::bounded_statement_diagnostic(database.message());
+        let mut detail = format!("{}\n{message}", safe_detail.unwrap_or_default());
+        if let Some(postgres) = database.try_downcast_ref::<sqlx::postgres::PgDatabaseError>()
+            && let Some(sqlx::postgres::PgErrorPosition::Original(position)) = postgres.position()
+        {
+            detail.push_str(&format!("\nStatement character {position}."));
+        }
+        safe_detail = Some(detail);
+    }
     let mut mapped = QueryNotError::database(
         category,
         match category {
@@ -1831,7 +1859,7 @@ fn postgres_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
         return match code {
             "28P01" => crate::ErrorCategory::Authentication,
             "42501" | "3D000" => crate::ErrorCategory::Authorization,
-            "42601" => crate::ErrorCategory::Syntax,
+            "42601" | "42702" | "42703" | "42712" | "42P01" => crate::ErrorCategory::Syntax,
             "57014" => crate::ErrorCategory::Cancelled,
             "25P02" | "25000" => crate::ErrorCategory::Transaction,
             code if code.starts_with("23") => crate::ErrorCategory::Constraint,

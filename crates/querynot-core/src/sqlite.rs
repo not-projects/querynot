@@ -1477,7 +1477,7 @@ fn map_sqlite_connect_error(error: sqlx::Error) -> QueryNotError {
 
 fn map_sqlite_execution_error(error: sqlx::Error) -> QueryNotError {
     let category = sqlite_error_category(&error);
-    QueryNotError::database(
+    let mut mapped = QueryNotError::database(
         category,
         match category {
             crate::ErrorCategory::Cancelled => {
@@ -1496,7 +1496,15 @@ fn map_sqlite_execution_error(error: sqlx::Error) -> QueryNotError {
             _ => "SQLite could not complete the operation.",
         },
         matches!(category, crate::ErrorCategory::Connectivity),
-    )
+    );
+    if category == crate::ErrorCategory::Syntax
+        && let Some(database) = error.as_database_error()
+    {
+        mapped.safe_detail = Some(crate::error::bounded_statement_diagnostic(
+            database.message(),
+        ));
+    }
+    mapped
 }
 
 fn sqlite_error_category(error: &sqlx::Error) -> crate::ErrorCategory {

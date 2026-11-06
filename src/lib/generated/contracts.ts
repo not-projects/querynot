@@ -58,6 +58,14 @@ export interface UpdateProfileRequest {
   profile: ProfileInput;
 }
 
+export interface TestDraftConnectionRequest {
+  profile_id: string | null;
+  profile: ProfileInput;
+  use_saved_credentials: boolean;
+  database_password: string;
+  client_key_passphrase: string;
+}
+
 export interface ProfileIdRequest {
   profile_id: string;
 }
@@ -728,6 +736,21 @@ export interface ExportResultResponse {
   message: string;
 }
 
+export interface ProfileHealthResponse {
+  profile_id: string;
+  connection: ConnectionInfoView | null;
+  message: string | null;
+  sessions: SessionHealthView[];
+}
+
+export interface SessionHealthView {
+  tab_id: string;
+  status: string;
+  session: SessionView | null;
+  message: string | null;
+  session_id: string;
+}
+
 export interface QueryNotCommands {
   application_status: { request: null; response: ApplicationStatusResponse };
   check_for_updates: { request: null; response: UpdateCheckResponse };
@@ -789,6 +812,10 @@ export interface QueryNotCommands {
   pick_tls_client_key_file: { request: null; response: FilePickerResponse };
   test_profile_connection: {
     request: ProfileIdRequest;
+    response: ConnectionInfoView;
+  };
+  test_draft_connection: {
+    request: TestDraftConnectionRequest;
     response: ConnectionInfoView;
   };
   connect_profile: { request: ProfileIdRequest; response: ConnectionInfoView };
@@ -894,6 +921,10 @@ export interface QueryNotCommands {
   change_tab_context: {
     request: ChangeTabContextRequest;
     response: SessionContextResponse;
+  };
+  check_profile_health: {
+    request: ProfileIdRequest;
+    response: ProfileHealthResponse;
   };
 }
 

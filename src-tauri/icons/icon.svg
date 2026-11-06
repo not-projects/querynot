@@ -1,13 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title description">
   <title id="title">QueryNot</title>
-  <desc id="description">An open cream letter Q with an orange query dot on the dark green Not Projects tile.</desc>
+  <desc id="description">A closed cream Q with a crisp diagonal tail and a small orange query dot on the dark green Not Projects tile.</desc>
   <rect x="6" y="6" width="500" height="500" rx="88" fill="#162623" stroke="#2D4B45" stroke-width="12" />
-  <path
-    d="M356 151A146 146 0 1 0 356 361"
-    stroke="#F6F0E3"
-    stroke-width="78"
-    stroke-linecap="round"
-  />
-  <path d="M297 304L397 404" stroke="#F6F0E3" stroke-width="54" stroke-linecap="square" />
-  <circle cx="252" cy="238" r="50" fill="#E47E4B" />
+  <circle cx="248" cy="240" r="144" stroke="#F6F0E3" stroke-width="64" />
+  <path d="M330 322L402 394" stroke="#F6F0E3" stroke-width="56" />
+  <circle cx="248" cy="240" r="34" fill="#E47E4B" />
 </svg>

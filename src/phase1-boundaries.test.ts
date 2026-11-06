@@ -122,6 +122,8 @@ describe('Phase 1 native boundaries', () => {
     expect(actionMenu).toContain("event.key === 'ArrowDown'");
     expect(actionMenu).toContain('data-action-menu-boundary');
     expect(connectionList).toContain('Test connection');
+    expect(app).toMatch(/class="[^"]*\bprofile-test-action\b[^"]*"/);
+    expect(app).toContain('test_draft_connection');
     expect(connectionList).toContain('Delete connection…');
     expect(connectionList).not.toContain(
       '<details class="connection-overflow">'

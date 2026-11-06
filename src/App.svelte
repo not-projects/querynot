@@ -109,6 +109,7 @@
 
   const COMPLETION_OBJECT_CACHE_LIMIT = 256;
   const COMPLETION_PRELOAD_CONCURRENCY = 4;
+  const DIALOG_CONNECTION_TEST_ID = '00000000-0000-0000-0000-000000000000';
 
   type TableUi = {
     page: TablePageView | null;
@@ -209,6 +210,10 @@
   let profileForm = $state<ProfileForm>(defaultProfileForm());
   let connectionSource = $state<'server' | 'file'>('server');
   let editingProfileId = $state<string | null>(null);
+  let profileTestFeedback = $state<{
+    status: 'idle' | 'testing' | 'succeeded' | 'failed';
+    message: string;
+  }>({ status: 'idle', message: '' });
   let selectedSqliteName = $state<string | null>(null);
   let selectedTlsCaName = $state<string | null>(null);
   let selectedTlsClientCertificateName = $state<string | null>(null);
@@ -231,6 +236,12 @@
   let connections = $state<Record<string, ConnectionInfoView>>({});
   let dismissedCompatibilityWarnings = $state<Record<string, string>>({});
   let connectionOperations = $state<Record<string, 'test' | 'connect'>>({});
+  let connectionHealthMessages = $state<Record<string, string>>({});
+  let tabRecoveryModes = $state<Record<string, 'reconnecting' | 'review'>>({});
+  const lostSessionAutomatic = new Map<string, boolean>();
+  const connectionHealthPending = new Map<string, Promise<void>>();
+  const connectionHealthRevisions = new Map<string, number>();
+  let connectionHealthEpoch = 0;
   let tabSessionOperations = $state<Record<string, boolean>>({});
   let tabSessionErrors = $state<Record<string, string>>({});
   let lastActiveTabIds = $state<Record<string, string>>({});
@@ -331,6 +342,12 @@
     activeTab?.kind === 'table_data'
       ? (tableTabViews[activeTab.id] ?? 'structure')
       : null
+  );
+  const activeConnectionRecovering = $derived(
+    Boolean(
+      (activeProfile && connectionHealthMessages[activeProfile.id]) ||
+      (activeTab && tabRecoveryModes[activeTab.id])
+    )
   );
   const activeSession = $derived(
     activeTab && (activeTab.kind === 'query' || activeTableView === 'rows')
@@ -483,7 +500,7 @@
   const tabSessionErrorVisible = $derived(
     Boolean(
       activeTab?.profile_id &&
-      !activeSession &&
+      (!activeSession || tabRecoveryModes[activeTab.id]) &&
       tabSessionErrors[activeTab.id] &&
       (activeTab.kind === 'query' || activeTableView === 'rows')
     )
@@ -1037,6 +1054,8 @@
     let unlistenExecution: UnlistenFn | undefined;
     let unlistenExplain: UnlistenFn | undefined;
     let unlistenOpenFiles: UnlistenFn | undefined;
+    const healthTimer = window.setInterval(refreshConnectionHealth, 30_000);
+    window.addEventListener('focus', refreshConnectionHealth);
     const elapsedTimer = window.setInterval(() => {
       nowMs = Date.now();
     }, 250);
@@ -1082,6 +1101,8 @@
       unlistenOpenFiles?.();
       updater.dispose();
       window.clearInterval(elapsedTimer);
+      window.clearInterval(healthTimer);
+      window.removeEventListener('focus', refreshConnectionHealth);
       if (saveTimer) clearTimeout(saveTimer);
     };
   });
@@ -1126,42 +1147,6 @@
       await requestPendingSqlFileDrain();
       void updater.checkSilently();
     });
-    for (const profile of profiles.filter(
-      (candidate) => candidate.automatic_reconnect && candidate.has_saved_secret
-    )) {
-      try {
-        const info = await invokeCommand('connect_profile', {
-          profile_id: profile.id
-        });
-        delete dismissedCompatibilityWarnings[profile.id];
-        connections[profile.id] = info;
-        await loadSchemaNamespaces(profile.id);
-        const restoredActiveTab = workspace.tabs.find(
-          (tab) =>
-            tab.id === workspace.active_tab_id && tab.profile_id === profile.id
-        );
-        if (restoredActiveTab?.kind === 'table_data') {
-          tableTabViews[restoredActiveTab.id] = 'structure';
-          await loadSchemaObjectDetailForTab(restoredActiveTab);
-          statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. The restored object tab loaded structure only; row browsing remains explicit.`;
-        } else {
-          const restoredSession = restoredActiveTab
-            ? await ensureTabSession(restoredActiveTab)
-            : null;
-          if (!restoredActiveTab || restoredSession) {
-            statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. Only its restored active tab was opened; other tabs remain lazy.`;
-          }
-        }
-        startCompletionMetadataWarmup(
-          profile.id,
-          restoredActiveTab?.kind === 'table_data'
-            ? (restoredActiveTab.table_namespace ?? info.context)
-            : (restoredActiveTab?.context_label ?? info.context)
-        );
-      } catch (error) {
-        statusMessage = `${profile.name} automatic reconnect failed safely: ${safeErrorMessage(error)}`;
-      }
-    }
   }
 
   function applyBootstrap(response: BootstrapWorkspaceResponse) {
@@ -1176,6 +1161,12 @@
       clampSidebarConnectionsPercent(
         workspace.panel_sizes.sidebar_connections_percent
       );
+    connectionHealthEpoch += 1;
+    lostSessionAutomatic.clear();
+    connectionHealthPending.clear();
+    connectionHealthRevisions.clear();
+    connectionHealthMessages = {};
+    tabRecoveryModes = {};
     connections = {};
     dismissedCompatibilityWarnings = {};
     connectionOperations = {};
@@ -1453,7 +1444,8 @@
       tab.profile_id &&
       connections[tab.profile_id] &&
       !sessions[tab.id] &&
-      (tab.kind === 'query' || tableTabViews[tab.id] === 'rows')
+      tab.kind === 'table_data' &&
+      tableTabViews[tab.id] === 'rows'
     ) {
       await ensureTabSession(tab);
     }
@@ -1488,6 +1480,11 @@
   function ensureTabSession(
     tab: WorkspaceTabView
   ): Promise<SessionView | null> {
+    if (tabRecoveryModes[tab.id]) {
+      statusMessage =
+        tabSessionErrors[tab.id] ?? 'This connection is recovering.';
+      return Promise.resolve(null);
+    }
     if (sessions[tab.id]) return Promise.resolve(sessions[tab.id]);
     const pending = tabSessionOpenPromises.get(tab.id);
     if (pending) return pending;
@@ -1555,6 +1552,13 @@
       statusMessage =
         'Connect the profile before retrying this tab’s dedicated session.';
       return;
+    }
+    if (tabRecoveryModes[tab.id] === 'reconnecting') {
+      await checkConnectionHealth(tab.profile_id);
+      if (tabRecoveryModes[tab.id] === 'reconnecting') return;
+    }
+    if (tabRecoveryModes[tab.id] === 'review') {
+      delete tabRecoveryModes[tab.id];
     }
     await ensureTabSession(tab);
   }
@@ -1681,6 +1685,7 @@
     modal = null;
     profileForm.password = '';
     profileForm.client_key_passphrase = '';
+    profileTestFeedback = { status: 'idle', message: '' };
     resetConfirmation = false;
     clearLogConfirmation = false;
     await tick();
@@ -1751,6 +1756,7 @@
     selectedTlsCaName = null;
     selectedTlsClientCertificateName = null;
     selectedTlsClientKeyName = null;
+    profileTestFeedback = { status: 'idle', message: '' };
     void openModal('profile');
   }
 
@@ -1768,6 +1774,7 @@
     selectedTlsCaName = null;
     selectedTlsClientCertificateName = null;
     selectedTlsClientKeyName = null;
+    profileTestFeedback = { status: 'idle', message: '' };
   }
 
   function setServerKind(kind: 'mysql_family' | 'postgres') {
@@ -1804,6 +1811,7 @@
           'SQLite database';
       }
       selectedSqliteName = picked.display_name;
+      profileTestFeedback = { status: 'idle', message: '' };
       statusMessage = `${picked.display_name ?? 'Database file'} detected as SQLite. Save the profile to use it.`;
     });
   }
@@ -1817,10 +1825,7 @@
         const info = await invokeCommand('test_profile_connection', {
           profile_id: profile.id
         });
-        statusMessage = `${profile.name} test succeeded with ${info.engine} ${info.exact_version}${info.read_only ? ' in read-only mode' : ''}. The test resource was closed.`;
-        if (info.compatibility_warning) {
-          statusMessage += ` ${info.compatibility_warning}`;
-        }
+        statusMessage = connectionTestMessage(info);
       } finally {
         delete connectionOperations[profile.id];
       }
@@ -1861,6 +1866,11 @@
         });
         delete dismissedCompatibilityWarnings[profile.id];
         connections[profile.id] = info;
+        connectionHealthRevisions.set(
+          profile.id,
+          (connectionHealthRevisions.get(profile.id) ?? 0) + 1
+        );
+        delete connectionHealthMessages[profile.id];
         const schema = await loadSchemaNamespaces(profile.id);
         statusMessage = `${profile.name} connected to ${info.engine} ${info.exact_version}. Metadata uses a separate native session.`;
         if (info.compatibility_warning) {
@@ -1877,8 +1887,6 @@
         if (selectedTab?.kind === 'table_data') {
           tableTabViews[selectedTab.id] = 'structure';
           await loadSchemaObjectDetailForTab(selectedTab);
-        } else if (selectedTab) {
-          await ensureTabSession(selectedTab);
         }
         startCompletionMetadataWarmup(
           profile.id,
@@ -1890,6 +1898,123 @@
         delete connectionOperations[profile.id];
       }
     });
+  }
+
+  function refreshConnectionHealth() {
+    if (!hasNativeRuntime() || !nativeBootstrapComplete || busy || modal)
+      return;
+    for (const profile of profiles) {
+      if (
+        connections[profile.id] &&
+        !connectionOperations[profile.id] &&
+        !pendingTabForProfile(profile.id) &&
+        !stagedTableTabForProfile(profile.id)
+      ) {
+        void checkConnectionHealth(profile.id);
+      }
+    }
+  }
+
+  function checkConnectionHealth(profileId: string): Promise<void> {
+    const pending = connectionHealthPending.get(profileId);
+    if (pending) return pending;
+    if (!connections[profileId] || !hasNativeRuntime())
+      return Promise.resolve();
+    const epoch = connectionHealthEpoch;
+    const revision = connectionHealthRevisions.get(profileId) ?? 0;
+    const signatures = new Map(
+      workspace.tabs
+        .filter((tab) => tab.profile_id === profileId)
+        .map((tab) => [tab.id, JSON.stringify(sessions[tab.id] ?? null)])
+    );
+    const current = () =>
+      epoch === connectionHealthEpoch &&
+      revision === (connectionHealthRevisions.get(profileId) ?? 0) &&
+      Boolean(connections[profileId]);
+    const request = (async () => {
+      try {
+        const health = await invokeCommand('check_profile_health', {
+          profile_id: profileId
+        });
+        if (!current()) return;
+        if (health.connection) {
+          const recovered = Boolean(connectionHealthMessages[profileId]);
+          connections[profileId] = health.connection;
+          delete connectionHealthMessages[profileId];
+          if (recovered && activeProfile?.id === profileId) {
+            statusMessage = 'Connection restored. SQL was not replayed.';
+          }
+        } else {
+          const message = health.message ?? 'Reconnecting automatically…';
+          if (
+            connectionHealthMessages[profileId] !== message &&
+            activeProfile?.id === profileId
+          ) {
+            statusMessage = message;
+          }
+          connectionHealthMessages[profileId] = message;
+        }
+        for (const item of health.sessions) {
+          const tab = workspace.tabs.find(
+            (tab) => tab.id === item.tab_id && tab.profile_id === profileId
+          );
+          if (
+            !tab ||
+            (sessions[tab.id] &&
+              sessions[tab.id].session_id !== item.session_id)
+          )
+            continue;
+          if (item.status === 'requires_review') {
+            lostSessionAutomatic.set(
+              tab.id,
+              sessions[tab.id]?.transaction.automatic ?? true
+            );
+            retainTableStagingAfterConnectionLoss(tab.id);
+            tabRecoveryModes[tab.id] = 'review';
+            tabSessionErrors[tab.id] =
+              item.message ?? 'Review the lost transaction, then Retry.';
+            if (workspace.active_tab_id === tab.id)
+              statusMessage = tabSessionErrors[tab.id];
+            continue;
+          }
+          if (
+            JSON.stringify(sessions[tab.id] ?? null) !==
+              signatures.get(tab.id) ||
+            (executions[tab.id] &&
+              ['queued', 'running', 'paused', 'cancelling'].includes(
+                executions[tab.id].state
+              ))
+          )
+            continue;
+          if (item.session) {
+            sessions[tab.id] = item.session;
+            if (tabRecoveryModes[tab.id] === 'reconnecting') {
+              delete tabRecoveryModes[tab.id];
+              delete tabSessionErrors[tab.id];
+            }
+            if (
+              item.status === 'reconnected' &&
+              workspace.active_tab_id === tab.id
+            ) {
+              statusMessage = 'Connection restored. SQL was not replayed.';
+            }
+          } else if (item.status === 'reconnecting') {
+            tabRecoveryModes[tab.id] = 'reconnecting';
+            tabSessionErrors[tab.id] =
+              item.message ?? 'Reconnecting automatically…';
+          }
+        }
+      } catch (error) {
+        if (current())
+          connectionHealthMessages[profileId] =
+            `Connection check failed. Retrying automatically. ${safeErrorMessage(error)}`;
+      }
+    })().finally(() => {
+      if (connectionHealthPending.get(profileId) === request)
+        connectionHealthPending.delete(profileId);
+    });
+    connectionHealthPending.set(profileId, request);
+    return request;
   }
 
   async function cancelProfileConnection(profile: ProfileView) {
@@ -1910,11 +2035,16 @@
     if (!hasNativeRuntime()) return;
     if (focusProfileSafetyBlocker(profile.id)) return;
     await runAction(async () => {
+      connectionHealthRevisions.set(
+        profile.id,
+        (connectionHealthRevisions.get(profile.id) ?? 0) + 1
+      );
       await closeProfileSessions(profile.id);
       const result = await invokeCommand('disconnect_profile', {
         profile_id: profile.id
       });
       delete connections[profile.id];
+      delete connectionHealthMessages[profile.id];
       delete dismissedCompatibilityWarnings[profile.id];
       delete schemaNamespaces[profile.id];
       delete schemaObjects[profile.id];
@@ -1923,6 +2053,8 @@
       for (const tab of workspace.tabs) {
         if (tab.profile_id === profile.id) {
           delete tabSessionErrors[tab.id];
+          delete tabRecoveryModes[tab.id];
+          lostSessionAutomatic.delete(tab.id);
         }
       }
       delete selectedSchemaObjectIds[profile.id];
@@ -1958,7 +2090,103 @@
       client_key_passphrase: '',
       secret_mode: 'none'
     };
+    profileTestFeedback = { status: 'idle', message: '' };
     void openModal('profile');
+  }
+
+  function profileInputFromForm(): ProfileInput {
+    return {
+      name: profileForm.name,
+      kind: profileForm.kind,
+      file_grant_id: profileForm.file_grant_id,
+      tls_ca_grant_id: profileForm.tls_ca_grant_id,
+      tls_client_certificate_grant_id:
+        profileForm.tls_client_certificate_grant_id,
+      tls_client_key_grant_id: profileForm.tls_client_key_grant_id,
+      clear_tls_ca: profileForm.clear_tls_ca,
+      clear_tls_client_identity: profileForm.clear_tls_client_identity,
+      read_only: profileForm.read_only,
+      host: profileForm.host || null,
+      port: profileForm.port,
+      default_database: profileForm.default_database || null,
+      username: profileForm.username || null,
+      tls_mode: profileForm.tls_mode,
+      connection_timeout_seconds: profileForm.connection_timeout_seconds,
+      automatic_reconnect: false
+    };
+  }
+
+  function connectionTestMessage(info: ConnectionInfoView) {
+    let message = `${info.profile_name} test succeeded with ${info.engine} ${info.exact_version}${info.read_only ? ' in read-only mode' : ''}. The test resource was closed.`;
+    if (info.compatibility_warning) {
+      message += ` ${info.compatibility_warning}`;
+    }
+    return message;
+  }
+
+  function resetProfileTestFeedback() {
+    if (profileTestFeedback.status !== 'testing') {
+      profileTestFeedback = { status: 'idle', message: '' };
+    }
+  }
+
+  async function testDraftConnection() {
+    if (busy || profileTestFeedback.status === 'testing') return;
+    const form = dialogElement?.querySelector<HTMLFormElement>('.profile-form');
+    if (form && !form.reportValidity()) return;
+    if (!hasNativeRuntime()) {
+      profileTestFeedback = {
+        status: 'failed',
+        message: 'Connection testing is available in the desktop runtime.'
+      };
+      statusMessage = profileTestFeedback.message;
+      return;
+    }
+    const testProfileId = editingProfileId;
+    await runAction(async () => {
+      profileTestFeedback = {
+        status: 'testing',
+        message: 'Testing connection…'
+      };
+      if (testProfileId) connectionOperations[testProfileId] = 'test';
+      try {
+        statusMessage = `Testing ${profileForm.name || 'connection'}…`;
+        const useFormSecrets = profileForm.secret_mode !== 'none';
+        const info = await invokeCommand('test_draft_connection', {
+          profile_id: testProfileId,
+          profile: profileInputFromForm(),
+          use_saved_credentials: !useFormSecrets,
+          database_password: useFormSecrets ? profileForm.password : '',
+          client_key_passphrase: useFormSecrets
+            ? profileForm.client_key_passphrase
+            : ''
+        });
+        const message = connectionTestMessage(info);
+        profileTestFeedback = { status: 'succeeded', message };
+        statusMessage = message;
+      } catch (error) {
+        const message = safeErrorMessage(error);
+        profileTestFeedback = { status: 'failed', message };
+        throw error;
+      } finally {
+        profileForm.password = '';
+        profileForm.client_key_passphrase = '';
+        if (testProfileId) delete connectionOperations[testProfileId];
+      }
+    });
+  }
+
+  async function cancelDraftConnectionTest() {
+    if (profileTestFeedback.status !== 'testing' || !hasNativeRuntime()) return;
+    try {
+      const response = await invokeCommand('cancel_profile_connection', {
+        profile_id: editingProfileId ?? DIALOG_CONNECTION_TEST_ID,
+        action: 'test'
+      });
+      statusMessage = response.message;
+    } catch (error) {
+      statusMessage = safeErrorMessage(error);
+    }
   }
 
   async function submitProfile(event: SubmitEvent) {
@@ -1973,25 +2201,7 @@
       const password = profileForm.password;
       const clientKeyPassphrase = profileForm.client_key_passphrase;
       const secretMode = profileForm.secret_mode;
-      const request: ProfileInput = {
-        name: profileForm.name,
-        kind: profileForm.kind,
-        file_grant_id: profileForm.file_grant_id,
-        tls_ca_grant_id: profileForm.tls_ca_grant_id,
-        tls_client_certificate_grant_id:
-          profileForm.tls_client_certificate_grant_id,
-        tls_client_key_grant_id: profileForm.tls_client_key_grant_id,
-        clear_tls_ca: profileForm.clear_tls_ca,
-        clear_tls_client_identity: profileForm.clear_tls_client_identity,
-        read_only: profileForm.read_only,
-        host: profileForm.host || null,
-        port: profileForm.port,
-        default_database: profileForm.default_database || null,
-        username: profileForm.username || null,
-        tls_mode: profileForm.tls_mode,
-        connection_timeout_seconds: profileForm.connection_timeout_seconds,
-        automatic_reconnect: profileForm.automatic_reconnect
-      };
+      const request = profileInputFromForm();
       const saved = editingProfileId
         ? await invokeCommand('update_profile', {
             profile_id: editingProfileId,
@@ -2199,9 +2409,7 @@
     workspace.tabs.push(tab);
     workspace.active_tab_id = tab.id;
     rememberActiveTab(tab);
-    const session =
-      profileId && connections[profileId] ? await ensureTabSession(tab) : null;
-    return { tab, session };
+    return { tab };
   }
 
   async function createOfflineTab(profileId: string | null = null) {
@@ -2211,12 +2419,13 @@
       return;
     }
     await runAction(async () => {
-      const { tab, session } = await appendNewQueryTab(profileId);
-      statusMessage = session
-        ? 'Opened a query tab with its own dedicated native database session.'
-        : profileId
-          ? 'Opened a profile-bound offline draft. Connect the profile once; its selected tabs open dedicated sessions automatically.'
-          : 'Opened an offline draft.';
+      const { tab } = await appendNewQueryTab(profileId);
+      statusMessage =
+        profileId && connections[profileId]
+          ? 'Opened a query tab on the connected profile.'
+          : profileId
+            ? 'Opened a profile-bound draft. Connect the profile to run SQL.'
+            : 'Opened an offline draft.';
       await saveWorkspaceNow();
       await tick();
       if (workspace.active_tab_id === tab.id) editorApi?.focus();
@@ -2437,13 +2646,8 @@
       workspace.tabs.push(duplicate);
       workspace.active_tab_id = duplicate.id;
       rememberActiveTab(duplicate);
-      const session = duplicate.profile_id
-        ? await ensureTabSession(duplicate)
-        : null;
-      if (session || !duplicate.profile_id) {
-        statusMessage =
-          'Duplicated the query draft and non-secret binding without sharing its file grant, native session, transaction, results, or running job.';
-      }
+      statusMessage =
+        'Duplicated the query draft without sharing its file, transaction, results, or running query.';
       await saveWorkspaceNow();
     });
   }
@@ -2826,9 +3030,10 @@
   }
 
   async function changeActiveContext(context: string) {
-    if (!activeTab || !activeSession || activeTab.kind !== 'query') return;
+    if (!activeTab || !activeConnection || activeTab.kind !== 'query') return;
     const tab = activeTab;
-    const session = activeSession;
+    const session = await ensureTabSession(tab);
+    if (!session) return;
     await runAction(async () => {
       try {
         const response = await invokeCommand('change_tab_context', {
@@ -2876,14 +3081,7 @@
         name: object.name
       };
       rememberActiveTab(tab);
-      const session = connections[profileId]
-        ? await ensureTabSession(tab)
-        : null;
-      if (session) {
-        statusMessage = `${starter.message} Opened with a dedicated session on the existing connection.`;
-      } else if (!connections[profileId]) {
-        statusMessage = starter.message;
-      }
+      statusMessage = starter.message;
       await saveWorkspaceNow();
     });
   }
@@ -2898,6 +3096,14 @@
       tab_id: tab.id
     });
     try {
+      if (lostSessionAutomatic.get(tab.id) === false) {
+        session.transaction = await invokeCommand('set_transaction_mode', {
+          profile_id: profileId,
+          tab_id: tab.id,
+          session_id: session.session_id,
+          automatic: false
+        });
+      }
       if (context && session.context !== context) {
         const changed = await invokeCommand('change_tab_context', {
           profile_id: profileId,
@@ -2909,6 +3115,7 @@
       }
       tab.context_label = session.context;
       sessions[tab.id] = session;
+      lostSessionAutomatic.delete(tab.id);
       return session;
     } catch (error) {
       await invokeCommand('close_tab_session', {
@@ -3137,16 +3344,28 @@
   }
 
   async function runEditorRequest(editorRequest: EditorRunRequest) {
-    if (!activeTab || !activeProfile || !activeSession || !hasNativeRuntime()) {
-      statusMessage =
-        'Connect this profile-bound tab before running SQL. Restored and file tabs remain offline by default.';
+    if (
+      !activeTab ||
+      !activeProfile ||
+      !activeConnection ||
+      !hasNativeRuntime()
+    ) {
+      statusMessage = 'Connect this profile before running SQL.';
       return;
     }
-    const sql = activeTab.sql;
+    if (connectionHealthMessages[activeProfile.id]) {
+      statusMessage = connectionHealthMessages[activeProfile.id];
+      return;
+    }
+    const tab = activeTab;
+    const profileId = activeProfile.id;
+    const sql = tab.sql;
+    const session = await ensureTabSession(tab);
+    if (!session) return;
     const request: StartExecutionRequest = {
-      profile_id: activeProfile.id,
-      tab_id: activeTab.id,
-      session_id: activeSession.session_id,
+      profile_id: profileId,
+      tab_id: tab.id,
+      session_id: session.session_id,
       sql,
       selection_start:
         editorRequest.selectionStart === null
@@ -3164,17 +3383,26 @@
   }
 
   async function explainEditorStatement() {
-    if (!activeTab || !activeProfile || !activeSession || !hasNativeRuntime()) {
+    if (
+      !activeTab ||
+      !activeProfile ||
+      !activeConnection ||
+      !hasNativeRuntime()
+    ) {
       statusMessage =
-        'Connect this profile-bound tab before generating an estimated plan.';
+        'Connect this profile before generating an estimated plan.';
       return;
     }
+    const tab = activeTab;
+    const profileId = activeProfile.id;
     const selection = editorApi?.selection();
-    const sql = activeTab.sql;
+    const sql = tab.sql;
+    const session = await ensureTabSession(tab);
+    if (!session) return;
     const request: StartExplainRequest = {
-      profile_id: activeProfile.id,
-      tab_id: activeTab.id,
-      session_id: activeSession.session_id,
+      profile_id: profileId,
+      tab_id: tab.id,
+      session_id: session.session_id,
       sql,
       selection_start:
         selection && selection.start !== selection.end
@@ -3607,19 +3835,18 @@
   }
 
   async function setAutomaticTransaction(automatic: boolean) {
-    if (!activeSession || !hasNativeRuntime()) return;
-    const tabId = activeSession.tab_id;
+    if (!activeTab || !activeConnection || !hasNativeRuntime()) return;
+    const session = await ensureTabSession(activeTab);
+    if (!session) return;
+    const tabId = session.tab_id;
     await runAction(async () => {
       try {
-        activeSession.transaction = await invokeCommand(
-          'set_transaction_mode',
-          {
-            profile_id: activeSession.profile_id,
-            tab_id: activeSession.tab_id,
-            session_id: activeSession.session_id,
-            automatic
-          }
-        );
+        session.transaction = await invokeCommand('set_transaction_mode', {
+          profile_id: session.profile_id,
+          tab_id: session.tab_id,
+          session_id: session.session_id,
+          automatic
+        });
       } catch (error) {
         if (safeErrorCategory(error) === 'connectivity') {
           retainTableStagingAfterConnectionLoss(tabId);
@@ -4474,6 +4701,7 @@
           offlineActive={Boolean(activeTab && !activeTab.profile_id)}
           {connections}
           {connectionOperations}
+          healthMessages={connectionHealthMessages}
           onselectprofile={(profile) => void selectProfileGroup(profile)}
           onselectoffline={() => void selectOfflineGroup()}
           onconnect={(profile) => void connectProfile(profile)}
@@ -4656,20 +4884,19 @@
       <div class="context-bar" aria-label="Active workspace context">
         <span
           class="context-state"
-          class:online={Boolean(
-            activeSession ||
-            (activeTab?.kind === 'table_data' && activeConnection)
-          )}
+          class:online={Boolean(activeConnection) &&
+            !activeConnectionRecovering}
         >
-          {activeTab?.kind === 'table_data' &&
-          activeTableView === 'structure' &&
-          activeConnection
-            ? 'Connected'
-            : activeSession
-              ? 'Connected'
+          {(activeProfile && connectionHealthMessages[activeProfile.id]) ||
+          (activeTab && tabRecoveryModes[activeTab.id] === 'reconnecting')
+            ? 'Reconnecting'
+            : activeTab && tabRecoveryModes[activeTab.id] === 'review'
+              ? 'Review transaction'
               : activeTab && tabSessionOperations[activeTab.id]
                 ? 'Opening'
-                : 'Offline'}
+                : activeConnection
+                  ? 'Connected'
+                  : 'Offline'}
         </span>
         <span>{activeTab?.profile_label ?? 'No profile'}</span>
         <span
@@ -4677,13 +4904,18 @@
             ? `${activeConnection.engine} ${activeConnection.exact_version}`
             : 'Engine unavailable'}</span
         >
-        {#if activeSession && activeTab?.kind === 'query' && activeProfile}
+        {#if activeConnection && activeTab?.kind === 'query' && activeProfile}
           <label class="context-selector">
             <span class="sr-only">Active database or schema for this tab</span>
             <select
-              value={activeSession.context}
+              value={activeSession?.context ??
+                activeTab.context_label ??
+                activeConnection.context}
               disabled={Boolean(activeExecution) ||
-                activeSession.transaction.certainty !== 'clean'}
+                Boolean(
+                  activeSession &&
+                  activeSession.transaction.certainty !== 'clean'
+                )}
               onchange={(event) =>
                 void changeActiveContext(
                   (event.currentTarget as HTMLSelectElement).value
@@ -4707,7 +4939,9 @@
             ? 'Structure metadata'
             : activeSession
               ? `${activeSession.transaction.automatic ? 'Auto-commit' : 'Manual'} · ${activeSession.transaction.certainty}`
-              : 'Transaction unavailable'}
+              : activeConnection
+                ? 'Auto-commit'
+                : 'Transaction unavailable'}
         </span>
       </div>
 
@@ -4727,7 +4961,7 @@
           onmovetab={(tab, direction) => moveTab(tab.id, direction)}
         />
 
-        {#if activeTab?.profile_id && (activeTab.kind === 'query' || activeTableView === 'rows') && !activeSession && tabSessionErrors[activeTab.id]}
+        {#if activeTab?.profile_id && (activeTab.kind === 'query' || activeTableView === 'rows') && (!activeSession || tabRecoveryModes[activeTab.id]) && tabSessionErrors[activeTab.id]}
           <div class="recovery-banner tab-session-error" role="alert">
             <strong>Tab session unavailable</strong>
             <span>{tabSessionErrors[activeTab.id]}</span>
@@ -4810,8 +5044,8 @@
                 <h2 id="editor-heading">{activeTab?.title}</h2>
               </div>
               <span class="execution-context"
-                >{activeSession
-                  ? `${activeConnection?.engine ?? 'Database'} · explicit execution only`
+                >{activeConnection
+                  ? `${activeConnection.engine} · explicit execution only`
                   : activeTab && tabSessionOperations[activeTab.id]
                     ? 'Opening dedicated session…'
                     : 'Offline · connect profile to execute'}</span
@@ -4823,15 +5057,18 @@
                 role="group"
                 aria-label="Execution controls"
               >
-                {#if activeSession}
+                {#if activeConnection}
                   <button
                     type="button"
                     class="primary primary-action"
                     title={`Run current statement (${shortcutModifier}+Enter)`}
                     aria-keyshortcuts={`${ariaShortcutModifier}+Enter`}
-                    disabled={activeExecution &&
-                      ['queued', 'running', 'paused', 'cancelling'].includes(
-                        activeExecution.state
+                    disabled={activeConnectionRecovering ||
+                      Boolean(
+                        activeExecution &&
+                        ['queued', 'running', 'paused', 'cancelling'].includes(
+                          activeExecution.state
+                        )
                       )}
                     onclick={() => {
                       const selection = editorApi?.selection();
@@ -4853,9 +5090,12 @@
                     type="button"
                     title={`Run all statements (${shortcutModifier}+Shift+Enter)`}
                     aria-keyshortcuts={`${ariaShortcutModifier}+Shift+Enter`}
-                    disabled={activeExecution &&
-                      ['queued', 'running', 'paused', 'cancelling'].includes(
-                        activeExecution.state
+                    disabled={activeConnectionRecovering ||
+                      Boolean(
+                        activeExecution &&
+                        ['queued', 'running', 'paused', 'cancelling'].includes(
+                          activeExecution.state
+                        )
                       )}
                     onclick={() => {
                       const selection = editorApi?.selection();
@@ -4872,6 +5112,7 @@
                     class="explain-action"
                     title="Generate an estimated plan for the selection or caret statement"
                     disabled={Boolean(
+                      activeConnectionRecovering ||
                       (activeExecution &&
                         ['queued', 'running', 'paused', 'cancelling'].includes(
                           activeExecution.state
@@ -4899,9 +5140,9 @@
                   <label class="transaction-mode">
                     <span>Transaction</span>
                     <select
-                      value={activeSession.transaction.automatic
-                        ? 'automatic'
-                        : 'manual'}
+                      value={activeSession?.transaction.automatic === false
+                        ? 'manual'
+                        : 'automatic'}
                       onchange={(event) =>
                         void setAutomaticTransaction(
                           (event.currentTarget as HTMLSelectElement).value ===
@@ -4912,7 +5153,7 @@
                       <option value="manual">Manual</option>
                     </select>
                   </label>
-                  {#if activeSession.transaction.certainty !== 'clean'}
+                  {#if activeSession && activeSession.transaction.certainty !== 'clean'}
                     <button
                       type="button"
                       onclick={() => void resolveTransaction('commit')}
@@ -5256,7 +5497,11 @@
       onkeydown={handleDialogKeydown}
     >
       {#if modal === 'profile'}
-        <form class="profile-form" onsubmit={submitProfile}>
+        <form
+          class="profile-form"
+          onsubmit={submitProfile}
+          oninput={resetProfileTestFeedback}
+        >
           <div class="modal-header profile-header">
             <div>
               <p class="eyebrow">
@@ -5274,7 +5519,7 @@
             {@render modalCloseButton()}
           </div>
 
-          <div class="profile-scroll">
+          <div class="profile-scroll" inert={busy}>
             <fieldset
               class="connection-source-choice"
               disabled={Boolean(editingProfileId)}
@@ -5719,33 +5964,48 @@
                       bind:value={profileForm.connection_timeout_seconds}
                     />
                   </label>
-                  {#if editingProfileHasSavedSecret}
-                    <label class="check-row profile-check-row">
-                      <input
-                        type="checkbox"
-                        bind:checked={profileForm.automatic_reconnect}
-                      />
-                      <span>
-                        <strong>Allow automatic reconnect</strong>
-                        <small>Uses the saved OS-vault credential.</small>
-                      </span>
-                    </label>
-                  {:else}
-                    <p class="profile-note">
-                      Automatic reconnect is configured later and requires a
-                      saved OS-vault credential.
-                    </p>
-                  {/if}
+                  <p class="profile-note">
+                    Connected sessions recover automatically when it is safe.
+                  </p>
                 </div>
               </section>
             {/if}
           </div>
 
           <div class="profile-footer">
-            <span>
-              {editingProfileId
-                ? 'Saving changes does not reconnect this profile.'
-                : 'Saving keeps this connection offline until you choose Connect.'}
+            <div class="profile-test">
+              {#if profileTestFeedback.status === 'testing'}
+                <button
+                  type="button"
+                  class="quiet profile-test-action"
+                  onclick={() => void cancelDraftConnectionTest()}
+                  >Cancel test</button
+                >
+              {:else}
+                <button
+                  type="button"
+                  class="quiet profile-test-action"
+                  disabled={busy ||
+                    (!editingProfileId &&
+                      connectionSource === 'file' &&
+                      !profileForm.file_grant_id)}
+                  onclick={() => void testDraftConnection()}
+                  >Test connection</button
+                >
+              {/if}
+            </div>
+            <span
+              class="profile-test-status"
+              data-state={profileTestFeedback.status}
+              aria-live="polite"
+            >
+              {profileTestFeedback.status === 'idle'
+                ? editingProfileId
+                  ? connections[editingProfileId]
+                    ? 'Disconnect this profile before saving changes. Testing does not save them.'
+                    : 'Changes apply when you next Connect.'
+                  : 'Saving keeps this connection offline until you choose Connect.'
+                : profileTestFeedback.message}
             </span>
             <div class="modal-actions">
               <button type="button" class="quiet" onclick={closeModal}

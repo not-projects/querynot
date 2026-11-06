@@ -244,6 +244,11 @@ function setupNativeWorkspace() {
             4 + created
           );
         }
+        case 'change_tab_context':
+          return {
+            context: String(request.context),
+            message: 'Context selected.'
+          };
         case 'close_tab_session':
           return {
             completed: true,
@@ -289,6 +294,15 @@ function click(selector: string) {
   const element = document.querySelector<HTMLButtonElement>(selector);
   if (!element) throw new Error(`Missing button ${selector}`);
   element.click();
+  flushSync();
+}
+
+function requestQuerySession() {
+  const selector = document.querySelector<HTMLSelectElement>(
+    '.context-selector select'
+  );
+  if (!selector) throw new Error('Missing context selector');
+  selector.dispatchEvent(new Event('change', { bubbles: true }));
   flushSync();
 }
 
@@ -374,7 +388,7 @@ describe('Connection-scoped workbench tabs', () => {
     expect(document.querySelector('[title="Offline draft"]')).toBeNull();
   });
 
-  it('shows only the selected connection group in the top strip, then lazily opens only its selected child', async () => {
+  it('shows connected query tabs without opening sessions until an explicit context action', async () => {
     const { commands } = setupNativeWorkspace();
     await renderNativeWorkbench();
 
@@ -395,6 +409,11 @@ describe('Connection-scoped workbench tabs', () => {
     expect(commandCount(commands, 'open_tab_session')).toBe(0);
 
     click('[data-profile-id="profile-1"] .connection-action');
+    await waitFor(
+      () => document.querySelector('.context-selector select') !== null
+    );
+    expect(commandCount(commands, 'open_tab_session')).toBe(0);
+    requestQuerySession();
     await waitFor(
       () => commandCount(commands, 'open_tab_session', 'query-1') === 1
     );
@@ -418,12 +437,20 @@ describe('Connection-scoped workbench tabs', () => {
     click('[data-profile-id="profile-1"] .connection-main');
     click('[data-profile-id="profile-1"] .connection-action');
     await waitFor(
+      () => document.querySelector('.context-selector select') !== null
+    );
+    expect(commandCount(commands, 'open_tab_session')).toBe(0);
+    requestQuerySession();
+    await waitFor(
       () => commandCount(commands, 'open_tab_session', 'query-1') === 1
     );
 
     tabButton('Primary query 2').click();
     tabButton('Primary query 2').click();
     flushSync();
+    expect(commandCount(commands, 'open_tab_session', 'query-2')).toBe(0);
+    requestQuerySession();
+    requestQuerySession();
     await waitFor(
       () => commandCount(commands, 'open_tab_session', 'query-2') === 1
     );
@@ -446,6 +473,8 @@ describe('Connection-scoped workbench tabs', () => {
     );
 
     tabButton('Primary query 3').click();
+    flushSync();
+    requestQuerySession();
     await waitFor(
       () =>
         document
@@ -464,16 +493,33 @@ describe('Connection-scoped workbench tabs', () => {
     ).toBe('Disconnect');
   });
 
-  it('creates a child only for an empty selected group and opens new children immediately under an established connection', async () => {
+  it('opens new connected query drafts without allocating a database session', async () => {
     const { commands } = setupNativeWorkspace();
     await renderNativeWorkbench();
     click('[data-profile-id="profile-1"] .connection-main');
     click('[data-profile-id="profile-1"] .connection-action');
     await waitFor(
+      () => document.querySelector('.context-selector select') !== null
+    );
+    expect(commandCount(commands, 'open_tab_session')).toBe(0);
+    requestQuerySession();
+    await waitFor(
       () => commandCount(commands, 'open_tab_session', 'query-1') === 1
     );
 
     click('[aria-label="New query in Primary"]');
+    await waitFor(
+      () =>
+        document
+          .querySelector('[title="Query 1"]')
+          ?.closest('button')
+          ?.getAttribute('aria-selected') === 'true' &&
+        document.querySelector('.context-selector select:not(:disabled)') !==
+          null
+    );
+    expect(commandCount(commands, 'create_offline_tab')).toBe(1);
+    expect(commandCount(commands, 'open_tab_session', 'created-1')).toBe(0);
+    requestQuerySession();
     await waitFor(
       () => commandCount(commands, 'open_tab_session', 'created-1') === 1
     );

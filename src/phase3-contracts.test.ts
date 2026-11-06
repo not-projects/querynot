@@ -29,7 +29,7 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     expect(profile).toContain('&"[REDACTED]"');
   });
 
-  it('shows query-only and legacy compatibility state persistently', () => {
+  it('retains compatibility restrictions without routine supported-version notices', () => {
     const app = read('src/App.svelte');
     const mysql = read('crates/querynot-core/src/mysql.rs');
 
@@ -40,7 +40,7 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     expect(mysql).toContain(
       'mysql_version_line(exact_version) == Some((5, 7))'
     );
-    expect(mysql).toContain(
+    expect(mysql).not.toContain(
       'write-enabled under the MySQL 5.7 compatibility line'
     );
   });
@@ -52,10 +52,12 @@ describe('Phase 3 MySQL-family adapter boundaries', () => {
     const connectionList = read('src/lib/components/ConnectionList.svelte');
 
     expect(contract).toContain('cancel_profile_connection');
+    expect(contract).toContain('test_draft_connection');
     expect(runtime).toContain('begin_connection_attempt');
     expect(runtime).toContain('connection_timeout_error');
     expect(runtime).toContain('partial native resources were closed');
     expect(app).toContain('connectionOperations');
+    expect(app).toContain('Cancel test');
     expect(connectionList).toContain('Testing connection');
     expect(connectionList).toContain('Connecting');
   });

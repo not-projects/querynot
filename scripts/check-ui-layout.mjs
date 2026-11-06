@@ -653,6 +653,7 @@ try {
         content: bounds('.profile-scroll'),
         footer: bounds('.profile-footer'),
         save: bounds('button[type="submit"]'),
+        test: bounds('.profile-test-action'),
         password_count: element.querySelectorAll('input[type="password"]')
           .length,
         client_identity_open:
@@ -683,7 +684,9 @@ try {
   assert(
     connectionServer.header.bottom <= connectionServer.content.top + 1 &&
       connectionServer.content.bottom <= connectionServer.footer.top + 1 &&
-      connectionServer.save.bottom <= connectionServer.card.bottom + 1,
+      connectionServer.save.bottom <= connectionServer.card.bottom + 1 &&
+      connectionServer.test.bottom <= connectionServer.footer.bottom + 1 &&
+      connectionServer.test.top >= connectionServer.footer.top - 1,
     'server connection header, content, and persistent actions overlap'
   );
   await connectionPage.screenshot({ path: connectionServerScreenshotPath });
@@ -746,6 +749,10 @@ try {
         element.querySelector('button[type="submit"]') instanceof
           HTMLButtonElement &&
         element.querySelector('button[type="submit"]').disabled,
+      test_disabled:
+        element.querySelector('.profile-test-action') instanceof
+          HTMLButtonElement &&
+        element.querySelector('.profile-test-action').disabled,
       content_client_width:
         element.querySelector('.profile-scroll')?.clientWidth ?? 0,
       content_scroll_width:
@@ -755,7 +762,8 @@ try {
     JSON.stringify(connectionFile.headings) ===
       JSON.stringify(['Database file', 'Profile details']) &&
       !connectionFile.text.includes('Automatic reconnect') &&
-      connectionFile.save_disabled,
+      connectionFile.save_disabled &&
+      connectionFile.test_disabled,
     `file connection exposes irrelevant or unsafe controls (${JSON.stringify(connectionFile)})`
   );
   assert(
@@ -827,6 +835,7 @@ try {
     const save = document.querySelector(
       '.profile-footer button[type="submit"]'
     );
+    const test = document.querySelector('.profile-test-action');
     const close = document.querySelector('.profile-header .icon-button');
     if (
       !(backdrop instanceof HTMLElement) ||
@@ -835,6 +844,7 @@ try {
       !(header instanceof HTMLElement) ||
       !(footer instanceof HTMLElement) ||
       !(save instanceof HTMLElement) ||
+      !(test instanceof HTMLElement) ||
       !(close instanceof HTMLElement)
     ) {
       throw new Error('high-scale connection dialog is incomplete');
@@ -844,6 +854,7 @@ try {
     const headerBounds = header.getBoundingClientRect();
     const footerBounds = footer.getBoundingClientRect();
     const saveBounds = save.getBoundingClientRect();
+    const testBounds = test.getBoundingClientRect();
     const closeBounds = close.getBoundingClientRect();
     return {
       backdrop_transform: getComputedStyle(backdrop).transform,
@@ -855,6 +866,7 @@ try {
       header_bottom: headerBounds.bottom,
       footer_top: footerBounds.top,
       save: saveBounds.toJSON(),
+      test: testBounds.toJSON(),
       close: closeBounds.toJSON(),
       viewport_height: window.innerHeight
     };
@@ -872,6 +884,8 @@ try {
         highScaleConnection.footer_top + 1 &&
       highScaleConnection.save.top >= 0 &&
       highScaleConnection.save.bottom <= highScaleConnection.viewport_height &&
+      highScaleConnection.test.top >= 0 &&
+      highScaleConnection.test.bottom <= highScaleConnection.viewport_height &&
       highScaleConnection.close.top >= 0 &&
       highScaleConnection.close.bottom <= highScaleConnection.viewport_height,
     `200% connection dialog is not fully reachable (${JSON.stringify(highScaleConnection)})`
@@ -1520,7 +1534,7 @@ try {
       nonBlockingCompletionWarmup.context_state === 'Connected' &&
       nonBlockingCompletionWarmup.aria_busy === 'false' &&
       nonBlockingCompletionWarmup.run_enabled &&
-      nonBlockingCompletionWarmup.session_opens === 1 &&
+      nonBlockingCompletionWarmup.session_opens === 0 &&
       nonBlockingCompletionWarmup.detail_resolutions === 0,
     `connection remained blocked by completion metadata warmup (${JSON.stringify(nonBlockingCompletionWarmup)})`
   );

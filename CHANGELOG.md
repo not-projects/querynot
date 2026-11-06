@@ -6,6 +6,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.17] - 2026-11-06
+
+### Added
+
+- Added background checks for idle server connections and automatic recovery of clean sessions, preserving context and transaction mode while requiring explicit review for a lost transaction.
+- Persisted the desktop window’s normal bounds and maximized state across restarts, adjusting restored bounds to available monitor work areas.
+- Added Test connection to Add and Edit connection, using the current form values for a temporary native probe that closes without saving or connecting.
+
+### Changed
+
+- Replaced the connection’s automatic-reconnect toggle with default recovery during explicitly connected sessions; saved endpoint/security edits take effect after explicit reconnect.
+- Refined the application icon with a closed, clearer Q and a smaller query dot, preserving the original Not Projects tile and palette across platform icon assets.
+
+### Fixed
+
+- Removed routine version notices for supported MySQL 5.7.x and PostgreSQL 18.x connections while retaining actionable transport, read-only-server, and unsupported-version feedback.
+- Removed connection waits when opening or switching query tabs; isolated SQL sessions now allocate only for Run, Explain, context changes, or transaction actions.
+- Included bounded database syntax and missing-object diagnostics in query and Explain failures, including the offending identifier, vendor code, and PostgreSQL statement character when provided.
+- Preserved SQL editor focus and its caret or selection when running with Ctrl+Enter or Command+Enter, while keeping the SQL read-only during execution.
+- Enabled copying a focused query-result cell with Ctrl+C on Windows/Linux or Command+C on macOS, preserving its complete canonical raw value and the existing double-click action.
+
+### Security
+
+- Updated stable Tauri and the pinned updater to replace vulnerable ZIP extraction dependencies; refreshed Rustls/WebPKI, Tokio, constant-time utilities, and yanked transitive versions.
+- Updated Vite, Vitest, and affected frontend transitives while retaining the existing npm high-severity and native dependency gates. Removed obsolete rust-unic advisory exceptions and documented only the stable Linux D-Bus stack's informational maintenance notices.
+
 ## [0.1.16] - 2026-09-04
 
 ### Added

@@ -8,6 +8,7 @@
     MIN_RESULT_COLUMN_WIDTH,
     autoResultColumnWidth
   } from '../result-grid-sizing';
+  import { primaryAriaModifier, primaryShortcutLabel } from '../platform';
   import ActionMenu, { type ActionMenuItem } from './ActionMenu.svelte';
   import FormPopover from './FormPopover.svelte';
   import Icon from './Icon.svelte';
@@ -69,6 +70,8 @@
   const rowHeight = $derived(Math.max(34, tableFontSizePx + 18));
   const overscan = 8;
   const maxCellPreview = 512;
+  const copyShortcut = `${primaryShortcutLabel()}+C`;
+  const copyAriaShortcut = `${primaryAriaModifier()}+C`;
 
   const viewIndexes = $derived.by(() => {
     const query = filterText.toLocaleLowerCase();
@@ -293,6 +296,15 @@
         tableFontSizePx,
         tableFontFamily
       )
+    );
+  }
+
+  function handleCellCopy(event: ClipboardEvent, value: TaggedValueView) {
+    if (!event.clipboardData) return;
+    event.clipboardData.setData('text/plain', canonicalText(value));
+    event.preventDefault();
+    onstatus(
+      'Copied one visible cell using QueryNot’s canonical raw representation.'
     );
   }
 
@@ -580,7 +592,9 @@
                   class:focused={focusedCell?.rowIndex === rowIndex &&
                     focusedCell.columnIndex === columnIndex}
                   class:null-value={value.value_type === 'null'}
-                  title={`${previewText(value)} · Right-click or use Open value to inspect`}
+                  title={`${previewText(value)} · ${copyShortcut} or double-click to copy · Right-click or use Open value to inspect`}
+                  aria-keyshortcuts={copyAriaShortcut}
+                  oncopy={(event) => handleCellCopy(event, value)}
                   onfocus={() => focusCell(rowIndex, columnIndex)}
                   onclick={() => focusCell(rowIndex, columnIndex)}
                   oncontextmenu={(event) =>

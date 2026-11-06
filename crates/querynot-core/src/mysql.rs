@@ -162,6 +162,23 @@ impl MySqlSession {
         true
     }
 
+    pub async fn ping_if_idle(&self) -> Result<bool, QueryNotError> {
+        let Ok(mut connection) = self.connection.try_lock() else {
+            return Ok(false);
+        };
+        tokio::time::timeout(Duration::from_secs(3), connection.ping())
+            .await
+            .map_err(|_| {
+                QueryNotError::database(
+                    crate::ErrorCategory::Connectivity,
+                    "MySQL-family connection health checking timed out.",
+                    true,
+                )
+            })?
+            .map_err(map_mysql_execution_error)?;
+        Ok(true)
+    }
+
     pub async fn connection_info(
         &self,
         profile: &ConnectionProfile,
@@ -1157,22 +1174,11 @@ async fn connection_info(
         .next()
         .unwrap_or(&reported_version)
         .to_owned();
-    let (compatibility_status, legacy, exact_fixture) =
-        classify_compatibility(product, &exact_version);
+    let (compatibility_status, legacy, _) = classify_compatibility(product, &exact_version);
     let mut warnings = Vec::new();
     if compatibility_status == CompatibilityStatus::QueryOnly {
         warnings.push(format!(
             "{product} {exact_version} is outside the tested compatibility matrix; possible writes are disabled."
-        ));
-    }
-    if compatibility_status == CompatibilityStatus::Supported && !exact_fixture {
-        warnings.push(format!(
-            "{product} {exact_version} is write-enabled under the MySQL 5.7 compatibility line; 5.7.44 remains the exact conformance fixture."
-        ));
-    }
-    if legacy {
-        warnings.push(format!(
-            "{product} {exact_version} is a legacy/EOL line and should be upgraded."
         ));
     }
     if let ConnectionTarget::MysqlFamily { tls_mode, .. } = &profile.target {
@@ -1774,7 +1780,18 @@ fn map_mysql_connect_error(error: sqlx::Error) -> QueryNotError {
 
 fn map_mysql_execution_error(error: sqlx::Error) -> QueryNotError {
     let category = mysql_error_category(&error);
-    let safe_detail = mysql_safe_detail(&error);
+    let mut safe_detail = mysql_safe_detail(&error);
+    if let Some(database) = error.as_database_error()
+        && matches!(
+            database
+                .try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                .map(|mysql| mysql.number()),
+            Some(1052 | 1054 | 1060 | 1064 | 1109 | 1146)
+        )
+    {
+        let message = crate::error::bounded_statement_diagnostic(database.message());
+        safe_detail = Some(format!("{}\n{message}", safe_detail.unwrap_or_default()));
+    }
     let mut mapped = QueryNotError::database(
         category,
         match category {
@@ -1808,11 +1825,14 @@ fn map_mysql_execution_error(error: sqlx::Error) -> QueryNotError {
 }
 
 fn mysql_safe_detail(error: &sqlx::Error) -> Option<String> {
-    if let Some(code) = error
-        .as_database_error()
-        .and_then(|database| database.code())
+    if let Some(database) = error.as_database_error()
+        && let Some(mysql) = database.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
     {
-        return Some(format!("Vendor error code: {code}."));
+        let state = database
+            .code()
+            .map(|code| format!(" (SQLSTATE {code})"))
+            .unwrap_or_default();
+        return Some(format!("MySQL error {}{state}.", mysql.number()));
     }
     match error {
         sqlx::Error::ColumnDecode { index, .. } => {
@@ -1829,15 +1849,17 @@ fn mysql_safe_detail(error: &sqlx::Error) -> Option<String> {
 }
 
 fn mysql_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
-    if let Some(database) = error.as_database_error() {
-        return match database.code().as_deref() {
-            Some("1045") => crate::ErrorCategory::Authentication,
-            Some("1044" | "1142" | "1143" | "1227") => crate::ErrorCategory::Authorization,
-            Some("1064") => crate::ErrorCategory::Syntax,
-            Some("1062" | "1216" | "1217" | "1451" | "1452") => crate::ErrorCategory::Constraint,
-            Some("1205") => crate::ErrorCategory::Timeout,
-            Some("1213") => crate::ErrorCategory::Transaction,
-            Some("1317") => crate::ErrorCategory::Cancelled,
+    if let Some(database) = error.as_database_error()
+        && let Some(mysql) = database.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+    {
+        return match mysql.number() {
+            1045 => crate::ErrorCategory::Authentication,
+            1044 | 1142 | 1143 | 1227 => crate::ErrorCategory::Authorization,
+            1052 | 1054 | 1060 | 1064 | 1109 | 1146 => crate::ErrorCategory::Syntax,
+            1062 | 1216 | 1217 | 1451 | 1452 => crate::ErrorCategory::Constraint,
+            1205 => crate::ErrorCategory::Timeout,
+            1213 => crate::ErrorCategory::Transaction,
+            1317 => crate::ErrorCategory::Cancelled,
             _ => crate::ErrorCategory::Internal,
         };
     }

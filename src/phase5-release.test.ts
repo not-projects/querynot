@@ -10,7 +10,7 @@ import {
 const read = (path: string) => readFileSync(path, 'utf8');
 
 describe('Phase 5 history and current release boundary', () => {
-  it('keeps 0.1.16 versions aligned and updater generation enabled', () => {
+  it('keeps 0.1.17 versions aligned and updater generation enabled', () => {
     const packageJson = JSON.parse(read('package.json'));
     const packageLock = JSON.parse(read('package-lock.json'));
     const tauri = JSON.parse(read('src-tauri/tauri.conf.json'));
@@ -19,7 +19,7 @@ describe('Phase 5 history and current release boundary', () => {
     const tauriCargo = read('src-tauri/Cargo.toml');
     const fixtureCargo = read('crates/querynot-fixture-harness/Cargo.toml');
 
-    expect(packageJson.version).toBe('0.1.16');
+    expect(packageJson.version).toBe('0.1.17');
     expect(packageLock.version).toBe(packageJson.version);
     expect(packageLock.packages[''].version).toBe(packageJson.version);
     expect(tauri.version).toBe(packageJson.version);
@@ -216,7 +216,7 @@ describe('Phase 5 history and current release boundary', () => {
     expect(native).not.toContain('#[cfg(target_os = "windows")]');
     expect(native).not.toContain('available only in the supported Windows');
     expect(runtime).toContain('tauri_plugin_updater::Builder::new().build()');
-    expect(cargo).toContain('tauri-plugin-updater = "=2.10.1"');
+    expect(cargo).toContain('tauri-plugin-updater = "=2.14.1"');
     expect(nativeDependencies).toContain('serde_json.workspace = true');
     expect(build).toContain('QUERYNOT_UPDATER_PUBLIC_KEY');
   });

@@ -16,15 +16,15 @@ tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 base64.workspace = true
-querynot-core = { path = "../crates/querynot-core", version = "0.1.16" }
+querynot-core = { path = "../crates/querynot-core", version = "0.1.17" }
 secrecy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sqlformat.workspace = true
-tauri = { version = "2.11.5", features = [] }
+tauri = { version = "2.12.5", features = [] }
 tauri-plugin-dialog = "2.7.2"
 tauri-plugin-single-instance = "2.4.3"
-tauri-plugin-updater = "=2.10.1"
+tauri-plugin-updater = "=2.14.1"
 tokio.workspace = true
 url.workspace = true
 

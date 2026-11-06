@@ -68,6 +68,15 @@ pub struct UpdateProfileRequest {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TestDraftConnectionRequest {
+    pub profile_id: Option<String>,
+    pub profile: ProfileInput,
+    pub use_saved_credentials: bool,
+    pub database_password: String,
+    pub client_key_passphrase: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ProfileIdRequest {
     pub profile_id: String,
 }
@@ -820,4 +829,21 @@ pub struct ExportResultResponse {
     pub cancelled: bool,
     pub rows_written: u32,
     pub message: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProfileHealthResponse {
+    pub profile_id: String,
+    pub connection: Option<ConnectionInfoView>,
+    pub message: Option<String>,
+    pub sessions: Vec<SessionHealthView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SessionHealthView {
+    pub tab_id: String,
+    pub status: String,
+    pub session: Option<SessionView>,
+    pub message: Option<String>,
+    pub session_id: String,
 }
