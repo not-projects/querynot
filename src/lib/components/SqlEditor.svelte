@@ -88,7 +88,7 @@
   let applyingExternal = false;
   const wrapCompartment = new Compartment();
   const languageCompartment = new Compartment();
-  const editableCompartment = new Compartment();
+  const readOnlyCompartment = new Compartment();
   const macPrimaryShortcuts = isMacPlatform();
   const editorPrimaryModifier = macPrimaryShortcuts ? 'Cmd' : 'Ctrl';
   const ariaPrimaryModifier = primaryAriaModifier(macPrimaryShortcuts);
@@ -167,7 +167,7 @@
           tooltips({ parent: tooltipParent }),
           languageCompartment.of(languageExtensions()),
           wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
-          editableCompartment.of(EditorView.editable.of(!disabled)),
+          readOnlyCompartment.of(EditorState.readOnly.of(disabled)),
           parseDiagnostics,
           Prec.highest(
             keymap.of([
@@ -335,8 +335,8 @@
 
   $effect(() => {
     view?.dispatch({
-      effects: editableCompartment.reconfigure(
-        EditorView.editable.of(!disabled)
+      effects: readOnlyCompartment.reconfigure(
+        EditorState.readOnly.of(disabled)
       )
     });
   });
