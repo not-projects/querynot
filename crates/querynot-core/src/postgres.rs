@@ -1037,15 +1037,11 @@ async fn connection_info(
     let context: Option<String> = row.try_get(3).map_err(map_postgres_execution_error)?;
     let server_read_only: bool = row.try_get(4).map_err(map_postgres_execution_error)?;
     validate_metadata(&database)?;
-    let (compatibility_status, exact_fixture) = classify_compatibility(&exact_version);
+    let (compatibility_status, _) = classify_compatibility(&exact_version);
     let mut warnings = Vec::new();
     if compatibility_status == CompatibilityStatus::QueryOnly {
         warnings.push(format!(
             "PostgreSQL {exact_version} is outside the tested PostgreSQL 18.x compatibility line; possible writes are disabled."
-        ));
-    } else if !exact_fixture {
-        warnings.push(format!(
-            "PostgreSQL {exact_version} is write-enabled under the PostgreSQL 18.x compatibility line; {EXACT_POSTGRES_FIXTURE} remains the exact conformance baseline."
         ));
     }
     if server_read_only {

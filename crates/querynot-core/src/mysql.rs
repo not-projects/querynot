@@ -1157,22 +1157,11 @@ async fn connection_info(
         .next()
         .unwrap_or(&reported_version)
         .to_owned();
-    let (compatibility_status, legacy, exact_fixture) =
-        classify_compatibility(product, &exact_version);
+    let (compatibility_status, legacy, _) = classify_compatibility(product, &exact_version);
     let mut warnings = Vec::new();
     if compatibility_status == CompatibilityStatus::QueryOnly {
         warnings.push(format!(
             "{product} {exact_version} is outside the tested compatibility matrix; possible writes are disabled."
-        ));
-    }
-    if compatibility_status == CompatibilityStatus::Supported && !exact_fixture {
-        warnings.push(format!(
-            "{product} {exact_version} is write-enabled under the MySQL 5.7 compatibility line; 5.7.44 remains the exact conformance fixture."
-        ));
-    }
-    if legacy {
-        warnings.push(format!(
-            "{product} {exact_version} is a legacy/EOL line and should be upgraded."
         ));
     }
     if let ConnectionTarget::MysqlFamily { tls_mode, .. } = &profile.target {
