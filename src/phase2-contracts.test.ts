@@ -35,6 +35,7 @@ describe('Phase 2 SQLite boundaries', () => {
     for (const command of [
       'test_profile_connection',
       'test_draft_connection',
+      'check_profile_health',
       'connect_profile',
       'open_tab_session',
       'load_schema_objects',

@@ -736,6 +736,21 @@ export interface ExportResultResponse {
   message: string;
 }
 
+export interface ProfileHealthResponse {
+  profile_id: string;
+  connection: ConnectionInfoView | null;
+  message: string | null;
+  sessions: SessionHealthView[];
+}
+
+export interface SessionHealthView {
+  tab_id: string;
+  status: string;
+  session: SessionView | null;
+  message: string | null;
+  session_id: string;
+}
+
 export interface QueryNotCommands {
   application_status: { request: null; response: ApplicationStatusResponse };
   check_for_updates: { request: null; response: UpdateCheckResponse };
@@ -906,6 +921,10 @@ export interface QueryNotCommands {
   change_tab_context: {
     request: ChangeTabContextRequest;
     response: SessionContextResponse;
+  };
+  check_profile_health: {
+    request: ProfileIdRequest;
+    response: ProfileHealthResponse;
   };
 }
 

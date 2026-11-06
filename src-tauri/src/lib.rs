@@ -114,6 +114,7 @@ pub fn run() {
             phase2::test_profile_connection,
             phase2::test_draft_connection,
             phase2::connect_profile,
+            phase2::check_profile_health,
             phase2::cancel_profile_connection,
             phase2::disconnect_profile,
             phase2::open_tab_session,

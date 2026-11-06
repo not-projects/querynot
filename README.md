@@ -71,6 +71,8 @@ Humans remain responsible for product direction, prompts, review, testing, legal
 
 ## Development
 
+Unreleased development source checks idle server connections after an explicit Connect and recovers clean sessions automatically. It preserves each tab’s context and mode, leaves SQL execution explicit, and requires review when a transaction’s connection is lost. Saved endpoint and security changes apply after reconnect. See [ADR 0022](docs/architecture/0022-idle-connection-health-and-recovery.md).
+
 The verified foundation commands are:
 
 ```sh

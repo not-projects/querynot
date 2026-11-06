@@ -145,6 +145,23 @@ impl PostgresSession {
         true
     }
 
+    pub async fn ping_if_idle(&self) -> Result<bool, QueryNotError> {
+        let Ok(mut connection) = self.connection.try_lock() else {
+            return Ok(false);
+        };
+        tokio::time::timeout(Duration::from_secs(3), connection.ping())
+            .await
+            .map_err(|_| {
+                QueryNotError::database(
+                    crate::ErrorCategory::Connectivity,
+                    "PostgreSQL connection health checking timed out.",
+                    true,
+                )
+            })?
+            .map_err(map_postgres_execution_error)?;
+        Ok(true)
+    }
+
     pub async fn connection_info(
         &self,
         profile: &ConnectionProfile,

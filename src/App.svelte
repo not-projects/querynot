@@ -236,6 +236,12 @@
   let connections = $state<Record<string, ConnectionInfoView>>({});
   let dismissedCompatibilityWarnings = $state<Record<string, string>>({});
   let connectionOperations = $state<Record<string, 'test' | 'connect'>>({});
+  let connectionHealthMessages = $state<Record<string, string>>({});
+  let tabRecoveryModes = $state<Record<string, 'reconnecting' | 'review'>>({});
+  const lostSessionAutomatic = new Map<string, boolean>();
+  const connectionHealthPending = new Map<string, Promise<void>>();
+  const connectionHealthRevisions = new Map<string, number>();
+  let connectionHealthEpoch = 0;
   let tabSessionOperations = $state<Record<string, boolean>>({});
   let tabSessionErrors = $state<Record<string, string>>({});
   let lastActiveTabIds = $state<Record<string, string>>({});
@@ -336,6 +342,12 @@
     activeTab?.kind === 'table_data'
       ? (tableTabViews[activeTab.id] ?? 'structure')
       : null
+  );
+  const activeConnectionRecovering = $derived(
+    Boolean(
+      (activeProfile && connectionHealthMessages[activeProfile.id]) ||
+      (activeTab && tabRecoveryModes[activeTab.id])
+    )
   );
   const activeSession = $derived(
     activeTab && (activeTab.kind === 'query' || activeTableView === 'rows')
@@ -488,7 +500,7 @@
   const tabSessionErrorVisible = $derived(
     Boolean(
       activeTab?.profile_id &&
-      !activeSession &&
+      (!activeSession || tabRecoveryModes[activeTab.id]) &&
       tabSessionErrors[activeTab.id] &&
       (activeTab.kind === 'query' || activeTableView === 'rows')
     )
@@ -1042,6 +1054,8 @@
     let unlistenExecution: UnlistenFn | undefined;
     let unlistenExplain: UnlistenFn | undefined;
     let unlistenOpenFiles: UnlistenFn | undefined;
+    const healthTimer = window.setInterval(refreshConnectionHealth, 30_000);
+    window.addEventListener('focus', refreshConnectionHealth);
     const elapsedTimer = window.setInterval(() => {
       nowMs = Date.now();
     }, 250);
@@ -1087,6 +1101,8 @@
       unlistenOpenFiles?.();
       updater.dispose();
       window.clearInterval(elapsedTimer);
+      window.clearInterval(healthTimer);
+      window.removeEventListener('focus', refreshConnectionHealth);
       if (saveTimer) clearTimeout(saveTimer);
     };
   });
@@ -1131,42 +1147,6 @@
       await requestPendingSqlFileDrain();
       void updater.checkSilently();
     });
-    for (const profile of profiles.filter(
-      (candidate) => candidate.automatic_reconnect && candidate.has_saved_secret
-    )) {
-      try {
-        const info = await invokeCommand('connect_profile', {
-          profile_id: profile.id
-        });
-        delete dismissedCompatibilityWarnings[profile.id];
-        connections[profile.id] = info;
-        await loadSchemaNamespaces(profile.id);
-        const restoredActiveTab = workspace.tabs.find(
-          (tab) =>
-            tab.id === workspace.active_tab_id && tab.profile_id === profile.id
-        );
-        if (restoredActiveTab?.kind === 'table_data') {
-          tableTabViews[restoredActiveTab.id] = 'structure';
-          await loadSchemaObjectDetailForTab(restoredActiveTab);
-          statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. The restored object tab loaded structure only; row browsing remains explicit.`;
-        } else {
-          const restoredSession = restoredActiveTab
-            ? await ensureTabSession(restoredActiveTab)
-            : null;
-          if (!restoredActiveTab || restoredSession) {
-            statusMessage = `${profile.name} reconnected through its explicit saved-credential preference. Only its restored active tab was opened; other tabs remain lazy.`;
-          }
-        }
-        startCompletionMetadataWarmup(
-          profile.id,
-          restoredActiveTab?.kind === 'table_data'
-            ? (restoredActiveTab.table_namespace ?? info.context)
-            : (restoredActiveTab?.context_label ?? info.context)
-        );
-      } catch (error) {
-        statusMessage = `${profile.name} automatic reconnect failed safely: ${safeErrorMessage(error)}`;
-      }
-    }
   }
 
   function applyBootstrap(response: BootstrapWorkspaceResponse) {
@@ -1181,6 +1161,12 @@
       clampSidebarConnectionsPercent(
         workspace.panel_sizes.sidebar_connections_percent
       );
+    connectionHealthEpoch += 1;
+    lostSessionAutomatic.clear();
+    connectionHealthPending.clear();
+    connectionHealthRevisions.clear();
+    connectionHealthMessages = {};
+    tabRecoveryModes = {};
     connections = {};
     dismissedCompatibilityWarnings = {};
     connectionOperations = {};
@@ -1494,6 +1480,11 @@
   function ensureTabSession(
     tab: WorkspaceTabView
   ): Promise<SessionView | null> {
+    if (tabRecoveryModes[tab.id]) {
+      statusMessage =
+        tabSessionErrors[tab.id] ?? 'This connection is recovering.';
+      return Promise.resolve(null);
+    }
     if (sessions[tab.id]) return Promise.resolve(sessions[tab.id]);
     const pending = tabSessionOpenPromises.get(tab.id);
     if (pending) return pending;
@@ -1561,6 +1552,13 @@
       statusMessage =
         'Connect the profile before retrying this tab’s dedicated session.';
       return;
+    }
+    if (tabRecoveryModes[tab.id] === 'reconnecting') {
+      await checkConnectionHealth(tab.profile_id);
+      if (tabRecoveryModes[tab.id] === 'reconnecting') return;
+    }
+    if (tabRecoveryModes[tab.id] === 'review') {
+      delete tabRecoveryModes[tab.id];
     }
     await ensureTabSession(tab);
   }
@@ -1868,6 +1866,11 @@
         });
         delete dismissedCompatibilityWarnings[profile.id];
         connections[profile.id] = info;
+        connectionHealthRevisions.set(
+          profile.id,
+          (connectionHealthRevisions.get(profile.id) ?? 0) + 1
+        );
+        delete connectionHealthMessages[profile.id];
         const schema = await loadSchemaNamespaces(profile.id);
         statusMessage = `${profile.name} connected to ${info.engine} ${info.exact_version}. Metadata uses a separate native session.`;
         if (info.compatibility_warning) {
@@ -1897,6 +1900,124 @@
     });
   }
 
+  function refreshConnectionHealth() {
+    if (!hasNativeRuntime() || !nativeBootstrapComplete || busy || modal)
+      return;
+    for (const profile of profiles) {
+      if (
+        profile.kind !== 'sqlite' &&
+        connections[profile.id] &&
+        !connectionOperations[profile.id] &&
+        !pendingTabForProfile(profile.id) &&
+        !stagedTableTabForProfile(profile.id)
+      ) {
+        void checkConnectionHealth(profile.id);
+      }
+    }
+  }
+
+  function checkConnectionHealth(profileId: string): Promise<void> {
+    const pending = connectionHealthPending.get(profileId);
+    if (pending) return pending;
+    if (!connections[profileId] || !hasNativeRuntime())
+      return Promise.resolve();
+    const epoch = connectionHealthEpoch;
+    const revision = connectionHealthRevisions.get(profileId) ?? 0;
+    const signatures = new Map(
+      workspace.tabs
+        .filter((tab) => tab.profile_id === profileId)
+        .map((tab) => [tab.id, JSON.stringify(sessions[tab.id] ?? null)])
+    );
+    const current = () =>
+      epoch === connectionHealthEpoch &&
+      revision === (connectionHealthRevisions.get(profileId) ?? 0) &&
+      Boolean(connections[profileId]);
+    const request = (async () => {
+      try {
+        const health = await invokeCommand('check_profile_health', {
+          profile_id: profileId
+        });
+        if (!current()) return;
+        if (health.connection) {
+          const recovered = Boolean(connectionHealthMessages[profileId]);
+          connections[profileId] = health.connection;
+          delete connectionHealthMessages[profileId];
+          if (recovered && activeProfile?.id === profileId) {
+            statusMessage = 'Connection restored. SQL was not replayed.';
+          }
+        } else {
+          const message = health.message ?? 'Reconnecting automatically…';
+          if (
+            connectionHealthMessages[profileId] !== message &&
+            activeProfile?.id === profileId
+          ) {
+            statusMessage = message;
+          }
+          connectionHealthMessages[profileId] = message;
+        }
+        for (const item of health.sessions) {
+          const tab = workspace.tabs.find(
+            (tab) => tab.id === item.tab_id && tab.profile_id === profileId
+          );
+          if (
+            !tab ||
+            (sessions[tab.id] &&
+              sessions[tab.id].session_id !== item.session_id)
+          )
+            continue;
+          if (item.status === 'requires_review') {
+            lostSessionAutomatic.set(
+              tab.id,
+              sessions[tab.id]?.transaction.automatic ?? true
+            );
+            retainTableStagingAfterConnectionLoss(tab.id);
+            tabRecoveryModes[tab.id] = 'review';
+            tabSessionErrors[tab.id] =
+              item.message ?? 'Review the lost transaction, then Retry.';
+            if (workspace.active_tab_id === tab.id)
+              statusMessage = tabSessionErrors[tab.id];
+            continue;
+          }
+          if (
+            JSON.stringify(sessions[tab.id] ?? null) !==
+              signatures.get(tab.id) ||
+            (executions[tab.id] &&
+              ['queued', 'running', 'paused', 'cancelling'].includes(
+                executions[tab.id].state
+              ))
+          )
+            continue;
+          if (item.session) {
+            sessions[tab.id] = item.session;
+            if (tabRecoveryModes[tab.id] === 'reconnecting') {
+              delete tabRecoveryModes[tab.id];
+              delete tabSessionErrors[tab.id];
+            }
+            if (
+              item.status === 'reconnected' &&
+              workspace.active_tab_id === tab.id
+            ) {
+              statusMessage = 'Connection restored. SQL was not replayed.';
+            }
+          } else if (item.status === 'reconnecting') {
+            tabRecoveryModes[tab.id] = 'reconnecting';
+            tabSessionErrors[tab.id] =
+              item.message ?? 'Reconnecting automatically…';
+          }
+        }
+      } catch (error) {
+        if (current())
+          connectionHealthMessages[profileId] =
+            `Connection check failed. Retrying automatically. ${safeErrorMessage(error)}`;
+      }
+    })().finally(() => {
+      if (connectionHealthPending.get(profileId) === request)
+        connectionHealthPending.delete(profileId);
+    });
+    connectionHealthPending.set(profileId, request);
+    return request;
+  }
+
   async function cancelProfileConnection(profile: ProfileView) {
     const action = connectionOperations[profile.id];
     if (!action || !hasNativeRuntime()) return;
@@ -1915,11 +2036,16 @@
     if (!hasNativeRuntime()) return;
     if (focusProfileSafetyBlocker(profile.id)) return;
     await runAction(async () => {
+      connectionHealthRevisions.set(
+        profile.id,
+        (connectionHealthRevisions.get(profile.id) ?? 0) + 1
+      );
       await closeProfileSessions(profile.id);
       const result = await invokeCommand('disconnect_profile', {
         profile_id: profile.id
       });
       delete connections[profile.id];
+      delete connectionHealthMessages[profile.id];
       delete dismissedCompatibilityWarnings[profile.id];
       delete schemaNamespaces[profile.id];
       delete schemaObjects[profile.id];
@@ -1928,6 +2054,8 @@
       for (const tab of workspace.tabs) {
         if (tab.profile_id === profile.id) {
           delete tabSessionErrors[tab.id];
+          delete tabRecoveryModes[tab.id];
+          lostSessionAutomatic.delete(tab.id);
         }
       }
       delete selectedSchemaObjectIds[profile.id];
@@ -1985,7 +2113,7 @@
       username: profileForm.username || null,
       tls_mode: profileForm.tls_mode,
       connection_timeout_seconds: profileForm.connection_timeout_seconds,
-      automatic_reconnect: profileForm.automatic_reconnect
+      automatic_reconnect: false
     };
   }
 
@@ -2969,6 +3097,14 @@
       tab_id: tab.id
     });
     try {
+      if (lostSessionAutomatic.get(tab.id) === false) {
+        session.transaction = await invokeCommand('set_transaction_mode', {
+          profile_id: profileId,
+          tab_id: tab.id,
+          session_id: session.session_id,
+          automatic: false
+        });
+      }
       if (context && session.context !== context) {
         const changed = await invokeCommand('change_tab_context', {
           profile_id: profileId,
@@ -2980,6 +3116,7 @@
       }
       tab.context_label = session.context;
       sessions[tab.id] = session;
+      lostSessionAutomatic.delete(tab.id);
       return session;
     } catch (error) {
       await invokeCommand('close_tab_session', {
@@ -3215,6 +3352,10 @@
       !hasNativeRuntime()
     ) {
       statusMessage = 'Connect this profile before running SQL.';
+      return;
+    }
+    if (connectionHealthMessages[activeProfile.id]) {
+      statusMessage = connectionHealthMessages[activeProfile.id];
       return;
     }
     const tab = activeTab;
@@ -4561,6 +4702,7 @@
           offlineActive={Boolean(activeTab && !activeTab.profile_id)}
           {connections}
           {connectionOperations}
+          healthMessages={connectionHealthMessages}
           onselectprofile={(profile) => void selectProfileGroup(profile)}
           onselectoffline={() => void selectOfflineGroup()}
           onconnect={(profile) => void connectProfile(profile)}
@@ -4741,12 +4883,21 @@
       {@attach captureMain}
     >
       <div class="context-bar" aria-label="Active workspace context">
-        <span class="context-state" class:online={Boolean(activeConnection)}>
-          {activeTab && tabSessionOperations[activeTab.id]
-            ? 'Opening'
-            : activeConnection
-              ? 'Connected'
-              : 'Offline'}
+        <span
+          class="context-state"
+          class:online={Boolean(activeConnection) &&
+            !activeConnectionRecovering}
+        >
+          {(activeProfile && connectionHealthMessages[activeProfile.id]) ||
+          (activeTab && tabRecoveryModes[activeTab.id] === 'reconnecting')
+            ? 'Reconnecting'
+            : activeTab && tabRecoveryModes[activeTab.id] === 'review'
+              ? 'Review transaction'
+              : activeTab && tabSessionOperations[activeTab.id]
+                ? 'Opening'
+                : activeConnection
+                  ? 'Connected'
+                  : 'Offline'}
         </span>
         <span>{activeTab?.profile_label ?? 'No profile'}</span>
         <span
@@ -4811,7 +4962,7 @@
           onmovetab={(tab, direction) => moveTab(tab.id, direction)}
         />
 
-        {#if activeTab?.profile_id && (activeTab.kind === 'query' || activeTableView === 'rows') && !activeSession && tabSessionErrors[activeTab.id]}
+        {#if activeTab?.profile_id && (activeTab.kind === 'query' || activeTableView === 'rows') && (!activeSession || tabRecoveryModes[activeTab.id]) && tabSessionErrors[activeTab.id]}
           <div class="recovery-banner tab-session-error" role="alert">
             <strong>Tab session unavailable</strong>
             <span>{tabSessionErrors[activeTab.id]}</span>
@@ -4913,9 +5064,12 @@
                     class="primary primary-action"
                     title={`Run current statement (${shortcutModifier}+Enter)`}
                     aria-keyshortcuts={`${ariaShortcutModifier}+Enter`}
-                    disabled={activeExecution &&
-                      ['queued', 'running', 'paused', 'cancelling'].includes(
-                        activeExecution.state
+                    disabled={activeConnectionRecovering ||
+                      Boolean(
+                        activeExecution &&
+                        ['queued', 'running', 'paused', 'cancelling'].includes(
+                          activeExecution.state
+                        )
                       )}
                     onclick={() => {
                       const selection = editorApi?.selection();
@@ -4937,9 +5091,12 @@
                     type="button"
                     title={`Run all statements (${shortcutModifier}+Shift+Enter)`}
                     aria-keyshortcuts={`${ariaShortcutModifier}+Shift+Enter`}
-                    disabled={activeExecution &&
-                      ['queued', 'running', 'paused', 'cancelling'].includes(
-                        activeExecution.state
+                    disabled={activeConnectionRecovering ||
+                      Boolean(
+                        activeExecution &&
+                        ['queued', 'running', 'paused', 'cancelling'].includes(
+                          activeExecution.state
+                        )
                       )}
                     onclick={() => {
                       const selection = editorApi?.selection();
@@ -4956,6 +5113,7 @@
                     class="explain-action"
                     title="Generate an estimated plan for the selection or caret statement"
                     disabled={Boolean(
+                      activeConnectionRecovering ||
                       (activeExecution &&
                         ['queued', 'running', 'paused', 'cancelling'].includes(
                           activeExecution.state
@@ -5807,23 +5965,9 @@
                       bind:value={profileForm.connection_timeout_seconds}
                     />
                   </label>
-                  {#if editingProfileHasSavedSecret}
-                    <label class="check-row profile-check-row">
-                      <input
-                        type="checkbox"
-                        bind:checked={profileForm.automatic_reconnect}
-                      />
-                      <span>
-                        <strong>Allow automatic reconnect</strong>
-                        <small>Uses the saved OS-vault credential.</small>
-                      </span>
-                    </label>
-                  {:else}
-                    <p class="profile-note">
-                      Automatic reconnect is configured later and requires a
-                      saved OS-vault credential.
-                    </p>
-                  {/if}
+                  <p class="profile-note">
+                    Connected sessions recover automatically when it is safe.
+                  </p>
                 </div>
               </section>
             {/if}
@@ -5858,7 +6002,9 @@
             >
               {profileTestFeedback.status === 'idle'
                 ? editingProfileId
-                  ? 'Saving changes does not reconnect this profile.'
+                  ? connections[editingProfileId]
+                    ? 'Disconnect this profile before saving changes. Testing does not save them.'
+                    : 'Changes apply when you next Connect.'
                   : 'Saving keeps this connection offline until you choose Connect.'
                 : profileTestFeedback.message}
             </span>

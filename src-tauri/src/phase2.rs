@@ -38,6 +38,7 @@ use tokio::sync::{mpsc, watch};
 enum ConnectionAttemptKind {
     Test,
     Connect,
+    Health,
 }
 
 type ConnectionAttemptKey = (ProfileId, ConnectionAttemptKind);
@@ -45,6 +46,9 @@ type ConnectionAttemptRegistry = HashMap<ConnectionAttemptKey, watch::Sender<boo
 
 #[derive(Clone)]
 struct ConnectedProfile {
+    generation: NativeSessionId,
+    profile: ConnectionProfile,
+    secrets: ConnectionSecrets,
     profile_name: String,
     metadata: AdapterSession,
     info: SqliteConnectionInfo,
@@ -390,12 +394,224 @@ pub(crate) async fn connect_profile(
     lock(&state.phase2.connected)?.insert(
         profile_id,
         ConnectedProfile {
+            generation: NativeSessionId::new(),
+            profile: profile.clone(),
+            secrets: secrets.clone(),
             profile_name: profile.name.clone(),
             metadata: session,
             info: info.clone(),
         },
     );
     Ok(connection_view(profile_id, &profile.name, &info))
+}
+
+#[tauri::command]
+pub(crate) async fn check_profile_health(
+    state: State<'_, AppRuntimeState>,
+    request: ProfileIdRequest,
+) -> Result<ProfileHealthResponse, QueryNotError> {
+    let profile_id = parse_id::<ProfileId>(&request.profile_id)?;
+    lock(&state.ownership)?.authorize_profile(state.window_id, profile_id)?;
+    let mut cancel = state
+        .phase2
+        .begin_connection_attempt(profile_id, ConnectionAttemptKind::Health)?;
+    let result = tokio::select! {
+        biased;
+        _ = cancel.changed() => Err(cancelled_connection_error()),
+        result = check_profile_health_inner(&state, profile_id) => result,
+    };
+    // Cleanup from an old frontend generation must not remove a newer check.
+    let key = (profile_id, ConnectionAttemptKind::Health);
+    if let Ok(mut attempts) = state.phase2.connection_attempts.lock()
+        && attempts
+            .get(&key)
+            .is_some_and(|active| active.subscribe().same_channel(&cancel))
+    {
+        attempts.remove(&key);
+    }
+    result
+}
+
+fn health_generation_is_current(
+    state: &State<'_, AppRuntimeState>,
+    profile_id: ProfileId,
+    generation: NativeSessionId,
+) -> bool {
+    state.phase2.connected.lock().is_ok_and(|connected| {
+        connected
+            .get(&profile_id)
+            .is_some_and(|current| current.generation == generation)
+    })
+}
+
+async fn check_profile_health_inner(
+    state: &State<'_, AppRuntimeState>,
+    profile_id: ProfileId,
+) -> Result<ProfileHealthResponse, QueryNotError> {
+    let mut connected = connected_profile(state, profile_id)?;
+    let generation = connected.generation;
+    let profile = connected.profile.clone();
+    let secrets = connected.secrets.clone();
+    let timeout = Duration::from_secs(u64::from(profile.connection_timeout_seconds.min(10)));
+    let mut response = ProfileHealthResponse {
+        profile_id: profile_id.to_string(),
+        connection: Some(connection_view(
+            profile_id,
+            &connected.profile_name,
+            &connected.info,
+        )),
+        message: None,
+        sessions: Vec::new(),
+    };
+    // SQLite has no idle network connection to keep alive or replace.
+    if matches!(connected.metadata, AdapterSession::Sqlite(_)) {
+        return Ok(response);
+    }
+    if connected.metadata.ping_if_idle().await.is_err() {
+        if !health_generation_is_current(state, profile_id, generation) {
+            return Err(cancelled_connection_error());
+        }
+        let reconnect = async {
+            let session = AdapterSession::open(&profile, &secrets).await?;
+            let info = session.connection_info(&profile).await?;
+            Ok::<_, QueryNotError>((session, info))
+        };
+        match tokio::time::timeout(timeout, reconnect).await {
+            Ok(Ok((metadata, info))) => {
+                let mut profiles = lock(&state.phase2.connected)?;
+                let Some(current) = profiles
+                    .get_mut(&profile_id)
+                    .filter(|current| current.generation == generation)
+                else {
+                    return Err(cancelled_connection_error());
+                };
+                current.metadata = metadata;
+                current.info = info;
+                connected = current.clone();
+                response.connection = Some(connection_view(
+                    profile_id,
+                    &connected.profile_name,
+                    &connected.info,
+                ));
+            }
+            Ok(Err(error)) => {
+                response.connection = None;
+                response.message = Some(format!(
+                    "Connection lost. Retrying automatically. {}",
+                    error.safe_message
+                ));
+            }
+            Err(_) => {
+                response.connection = None;
+                response.message = Some(
+                    "Connection recovery reached the configured timeout. Retrying automatically."
+                        .to_owned(),
+                );
+            }
+        }
+    }
+    if !health_generation_is_current(state, profile_id, generation) {
+        return Err(cancelled_connection_error());
+    }
+    let sessions: Vec<_> = lock(&state.phase2.sessions)?
+        .iter()
+        .filter(|(_, resource)| resource.profile_id == profile_id)
+        .map(|(id, resource)| (*id, resource.clone()))
+        .collect();
+    for (session_id, resource) in sessions {
+        if !health_generation_is_current(state, profile_id, generation) {
+            return Err(cancelled_connection_error());
+        }
+        // Executions, retained cursors, and immutable mutation plans own their
+        // connections until terminal. Health checks must not replace them.
+        if ensure_session_idle(state, session_id).is_err()
+            || lock(&state.phase2.mutation_plans)?
+                .values()
+                .any(|plan| plan.session_id == session_id)
+        {
+            continue;
+        }
+        if resource.session.ping_if_idle().await.is_ok() {
+            response.sessions.push(SessionHealthView {
+                tab_id: resource.tab_id.to_string(),
+                session_id: session_id.to_string(),
+                status: "connected".to_owned(),
+                session: Some(session_view(
+                    profile_id,
+                    resource.tab_id,
+                    session_id,
+                    &resource.context,
+                    resource.session.transaction_state().await,
+                )),
+                message: None,
+            });
+            continue;
+        }
+        if !health_generation_is_current(state, profile_id, generation) {
+            return Err(cancelled_connection_error());
+        }
+        if ensure_session_idle(state, session_id).is_err() {
+            continue;
+        }
+        let transaction = resource.session.transaction_state().await;
+        if transaction.certainty != TransactionCertainty::Clean {
+            let _ = lock(&state.ownership)?.unregister_session(
+                state.window_id,
+                profile_id,
+                resource.tab_id,
+                session_id,
+            );
+            lock(&state.phase2.sessions)?.remove(&session_id);
+            dispose_tab_results(&state.phase2, resource.tab_id);
+            response.sessions.push(SessionHealthView {
+                tab_id: resource.tab_id.to_string(),
+            session_id: session_id.to_string(),
+                status: "requires_review".to_owned(),
+                session: None,
+                message: Some("Connection lost during a transaction. Its outcome may be unknown. Review the server transaction state, then choose Retry to open a new session. SQL was not replayed.".to_owned()),
+            });
+            continue;
+        }
+        let reconnect = async {
+            let session = AdapterSession::open(&profile, &secrets).await?;
+            let info = session.connection_info(&profile).await?;
+            if info.context != resource.context {
+                session.change_context(&resource.context).await?;
+            }
+            if !transaction.automatic {
+                session.set_automatic(false).await?;
+            }
+            Ok::<_, QueryNotError>(session)
+        };
+        let replacement = tokio::time::timeout(timeout, reconnect).await;
+        if !health_generation_is_current(state, profile_id, generation) {
+            return Err(cancelled_connection_error());
+        }
+        match replacement {
+            Ok(Ok(session)) if ensure_session_idle(state, session_id).is_ok() => {
+                let transaction = session.transaction_state().await;
+                let mut sessions = lock(&state.phase2.sessions)?;
+                if let Some(current) = sessions.get_mut(&session_id) {
+                    current.session = session;
+                    response.sessions.push(SessionHealthView {
+                        tab_id: resource.tab_id.to_string(),
+            session_id: session_id.to_string(),
+                        status: "reconnected".to_owned(),
+                        session: Some(session_view(profile_id, resource.tab_id, session_id, &resource.context, transaction)),
+                        message: None,
+                    });
+                }
+            }
+            _ => response.sessions.push(SessionHealthView {
+                tab_id: resource.tab_id.to_string(),
+            session_id: session_id.to_string(),
+                status: "reconnecting".to_owned(),
+                session: None,
+                message: Some("This tab's connection was lost. Reconnecting automatically; SQL and received results are not replayed.".to_owned()),
+            }),
+        }
+    }
+    Ok(response)
 }
 
 #[tauri::command]
@@ -474,6 +690,9 @@ pub(crate) async fn disconnect_profile(
             false,
         ));
     }
+    state
+        .phase2
+        .cancel_connection_attempt(profile_id, ConnectionAttemptKind::Health)?;
     state.clear_session_secret(profile_id)?;
     let removed = lock(&state.phase2.connected)?.remove(&profile_id).is_some();
     Ok(FileActionResponse {
@@ -519,10 +738,9 @@ pub(crate) async fn open_tab_session(
             resource.session.transaction_state().await,
         ));
     }
-    let profile = available_store(&state)?.profile(profile_id).await?;
-    let secrets = state.connection_secrets(&profile).await?;
-    let session = AdapterSession::open(&profile, &secrets).await?;
-    let context = session.connection_info(&profile).await?.context;
+    let connected = connected_profile(&state, profile_id)?;
+    let session = AdapterSession::open(&connected.profile, &connected.secrets).await?;
+    let context = session.connection_info(&connected.profile).await?.context;
     let session_id = NativeSessionId::new();
     lock(&state.ownership)?.register_session(state.window_id, profile_id, tab_id, session_id)?;
     lock(&state.phase2.sessions)?.insert(

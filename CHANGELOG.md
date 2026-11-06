@@ -8,11 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Check idle server connections in the background and recover clean sessions automatically, preserving context and transaction mode while requiring explicit review for a lost transaction.
 - Remember the desktop window’s normal bounds and maximized state across restarts, adjusting restored bounds to available monitor work areas.
 - Added Test connection to Add and Edit connection, using the current form values for a temporary native probe that closes without saving or connecting.
 
 ### Changed
 
+- Replace the connection’s automatic-reconnect toggle with default recovery during explicitly connected sessions; saved endpoint/security edits take effect after explicit reconnect.
 - Refine the application icon with a closed, clearer Q and a smaller query dot, preserving the original Not Projects tile and palette across platform icon assets.
 
 ### Fixed

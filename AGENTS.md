@@ -70,6 +70,8 @@ The current live `0.1.16` support and publication envelope is Windows 11 x86-64 
 
 The app icon is generated from `src-tauri/icons/icon.svg`: a closed cream Q, short diagonal tail, and orange query dot on the existing dark-green Not Projects tile. Keep all platform sizes aligned with this source.
 
+Unreleased connection recovery follows [ADR 0022](docs/architecture/0022-idle-connection-health-and-recovery.md): server profiles receive deduplicated 30-second and focus health checks after explicit Connect, clean idle sessions recover with their original native configuration and mode, and lost transactions require review plus Retry without SQL replay. Running work, native mutation plans, and staged editing are protected. Restored workspaces remain offline; the old automatic-reconnect flag is storage compatibility only. Saving endpoint edits requires Disconnect; the next explicit Connect uses the saved profile, while Test connection probes current form values without saving.
+
 ## Verified Commands
 
 - `npm run tauri -- icon src-tauri/icons/icon.svg` — regenerate platform icon assets from the canonical vector, including desktop PNG, ICO, and ICNS sizes. This command converts image assets.

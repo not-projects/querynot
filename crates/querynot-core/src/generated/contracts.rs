@@ -830,3 +830,20 @@ pub struct ExportResultResponse {
     pub rows_written: u32,
     pub message: String,
 }
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProfileHealthResponse {
+    pub profile_id: String,
+    pub connection: Option<ConnectionInfoView>,
+    pub message: Option<String>,
+    pub sessions: Vec<SessionHealthView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SessionHealthView {
+    pub tab_id: String,
+    pub status: String,
+    pub session: Option<SessionView>,
+    pub message: Option<String>,
+    pub session_id: String,
+}

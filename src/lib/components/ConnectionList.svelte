@@ -9,6 +9,7 @@
     offlineActive: boolean;
     connections: Record<string, ConnectionInfoView>;
     connectionOperations: Record<string, 'test' | 'connect'>;
+    healthMessages?: Record<string, string>;
     onselectprofile: (profile: ProfileView) => void;
     onselectoffline: () => void;
     onconnect: (profile: ProfileView) => void;
@@ -26,6 +27,7 @@
     offlineActive,
     connections,
     connectionOperations,
+    healthMessages = {},
     onselectprofile,
     onselectoffline,
     onconnect,
@@ -53,6 +55,7 @@
     const operation = connectionOperations[profileId];
     if (operation === 'test') return 'Testing';
     if (operation === 'connect') return 'Connecting';
+    if (healthMessages[profileId]) return 'Reconnecting';
     return connections[profileId] ? 'Connected' : 'Offline';
   }
 
@@ -134,6 +137,7 @@
           class="connection-state"
           data-state={connectionState(profile.id).toLowerCase()}
           aria-label={connectionStateAccessibleLabel(profile.id)}
+          title={healthMessages[profile.id] ?? undefined}
         >
           <span aria-hidden="true"></span>
           {connectionState(profile.id)}
@@ -324,12 +328,14 @@
 
   .connection-state[data-state='connected'],
   .connection-state[data-state='testing'],
-  .connection-state[data-state='connecting'] {
+  .connection-state[data-state='connecting'],
+  .connection-state[data-state='reconnecting'] {
     color: var(--accent);
   }
 
   .connection-state[data-state='testing'] > span,
-  .connection-state[data-state='connecting'] > span {
+  .connection-state[data-state='connecting'] > span,
+  .connection-state[data-state='reconnecting'] > span {
     background: transparent;
     box-shadow: inset 0 0 0 1px currentColor;
   }

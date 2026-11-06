@@ -125,6 +125,15 @@ impl AdapterSession {
         }
     }
 
+    /// Ping only an idle network connection; never wait for a running query.
+    pub async fn ping_if_idle(&self) -> Result<bool, QueryNotError> {
+        match self {
+            Self::Sqlite(_) => Ok(false),
+            Self::MySql(session) => session.ping_if_idle().await,
+            Self::Postgres(session) => session.ping_if_idle().await,
+        }
+    }
+
     pub async fn connection_info(
         &self,
         profile: &ConnectionProfile,
