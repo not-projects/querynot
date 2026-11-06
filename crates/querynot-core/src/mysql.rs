@@ -1766,8 +1766,10 @@ fn map_mysql_execution_error(error: sqlx::Error) -> QueryNotError {
     let mut safe_detail = mysql_safe_detail(&error);
     if let Some(database) = error.as_database_error()
         && matches!(
-            database.code().as_deref(),
-            Some("1052" | "1054" | "1060" | "1064" | "1109" | "1146")
+            database
+                .try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+                .map(|mysql| mysql.number()),
+            Some(1052 | 1054 | 1060 | 1064 | 1109 | 1146)
         )
     {
         let message = crate::error::bounded_statement_diagnostic(database.message());
@@ -1806,11 +1808,14 @@ fn map_mysql_execution_error(error: sqlx::Error) -> QueryNotError {
 }
 
 fn mysql_safe_detail(error: &sqlx::Error) -> Option<String> {
-    if let Some(code) = error
-        .as_database_error()
-        .and_then(|database| database.code())
+    if let Some(database) = error.as_database_error()
+        && let Some(mysql) = database.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
     {
-        return Some(format!("Vendor error code: {code}."));
+        let state = database
+            .code()
+            .map(|code| format!(" (SQLSTATE {code})"))
+            .unwrap_or_default();
+        return Some(format!("MySQL error {}{state}.", mysql.number()));
     }
     match error {
         sqlx::Error::ColumnDecode { index, .. } => {
@@ -1827,17 +1832,17 @@ fn mysql_safe_detail(error: &sqlx::Error) -> Option<String> {
 }
 
 fn mysql_error_category(error: &sqlx::Error) -> crate::ErrorCategory {
-    if let Some(database) = error.as_database_error() {
-        return match database.code().as_deref() {
-            Some("1045") => crate::ErrorCategory::Authentication,
-            Some("1044" | "1142" | "1143" | "1227") => crate::ErrorCategory::Authorization,
-            Some("1052" | "1054" | "1060" | "1064" | "1109" | "1146") => {
-                crate::ErrorCategory::Syntax
-            }
-            Some("1062" | "1216" | "1217" | "1451" | "1452") => crate::ErrorCategory::Constraint,
-            Some("1205") => crate::ErrorCategory::Timeout,
-            Some("1213") => crate::ErrorCategory::Transaction,
-            Some("1317") => crate::ErrorCategory::Cancelled,
+    if let Some(database) = error.as_database_error()
+        && let Some(mysql) = database.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
+    {
+        return match mysql.number() {
+            1045 => crate::ErrorCategory::Authentication,
+            1044 | 1142 | 1143 | 1227 => crate::ErrorCategory::Authorization,
+            1052 | 1054 | 1060 | 1064 | 1109 | 1146 => crate::ErrorCategory::Syntax,
+            1062 | 1216 | 1217 | 1451 | 1452 => crate::ErrorCategory::Constraint,
+            1205 => crate::ErrorCategory::Timeout,
+            1213 => crate::ErrorCategory::Transaction,
+            1317 => crate::ErrorCategory::Cancelled,
             _ => crate::ErrorCategory::Internal,
         };
     }
