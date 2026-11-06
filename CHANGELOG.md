@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Open and switch query tabs on a connected profile immediately; allocate each isolated SQL session only for Run, Explain, context changes, or transaction actions.
 - Show bounded database syntax and missing-object diagnostics in query and Explain failures, including the offending identifier, vendor code, and PostgreSQL statement character when provided.
 - Keep the SQL editor focused and retain its caret or selection when running with Ctrl+Enter or Command+Enter, while keeping the SQL read-only during execution.
 - Copy a focused query-result cell with Ctrl+C on Windows/Linux or Command+C on macOS, preserving its complete canonical raw value and the existing double-click action.

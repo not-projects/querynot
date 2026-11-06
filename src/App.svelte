@@ -1458,7 +1458,8 @@
       tab.profile_id &&
       connections[tab.profile_id] &&
       !sessions[tab.id] &&
-      (tab.kind === 'query' || tableTabViews[tab.id] === 'rows')
+      tab.kind === 'table_data' &&
+      tableTabViews[tab.id] === 'rows'
     ) {
       await ensureTabSession(tab);
     }
@@ -1883,8 +1884,6 @@
         if (selectedTab?.kind === 'table_data') {
           tableTabViews[selectedTab.id] = 'structure';
           await loadSchemaObjectDetailForTab(selectedTab);
-        } else if (selectedTab) {
-          await ensureTabSession(selectedTab);
         }
         startCompletionMetadataWarmup(
           profile.id,
@@ -2283,9 +2282,7 @@
     workspace.tabs.push(tab);
     workspace.active_tab_id = tab.id;
     rememberActiveTab(tab);
-    const session =
-      profileId && connections[profileId] ? await ensureTabSession(tab) : null;
-    return { tab, session };
+    return { tab };
   }
 
   async function createOfflineTab(profileId: string | null = null) {
@@ -2295,12 +2292,13 @@
       return;
     }
     await runAction(async () => {
-      const { tab, session } = await appendNewQueryTab(profileId);
-      statusMessage = session
-        ? 'Opened a query tab with its own dedicated native database session.'
-        : profileId
-          ? 'Opened a profile-bound offline draft. Connect the profile once; its selected tabs open dedicated sessions automatically.'
-          : 'Opened an offline draft.';
+      const { tab } = await appendNewQueryTab(profileId);
+      statusMessage =
+        profileId && connections[profileId]
+          ? 'Opened a query tab on the connected profile.'
+          : profileId
+            ? 'Opened a profile-bound draft. Connect the profile to run SQL.'
+            : 'Opened an offline draft.';
       await saveWorkspaceNow();
       await tick();
       if (workspace.active_tab_id === tab.id) editorApi?.focus();
@@ -2521,13 +2519,8 @@
       workspace.tabs.push(duplicate);
       workspace.active_tab_id = duplicate.id;
       rememberActiveTab(duplicate);
-      const session = duplicate.profile_id
-        ? await ensureTabSession(duplicate)
-        : null;
-      if (session || !duplicate.profile_id) {
-        statusMessage =
-          'Duplicated the query draft and non-secret binding without sharing its file grant, native session, transaction, results, or running job.';
-      }
+      statusMessage =
+        'Duplicated the query draft without sharing its file, transaction, results, or running query.';
       await saveWorkspaceNow();
     });
   }
@@ -2910,9 +2903,10 @@
   }
 
   async function changeActiveContext(context: string) {
-    if (!activeTab || !activeSession || activeTab.kind !== 'query') return;
+    if (!activeTab || !activeConnection || activeTab.kind !== 'query') return;
     const tab = activeTab;
-    const session = activeSession;
+    const session = await ensureTabSession(tab);
+    if (!session) return;
     await runAction(async () => {
       try {
         const response = await invokeCommand('change_tab_context', {
@@ -2960,14 +2954,7 @@
         name: object.name
       };
       rememberActiveTab(tab);
-      const session = connections[profileId]
-        ? await ensureTabSession(tab)
-        : null;
-      if (session) {
-        statusMessage = `${starter.message} Opened with a dedicated session on the existing connection.`;
-      } else if (!connections[profileId]) {
-        statusMessage = starter.message;
-      }
+      statusMessage = starter.message;
       await saveWorkspaceNow();
     });
   }
@@ -3221,16 +3208,24 @@
   }
 
   async function runEditorRequest(editorRequest: EditorRunRequest) {
-    if (!activeTab || !activeProfile || !activeSession || !hasNativeRuntime()) {
-      statusMessage =
-        'Connect this profile-bound tab before running SQL. Restored and file tabs remain offline by default.';
+    if (
+      !activeTab ||
+      !activeProfile ||
+      !activeConnection ||
+      !hasNativeRuntime()
+    ) {
+      statusMessage = 'Connect this profile before running SQL.';
       return;
     }
-    const sql = activeTab.sql;
+    const tab = activeTab;
+    const profileId = activeProfile.id;
+    const sql = tab.sql;
+    const session = await ensureTabSession(tab);
+    if (!session) return;
     const request: StartExecutionRequest = {
-      profile_id: activeProfile.id,
-      tab_id: activeTab.id,
-      session_id: activeSession.session_id,
+      profile_id: profileId,
+      tab_id: tab.id,
+      session_id: session.session_id,
       sql,
       selection_start:
         editorRequest.selectionStart === null
@@ -3248,17 +3243,26 @@
   }
 
   async function explainEditorStatement() {
-    if (!activeTab || !activeProfile || !activeSession || !hasNativeRuntime()) {
+    if (
+      !activeTab ||
+      !activeProfile ||
+      !activeConnection ||
+      !hasNativeRuntime()
+    ) {
       statusMessage =
-        'Connect this profile-bound tab before generating an estimated plan.';
+        'Connect this profile before generating an estimated plan.';
       return;
     }
+    const tab = activeTab;
+    const profileId = activeProfile.id;
     const selection = editorApi?.selection();
-    const sql = activeTab.sql;
+    const sql = tab.sql;
+    const session = await ensureTabSession(tab);
+    if (!session) return;
     const request: StartExplainRequest = {
-      profile_id: activeProfile.id,
-      tab_id: activeTab.id,
-      session_id: activeSession.session_id,
+      profile_id: profileId,
+      tab_id: tab.id,
+      session_id: session.session_id,
       sql,
       selection_start:
         selection && selection.start !== selection.end
@@ -3691,19 +3695,18 @@
   }
 
   async function setAutomaticTransaction(automatic: boolean) {
-    if (!activeSession || !hasNativeRuntime()) return;
-    const tabId = activeSession.tab_id;
+    if (!activeTab || !activeConnection || !hasNativeRuntime()) return;
+    const session = await ensureTabSession(activeTab);
+    if (!session) return;
+    const tabId = session.tab_id;
     await runAction(async () => {
       try {
-        activeSession.transaction = await invokeCommand(
-          'set_transaction_mode',
-          {
-            profile_id: activeSession.profile_id,
-            tab_id: activeSession.tab_id,
-            session_id: activeSession.session_id,
-            automatic
-          }
-        );
+        session.transaction = await invokeCommand('set_transaction_mode', {
+          profile_id: session.profile_id,
+          tab_id: session.tab_id,
+          session_id: session.session_id,
+          automatic
+        });
       } catch (error) {
         if (safeErrorCategory(error) === 'connectivity') {
           retainTableStagingAfterConnectionLoss(tabId);
@@ -4738,22 +4741,12 @@
       {@attach captureMain}
     >
       <div class="context-bar" aria-label="Active workspace context">
-        <span
-          class="context-state"
-          class:online={Boolean(
-            activeSession ||
-            (activeTab?.kind === 'table_data' && activeConnection)
-          )}
-        >
-          {activeTab?.kind === 'table_data' &&
-          activeTableView === 'structure' &&
-          activeConnection
-            ? 'Connected'
-            : activeSession
+        <span class="context-state" class:online={Boolean(activeConnection)}>
+          {activeTab && tabSessionOperations[activeTab.id]
+            ? 'Opening'
+            : activeConnection
               ? 'Connected'
-              : activeTab && tabSessionOperations[activeTab.id]
-                ? 'Opening'
-                : 'Offline'}
+              : 'Offline'}
         </span>
         <span>{activeTab?.profile_label ?? 'No profile'}</span>
         <span
@@ -4761,13 +4754,18 @@
             ? `${activeConnection.engine} ${activeConnection.exact_version}`
             : 'Engine unavailable'}</span
         >
-        {#if activeSession && activeTab?.kind === 'query' && activeProfile}
+        {#if activeConnection && activeTab?.kind === 'query' && activeProfile}
           <label class="context-selector">
             <span class="sr-only">Active database or schema for this tab</span>
             <select
-              value={activeSession.context}
+              value={activeSession?.context ??
+                activeTab.context_label ??
+                activeConnection.context}
               disabled={Boolean(activeExecution) ||
-                activeSession.transaction.certainty !== 'clean'}
+                Boolean(
+                  activeSession &&
+                  activeSession.transaction.certainty !== 'clean'
+                )}
               onchange={(event) =>
                 void changeActiveContext(
                   (event.currentTarget as HTMLSelectElement).value
@@ -4791,7 +4789,9 @@
             ? 'Structure metadata'
             : activeSession
               ? `${activeSession.transaction.automatic ? 'Auto-commit' : 'Manual'} · ${activeSession.transaction.certainty}`
-              : 'Transaction unavailable'}
+              : activeConnection
+                ? 'Auto-commit'
+                : 'Transaction unavailable'}
         </span>
       </div>
 
@@ -4894,8 +4894,8 @@
                 <h2 id="editor-heading">{activeTab?.title}</h2>
               </div>
               <span class="execution-context"
-                >{activeSession
-                  ? `${activeConnection?.engine ?? 'Database'} · explicit execution only`
+                >{activeConnection
+                  ? `${activeConnection.engine} · explicit execution only`
                   : activeTab && tabSessionOperations[activeTab.id]
                     ? 'Opening dedicated session…'
                     : 'Offline · connect profile to execute'}</span
@@ -4907,7 +4907,7 @@
                 role="group"
                 aria-label="Execution controls"
               >
-                {#if activeSession}
+                {#if activeConnection}
                   <button
                     type="button"
                     class="primary primary-action"
@@ -4983,9 +4983,9 @@
                   <label class="transaction-mode">
                     <span>Transaction</span>
                     <select
-                      value={activeSession.transaction.automatic
-                        ? 'automatic'
-                        : 'manual'}
+                      value={activeSession?.transaction.automatic === false
+                        ? 'manual'
+                        : 'automatic'}
                       onchange={(event) =>
                         void setAutomaticTransaction(
                           (event.currentTarget as HTMLSelectElement).value ===
@@ -4996,7 +4996,7 @@
                       <option value="manual">Manual</option>
                     </select>
                   </label>
-                  {#if activeSession.transaction.certainty !== 'clean'}
+                  {#if activeSession && activeSession.transaction.certainty !== 'clean'}
                     <button
                       type="button"
                       onclick={() => void resolveTransaction('commit')}

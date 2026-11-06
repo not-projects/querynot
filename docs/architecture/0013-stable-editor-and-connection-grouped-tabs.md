@@ -30,7 +30,7 @@ Each child row exposes dirty, pinned, table-data, and session state; close remai
 
 ### Profile connection and tab sessions
 
-Connect and Disconnect remain profile-level actions. Selecting a bound child under an established profile connection lazily requests that child's dedicated native session using its saved context. A newly created child under an established connection opens its session immediately. Restored unused children remain offline; automatic profile reconnect may open only the restored active child.
+Connect and Disconnect remain profile-level actions. Opening or selecting a query child under an established profile connection displays the draft immediately without opening a database session. Run, Explain, explicit context changes, and transaction actions lazily request that child's dedicated session using its saved context. Duplicating a query or creating one from schema navigation follows the same boundary. Sessions are never shared between tabs. Restored unused children remain offline; legacy automatic profile reconnect may open only the restored active child.
 
 All user tab activation, including `Ctrl+Tab`, goes through one activation helper. Per-tab session opens are deduplicated by tab identifier. A failed open leaves the metadata/profile connection intact, keeps that child offline, records a scoped error, and offers Retry without changing context. Completion never changes the active tab and focuses the editor only if that tab is still active.
 

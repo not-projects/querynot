@@ -243,13 +243,12 @@ describe('Phase 4 productivity and safe-editing boundaries', () => {
     const historyDrawer = read('src/lib/components/HistoryDrawer.svelte');
     const starter = app.slice(
       app.indexOf('async function startQueryForObject'),
-      app.indexOf('function handleEditorChange')
+      app.indexOf('async function openConnectedTabSession')
     );
 
-    expect(starter).toContain('connections[profileId]');
-    expect(starter).toContain('await ensureTabSession(tab)');
+    expect(starter).not.toContain('ensureTabSession');
     expect(starter).toContain('tab.context_label = object.namespace');
-    expect(starter).toContain("invokeCommand('open_tab_session'");
+    expect(starter).not.toContain("invokeCommand('open_tab_session'");
     expect(app).toContain('aria-controls="history-drawer"');
     expect(app).toContain('<HistoryDrawer');
     expect(app).toContain(
